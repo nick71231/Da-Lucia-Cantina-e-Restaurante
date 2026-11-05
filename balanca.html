@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Balança - Da Lúcia</title>
+<link rel="manifest" href="manifest-balanca.json"><meta name="theme-color" content="#A50F14">
+<style>
+:root {
+  --laranja: #FFA500; --vermelho: #A50F14; --verm-esc: #7d0a0e; --lar-esc: #FF8A00; --tinta: #2B1710; --verde: #1f9a45;
+  --creme: #FFF6E8; --bege: #F6E9D8; --bege-esc: #EAD7BF; --muted: #8a6f60;
+  --sombra: 0 1px 2px rgba(80,35,10,.06), 0 8px 24px rgba(120,50,10,.10);
+  --sombra-sm: 0 1px 2px rgba(80,35,10,.08), 0 3px 10px rgba(120,50,10,.08);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+input, textarea { user-select: text; -webkit-user-select: text; }
+body { font-family: Inter, "Segoe UI", system-ui, Arial, sans-serif; color: var(--tinta); min-height: 100vh;
+  background: radial-gradient(900px 480px at 0% -8%, #fff 0, transparent 62%), radial-gradient(700px 400px at 100% 100%, #ffe9c9 0, transparent 60%), var(--creme); background-attachment: fixed; }
+
+/* ===== topo ===== */
+header { background: linear-gradient(135deg, var(--vermelho) 0%, var(--verm-esc) 100%); color: #fff; padding: 12px 24px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 5; box-shadow: 0 4px 18px rgba(125,10,14,.30); border-bottom: 3px solid var(--laranja); }
+header h1 { flex: 1; font: 700 1.4rem Georgia, serif; letter-spacing: .2px; } .lg { width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); }
+.pill { display: inline-flex; align-items: center; gap: 8px; font-size: .85rem; font-weight: 600; background: rgba(255,255,255,.16); padding: 7px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,.18); }
+.pill::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: #4ee07f; box-shadow: 0 0 0 3px rgba(78,224,127,.25); animation: pulsa 2.4s infinite; }
+.pill.off { background: #ffe1e1; color: var(--vermelho); font-weight: 700; border-color: transparent; } .pill.off::before { background: var(--vermelho); box-shadow: 0 0 0 3px rgba(165,15,20,.2); animation: none; }
+@keyframes pulsa { 50% { box-shadow: 0 0 0 6px rgba(78,224,127,0); } }
+.ib { min-height: 0; width: 44px; height: 44px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 14px; background: rgba(255,255,255,.14); color: #fff; font-size: 1.15rem; transition: background .15s, transform .1s; }
+.ib:active { background: rgba(255,255,255,.3); transform: scale(.93); }
+
+/* ===== cards de resumo ===== */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; padding: 16px 24px 0; }
+.stats > div { position: relative; background: #fff; border-radius: 20px; padding: 12px 16px 12px; box-shadow: var(--sombra); border: 1px solid rgba(234,215,191,.6); overflow: hidden; }
+.stats > div::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 4px; border-radius: 0 4px 4px 0; background: linear-gradient(var(--laranja), var(--lar-esc)); }
+.stats small { display: block; color: var(--muted); font-size: .76rem; font-weight: 600; letter-spacing: .3px; text-transform: uppercase; padding-right: 40px; }
+.stats b { display: block; margin-top: 2px; font: 700 1.5rem Georgia, serif; color: var(--tinta); font-variant-numeric: tabular-nums; }
+.stats .ic { position: absolute; top: 10px; right: 12px; width: 34px; height: 34px; border-radius: 12px; background: var(--bege); display: grid; place-items: center; font-size: 1.05rem; }
+
+/* ===== layout ===== */
+.layout { display: grid; grid-template-columns: minmax(340px, 520px) 1fr; gap: 22px; padding: 18px 24px 100px; align-items: start; }
+.painel { background: linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,250,242,.85)); border: 1px solid rgba(234,215,191,.8); border-radius: 30px; padding: 16px; box-shadow: var(--sombra); }
+.campos { display: grid; gap: 10px; margin-bottom: 12px; }
+.campo { position: relative; text-align: left; background: #fff; border: 2px solid transparent; border-radius: 22px; padding: 12px 18px; box-shadow: var(--sombra-sm); min-height: 0; transition: border-color .15s, box-shadow .15s, transform .1s; }
+.campo:active { transform: scale(.98); }
+.campo small { color: var(--muted); font-weight: 600; font-size: .78rem; letter-spacing: .3px; text-transform: uppercase; }
+.campo b { display: block; margin-top: 2px; font: 700 2.1rem/1.15 Georgia, serif; font-variant-numeric: tabular-nums; }
+.campo:nth-child(2)::after { content: "⚖"; position: absolute; top: 12px; right: 16px; font-size: 1.1rem; opacity: .45; }
+.campo.on { border-color: var(--laranja); background: #fffdf9; box-shadow: 0 0 0 5px rgba(255,165,0,.20), var(--sombra-sm); }
+.campo.on small { color: var(--lar-esc); }
+.nome-cmd { width: 100%; margin-bottom: 12px; font-size: 1.02rem; border-radius: 16px !important; border-color: var(--bege-esc) !important; background: #fff; }
+.resumo { background: linear-gradient(135deg, #fff7ea, #fff); border: 1px dashed var(--bege-esc); border-radius: 16px; padding: 11px 16px; margin-bottom: 12px; min-height: 48px; line-height: 1.4; display: flex; align-items: center; flex-wrap: wrap; gap: 0 4px; color: #5a4234; font-size: .95rem; }
+.resumo small { color: var(--muted); } .resumo b { color: var(--vermelho); }
+
+/* ===== teclado numérico ===== */
+.teclado { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.teclado button { height: clamp(58px, 9vh, 78px); min-height: 0; padding: 0; border: 1px solid var(--bege-esc); border-bottom-width: 4px; border-radius: 20px; background: linear-gradient(180deg, #fffdf9, var(--bege)); color: var(--tinta); font: 700 1.85rem Georgia, serif; box-shadow: 0 2px 6px rgba(120,50,10,.08); transition: transform .08s, border-bottom-width .08s, background .12s; }
+.teclado button:nth-child(10), .teclado button:nth-child(12) { background: linear-gradient(180deg, #f6e9d8, var(--bege-esc)); color: #6b4a38; }
+.teclado button:active { transform: translateY(3px); border-bottom-width: 1px; background: linear-gradient(135deg, var(--laranja), var(--lar-esc)); color: #fff; border-color: var(--lar-esc); }
+.acoes-b { display: grid; grid-template-columns: 1fr 2.4fr; gap: 10px; margin-top: 14px; }
+.limpar { min-height: 0; padding: 18px; border: 2px solid var(--vermelho); border-radius: 22px; background: #fff; color: var(--vermelho); font-size: 1.1rem; font-weight: 700; transition: background .15s, transform .1s; }
+.limpar:active { background: #fde8e8; transform: scale(.97); }
+.registrar { min-height: 0; padding: 18px; border: 0; border-radius: 22px; font-size: 1.25rem; font-weight: 700; color: #fff; letter-spacing: .2px; background: linear-gradient(135deg, var(--verde), #16793a); box-shadow: 0 10px 22px rgba(26,127,55,.32), inset 0 1px 0 rgba(255,255,255,.25); transition: transform .1s; }
+.registrar:active:not(:disabled) { transform: scale(.97); }
+.registrar.prox { background: linear-gradient(135deg, var(--vermelho), var(--verm-esc)); box-shadow: 0 10px 22px rgba(165,15,20,.32), inset 0 1px 0 rgba(255,255,255,.2); }
+.registrar:disabled { background: #d9c9bd; box-shadow: none; opacity: 1; color: #fff9f2; }
+
+/* ===== lista (comandas / bebidas) ===== */
+h3 { margin: 4px 0 12px; font: 700 1.3rem Georgia, serif; } h3 small { font: 400 .85rem Inter, Arial; color: var(--muted); margin-left: 6px; }
+.abas-b { display: inline-flex; gap: 4px; margin-bottom: 14px; padding: 5px; background: var(--bege); border-radius: 999px; }
+.aba-b { min-height: 0; padding: 11px 22px; border: 0; border-radius: 999px; background: transparent; color: #7a5a48; font-weight: 700; font-size: 1rem; transition: background .15s, color .15s; }
+.aba-b.on { background: linear-gradient(135deg, var(--laranja), var(--lar-esc)); color: #fff; box-shadow: 0 4px 12px rgba(255,140,0,.35); }
+.card { background: #fff; border-radius: 22px; padding: 16px 18px; margin-bottom: 12px; box-shadow: var(--sombra); border: 1px solid rgba(234,215,191,.6); border-left: 8px solid var(--laranja); }
+.card.sel { border-left-color: var(--verde); box-shadow: 0 0 0 3px rgba(31,154,69,.30), var(--sombra); } .card.novo-lanc { animation: flash 1.6s; }
+.card.pend { border-left-color: #b5a79b; border-style: dashed; background: #fbf8f4; }
+.card .topo { display: flex; justify-content: space-between; align-items: center; gap: 10px; font: 700 1.3rem Georgia, serif; font-variant-numeric: tabular-nums; } .num { color: var(--vermelho); }
+.sub { color: var(--muted); font-size: .85rem; margin: 3px 0 8px; }
+.it { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid #f3e8db; font-size: .95rem; }
+.it button { min-height: 0; border: 0; background: #fde5e5; color: var(--vermelho); border-radius: 11px; width: 38px; height: 38px; padding: 0; font-weight: 700; flex-shrink: 0; }
+.it button:active { background: var(--vermelho); color: #fff; }
+.mais { min-height: 0; width: 100%; margin-top: 10px; padding: 12px; border: 2px dashed var(--laranja); border-radius: 16px; background: #fff9ef; color: #a35a00; font-weight: 700; transition: background .15s; }
+.mais:active { background: #ffe9c4; }
+.fech { background: #fff; border: 1px solid rgba(234,215,191,.6); border-radius: 18px; padding: 12px 16px; box-shadow: var(--sombra-sm); margin-top: 16px; } .fech summary { font-weight: 700; cursor: pointer; color: #5a4234; }
+.vazio { color: var(--muted); padding: 22px 0; text-align: center; }
+.ed-nome { min-height: 0; border: 0; background: var(--bege); color: #7a5a48; border-radius: 10px; padding: 3px 11px; font-size: .85rem; font-weight: 600; margin-left: 8px; font-family: Inter, Arial, sans-serif; } .pg-ok { color: #16793a; }
+
+/* ===== bebidas ===== */
+.pillsb { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.pillb { min-height: 0; padding: 9px 18px; border: 2px solid var(--bege-esc); border-radius: 999px; background: #fff; font-weight: 700; color: #6b4a38; }
+.pillb.on { background: var(--vermelho); color: #fff; border-color: var(--vermelho); box-shadow: 0 4px 12px rgba(165,15,20,.28); }
+.gradeb { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.beb { position: relative; min-height: 84px; padding: 14px 10px; border: 1px solid rgba(234,215,191,.7); border-radius: 20px; background: #fff; box-shadow: var(--sombra-sm); display: flex; flex-direction: column; gap: 6px; align-items: center; justify-content: center; text-align: center; transition: transform .1s, background .12s; }
+.beb b { font-size: .95rem; line-height: 1.2; } .beb small { color: var(--vermelho); font-weight: 700; font-size: 1.02rem; font-variant-numeric: tabular-nums; }
+.beb:active { background: #FFE3A8; transform: scale(.96); }
+.beb em { position: absolute; top: -8px; right: -8px; background: var(--vermelho); color: #fff; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-style: normal; font-weight: 700; box-shadow: 0 3px 8px rgba(165,15,20,.4); border: 2px solid #fff; }
+
+/* ===== avisos e janelas ===== */
+#undo { position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 140%); transition: transform .25s; z-index: 50; background: rgba(43,23,16,.96); color: #fff; padding: 10px 12px 10px 22px; border-radius: 40px; display: flex; align-items: center; gap: 14px; font-weight: 700; box-shadow: 0 12px 30px rgba(0,0,0,.3); }
+#undo.show { transform: translate(-50%, 0); } #undo button { min-height: 0; border: 0; border-radius: 30px; padding: 10px 18px; background: var(--laranja); color: #fff; }
+#toast { position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%); background: rgba(43,23,16,.96); color: #fff; padding: 12px 24px; border-radius: 30px; font-weight: 700; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 60; box-shadow: 0 12px 30px rgba(0,0,0,.3); } #toast.show { opacity: 1; }
+.modal { position: fixed; inset: 0; background: rgba(43,23,16,.55); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; } .modal[hidden] { display: none; }
+.caixa-modal { background: #fff; padding: 26px; border-radius: 28px; width: min(480px, 94vw); box-shadow: 0 24px 60px rgba(0,0,0,.3); border-top: 6px solid var(--vermelho); } .caixa-modal h2 { font: 700 1.4rem Georgia, serif; } .caixa-modal p { margin: 12px 0; line-height: 1.4; } .caixa-modal input:not([type=checkbox]) { width: 100%; margin-top: 4px; }
+.caixa-modal label { display: flex; align-items: center; gap: 10px; } .acoes { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
+.acoes button { padding: 12px 22px; border-radius: 14px; border: 2px solid var(--bege-esc); background: #fff; font-weight: 700; } .acoes .ok { background: linear-gradient(135deg, var(--verde), #16793a); color: #fff; border-color: transparent; }
+@keyframes flash { 0%, 60% { background: #e9f6ec; } 100% { background: #fff; } }
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; padding: 14px 14px 100px; } .stats { padding: 14px 14px 0; } header { padding: 10px 14px; } }
+
+/* ===== página fixa na tela: só o quadrado da direita rola ===== */
+html, body { height: 100%; }
+body { height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+body > header, body > .stats, body > #aviso-padrao { flex-shrink: 0; }
+.layout { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr); align-items: stretch; padding: 16px 24px 22px; }
+.painel { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.direita { display: flex; flex-direction: column; min-height: 0; background: linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,250,242,.85)); border: 1px solid rgba(234,215,191,.8); border-radius: 30px; padding: 16px 12px 12px 16px; box-shadow: var(--sombra); }
+.direita .abas-b { flex-shrink: 0; align-self: flex-start; }
+#lista { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 4px 8px 8px 4px; scrollbar-width: thin; scrollbar-color: var(--bege-esc) transparent; }
+#lista::-webkit-scrollbar { width: 8px; } #lista::-webkit-scrollbar-thumb { background: var(--bege-esc); border-radius: 8px; }
+#lista > h3:first-child { margin-top: 0; }
+/* ===== painel da esquerda se ajusta à tela: teclado sem rolagem ===== */
+header { padding-top: 8px; padding-bottom: 8px; } .lg { width: 38px; height: 38px; }
+.stats { padding-top: 12px; gap: 10px; }
+.stats > div { padding: 8px 14px; border-radius: 16px; } .stats b { font-size: 1.25rem; }
+.stats small { font-size: .7rem; } .stats .ic { width: 28px; height: 28px; top: 8px; right: 10px; font-size: .9rem; border-radius: 10px; }
+.layout { padding-top: 12px; padding-bottom: 16px; gap: 18px; }
+.painel { display: flex; flex-direction: column; overflow: hidden; padding: 14px; }
+.painel > * { flex-shrink: 0; }
+.campos { margin-bottom: 8px; gap: 8px; }
+.campo { padding: 8px 16px; border-radius: 18px; } .campo b { font-size: 1.75rem; line-height: 1.1; }
+.nome-cmd { min-height: 0; padding: 8px 14px; margin-bottom: 8px; }
+.resumo { min-height: 0; padding: 7px 14px; margin-bottom: 8px; font-size: .9rem; }
+.painel .teclado { flex: 1 1 0; min-height: 0; grid-template-rows: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.teclado button { height: 100%; min-height: 0; font-size: clamp(1.3rem, 3.4vh, 1.85rem); border-radius: 18px; }
+.acoes-b { margin-top: 10px; gap: 8px; }
+.limpar, .registrar { padding: 0; height: clamp(48px, 7vh, 62px); border-radius: 18px; }
+.registrar { font-size: 1.15rem; }
+/* cards do topo e resumo: aparecem só se ligados nos ajustes */
+body:not(.v-stats) .stats { display: none !important; }
+body:not(.v-resumo) .resumo { display: none !important; }
+/* ===== comandas já fechadas (pagas) ===== */
+.fech { padding: 8px 14px; border-radius: 20px; }
+.fech summary { display: flex; align-items: center; gap: 10px; padding: 8px 0; list-style: none; }
+.fech summary::-webkit-details-marker { display: none; }
+.fech summary::after { content: "▾"; margin-left: 4px; color: var(--muted); transition: transform .2s; }
+.fech[open] summary::after { transform: rotate(180deg); }
+.fech summary > span:first-child { flex: 1; }
+.fech-n { background: var(--verde); color: #fff; min-width: 26px; height: 26px; padding: 0 8px; border-radius: 999px; display: inline-grid; place-items: center; font-size: .85rem; }
+.fech-tot { color: var(--muted); font-weight: 600; font-size: .9rem; font-variant-numeric: tabular-nums; }
+.fc { display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-top: 8px; border-radius: 16px; background: #f3faf5; border: 1px solid #d3ecda; }
+.fc.conta { background: #fff8ec; border-color: #f5dcae; }
+.fc-ic { width: 38px; height: 38px; flex-shrink: 0; border-radius: 12px; display: grid; place-items: center; background: var(--verde); color: #fff; font-size: 1.15rem; font-weight: 700; }
+.fc.conta .fc-ic { background: #ffe3a8; color: #a35a00; }
+.fc-info { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.fc-info b { font: 700 1.05rem Georgia, serif; color: var(--tinta); }
+.fc-info span { color: var(--muted); font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fc-dir { text-align: right; display: flex; flex-direction: column; line-height: 1.25; }
+.fc-dir strong { font: 700 1.1rem Georgia, serif; font-variant-numeric: tabular-nums; }
+.fc-dir em { font-style: normal; font-size: .78rem; font-weight: 700; color: #16793a; }
+.fc.conta .fc-dir em { color: #a35a00; }
+/* ===== ajustes ===== */
+.caixa-modal .cfg-sec { margin-top: 14px; padding-top: 4px; font-size: .75rem; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--lar-esc); border-bottom: 1px solid var(--bege); }
+.caixa-modal .cfg-sec:first-of-type { margin-top: 10px; }
+.caixa-modal select { width: 100%; margin-top: 4px; }
+.caixa-modal p small { color: var(--muted); }
+.sair { width: 100%; margin-top: 10px; border-color: #f0c4c4; background: #fff5f5; color: var(--vermelho); }
+.sair:active { background: var(--vermelho); color: #fff; }
+.card.parada { border-left-color: var(--vermelho); background: #fff7f6; }
+.card.parada .sub { color: var(--vermelho); font-weight: 700; }
+.t-grande .teclado button { font-size: clamp(1.8rem, 5.2vh, 2.6rem); }
+.t-grande .limpar, .t-grande .registrar { font-size: 1.35rem; }
+/* ===== janela de ajustes: título fixo, corpo rolando, botões fixos ===== */
+.caixa-modal.cfg { display: flex; flex-direction: column; padding: 0; overflow: hidden; width: min(540px, 94vw); max-height: 90vh; }
+.cfg h2 { flex-shrink: 0; padding: 20px 26px 14px; border-bottom: 1px solid var(--bege); }
+.cm-corpo { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 26px 14px; }
+.cfg .acoes { flex-shrink: 0; margin: 0; padding: 14px 26px 18px; border-top: 1px solid var(--bege); background: #fff; }
+.cfg .cfg-sec { margin: 16px 0 2px; padding: 0 0 6px; font-size: .75rem; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--lar-esc); border-bottom: 1px solid var(--bege); }
+.cfg .cfg-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0; padding: 11px 0; border-bottom: 1px solid #f6ece0; line-height: 1.3; }
+.cfg .cfg-row > span { flex: 1; min-width: 0; }
+.cfg .cfg-row small { display: block; margin-top: 2px; font-size: .78rem; color: var(--muted); }
+.cfg .cfg-row input:not([type=checkbox]) { width: 120px; flex-shrink: 0; margin: 0; min-height: 42px; text-align: right; }
+.cfg .cfg-row select { width: 190px; flex-shrink: 0; margin: 0; min-height: 42px; }
+.cfg .cfg-row input[type=checkbox] { flex-shrink: 0; width: 26px; height: 26px; }
+.cfg label.cfg-row { cursor: pointer; }
+.cfg .sair { margin-top: 12px; }
+@media (max-width: 520px) { .cfg .cfg-row select { width: 150px; } .cfg .cfg-row input:not([type=checkbox]) { width: 100px; } }
+/* ===== aviso de comanda repetida (só aparece quando tem o que avisar) ===== */
+.aviso-cmd { flex-shrink: 0; height: 30px; margin: 0 0 8px; padding: 0 12px; display: flex; align-items: center; border-radius: 12px; font-size: .85rem; font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: transparent; }
+.aviso-cmd.info { background: #fff3d6; color: #8a4b00; } .aviso-cmd.alerta { background: #fde0e0; color: var(--vermelho); }
+@media (max-width: 900px) {
+  body { height: auto; overflow: auto; display: block; }
+  .layout { padding: 14px 14px 100px; }
+  .direita { height: 70vh; }
+  .painel { overflow: visible; } .painel .teclado { flex: none; } .teclado button { height: 64px; }
+}
+</style>
+<link rel="stylesheet" href="ui.css">
+</head>
+<body>
+<header><img class="lg" src="img/logo.png" alt="" onerror="this.remove()"><h1>Balança - Da Lúcia</h1><span id="status" class="pill">...</span><button class="ib" id="som" title="Som">🔔</button><button class="ib" id="cfgBtn" title="Ajustes da balança">⚙</button></header>
+<div class="stats" id="stats"></div>
+<div class="layout">
+  <section class="painel">
+    <div class="campos" id="campos"></div>
+    <input id="nome-cmd" class="nome-cmd" maxlength="40" placeholder="👤 Nome do cliente (opcional)">
+    <div class="aviso-cmd" id="aviso-cmd"></div>
+    <div class="resumo" id="resumo"></div>
+    <div class="teclado">
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="00">00</button><button data-k="0">0</button><button data-k="&lt;">⌫</button>
+    </div>
+    <div class="acoes-b"><button class="limpar" id="limpar">Limpar</button><button class="registrar" id="reg" disabled>Próximo</button></div>
+  </section>
+  <section class="direita"><div class="abas-b"><button class="aba-b on" data-t="comandas">Comandas abertas</button><button class="aba-b" data-t="bebidas">🥤 Bebidas</button></div><div id="lista"></div></section>
+</div>
+<div id="undo"></div><div id="toast"></div><div id="modal" class="modal" hidden></div>
+<script src="dados.js"></script>
+<script>
+const $ = (s) => document.querySelector(s);
+const brl = (n) => "R$" + Number(n).toFixed(2).replace(".", ",");
+const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const hoje = () => new Date().toLocaleDateString("en-CA");
+const hora = (t) => new Date(t).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+const soma = (a, f) => a.reduce((s, x) => s + f(x), 0), r2 = (n) => Math.round(n * 100) / 100;
+const ler = (k, p) => { try { const v = localStorage.getItem(k); return v === null ? p : JSON.parse(v); } catch (e) { return p; } };
+const salvar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const novoUid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+const cfg = () => ({ precoKg: 0, usarPeso: false, alerta: 150, som: true, mostrarStats: false, mostrarResumo: false, alertaParada: 40, undoSeg: 9, volume: "medio", abaInicial: "comandas", teclas: "normal", ...ler("balancaCfg", {}) });
+const JSONH = { "Content-Type": "application/json" };
+let campo = "comanda", comanda = "", cents = "", peso = "", pedidosB = [], uidLanc = null, enviando = false, aba = cfg().abaInicial === "bebidas" ? "bebidas" : "comandas", catAtual = "Todas", bebidas = BEBIDAS.slice(), ultimoReg = null, tUndo, fechadasAberto = false, offline = false;
+
+const token = () => localStorage.getItem("tokenBalanca") || "";
+const aut = async (url, opt = {}) => { // toda chamada leva a senha (token) da balança; se não tiver ou expirou, pede o login
+  const r = await fetch(url, { ...opt, headers: { ...(opt.headers || {}), Authorization: "Bearer " + token() } });
+  if (r.status === 401) mostrarLogin();
+  return r;
+};
+function mostrarLogin(msg) {
+  $("#modal").hidden = false;
+  $("#modal").innerHTML = `<div class="caixa-modal"><h2>Entrar na balança</h2><p>${msg || "Digite a senha da balança."}</p><input id="lg-pin" type="password" inputmode="numeric" maxlength="8" placeholder="Senha"><div class="acoes"><button class="ok" data-a="login">Entrar</button></div></div>`;
+  Promise.resolve().then(() => { const i = $("#lg-pin"); if (i) i.focus(); });
+}
+async function entrar() {
+  const pin = ($("#lg-pin").value || "").trim(); if (!pin) return;
+  try {
+    const r = await fetch("/api/login", { method: "POST", headers: JSONH, body: JSON.stringify({ role: "balanca", pin }) }), j = await r.json().catch(() => ({}));
+    if (r.ok) { localStorage.setItem("tokenBalanca", j.token); $("#modal").hidden = true; carregar(); carregarBebidas(); enviarFila(); return; }
+    mostrarLogin(r.status === 429 ? "Muitas tentativas. Aguarde alguns minutos." : "Senha incorreta, tente de novo.");
+  } catch (e) { mostrarLogin("Sem conexão com o servidor."); }
+}
+const NOMEF = { dinheiro: "dinheiro", pix: "Pix", cartao: "cartão" };
+const toast = (m) => { const t = $("#toast"); t.textContent = m; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 2600); };
+let ac; function bip(ok) { // som curtinho: agudo = deu certo, grave = erro
+  if (!cfg().som) return;
+  try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = ok ? 880 : 220; g.gain.value = ({ baixo: .05, medio: .15, alto: .4 })[cfg().volume] || .15; o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + (ok ? .12 : .35)); } catch (e) {}
+}
+const valorAtual = () => { if (cents) return parseInt(cents, 10) / 100; const c = cfg(); return peso && c.precoKg > 0 ? r2((parseInt(peso, 10) / 1000) * c.precoKg) : 0; };
+const ultimaAtiv = (p) => Math.max(p.quando, ...p.itens.map((c) => c.hora || 0));
+const abertas = () => pedidosB.filter((p) => p.status === "aguardando").sort((a, b) => ultimaAtiv(b) - ultimaAtiv(a));
+const fechadas = () => pedidosB.filter((p) => p.status === "pago" || p.status === "conta").sort((a, b) => b.quando - a.quando);
+
+function resumo() {
+  const n = parseInt(comanda || "0", 10), v = valorAtual(); if (!n) return "Digite o número da comanda";
+  const ab = abertas().find((p) => p.numero === n), fe = fechadas().filter((p) => p.numero === n).length, nm = ab && ab.nome ? " (" + esc(ab.nome) + ")" : "";
+  const nota = fe && !ab ? ` <small>(esse número já foi fechado hoje; vai abrir uma comanda nova)</small>` : "";
+  if (!v) return ab ? `Comanda <b>${n}</b>${nm} já tem <b>${brl(ab.valor)}</b> (${ab.itens.length} prato${ab.itens.length > 1 ? "s" : ""})` : `Comanda <b>${n}</b>${nm} nova${nota}`;
+  return ab ? `Comanda <b>${n}</b>${nm}: ${brl(ab.valor)} + ${brl(v)} = <b>${brl(r2(ab.valor + v))}</b>` : `Comanda <b>${n}</b>${nm} nova: <b>${brl(v)}</b>${nota}`;
+}
+function aplicarCfg() { const c = cfg(), b = document.body.classList; b.toggle("v-stats", !!c.mostrarStats); b.toggle("v-resumo", !!c.mostrarResumo); b.toggle("t-grande", c.teclas === "grande"); }
+function avisoCmd() { // só aparece quando tem algo importante pra avisar
+  const n = parseInt(comanda || "0", 10); if (!n) return ["", ""];
+  const ab = abertas().find((p) => p.numero === n), fe = fechadas().filter((p) => p.numero === n).length, v = valorAtual();
+  if (ab) return ["info", `📋 Comanda ${n}${ab.nome ? " (" + esc(ab.nome) + ")" : ""} já tem ${brl(ab.valor)} (${ab.itens.length} prato${ab.itens.length > 1 ? "s" : ""})${v ? " → fica " + brl(r2(ab.valor + v)) : " - o valor vai somar"}`];
+  if (fe) return ["alerta", `⚠ A comanda ${n} já foi fechada hoje - vai abrir uma nova`];
+  return ["", ""];
+}
+function atualizarAviso() { const el = $("#aviso-cmd"); if (!el) return; const [t, h] = avisoCmd(); el.className = "aviso-cmd " + t; el.innerHTML = h; }
+function tela() {
+  aplicarCfg();
+  const c = cfg(), v = valorAtual(), calc = !cents && peso && c.precoKg > 0, n = parseInt(comanda || "0", 10);
+  $("#campos").style.gridTemplateColumns = c.usarPeso ? "1fr 1.4fr 1fr" : "1fr 1.4fr";
+  $("#campos").innerHTML = `<button class="campo ${campo === "comanda" ? "on" : ""}" data-c="comanda"><small>Comanda</small><b>${comanda || "-"}</b></button>
+    <button class="campo ${campo === "valor" ? "on" : ""}" data-c="valor"><small>Valor da balança</small><b>${calc ? "≈ " : ""}${brl(v)}</b></button>
+    ${c.usarPeso ? `<button class="campo ${campo === "peso" ? "on" : ""}" data-c="peso"><small>Peso (g)</small><b>${peso || "-"}</b></button>` : ""}`;
+  $("#resumo").innerHTML = resumo(); atualizarAviso();
+  const reg = $("#reg"); reg.classList.toggle("prox", campo === "comanda");
+  reg.textContent = campo === "comanda" ? "Próximo: valor →" : "Registrar na comanda";
+  reg.disabled = campo === "comanda" ? !(n > 0) : !(n > 0 && v > 0);
+  $("#som").textContent = c.som ? "🔔" : "🔕"; listar();
+}
+function digitar(k) {
+  const tira = (s, n) => (k === "<" ? s.slice(0, -1) : s + k).slice(0, n).replace(/^0+/, "");
+  if (campo === "comanda") comanda = tira(comanda, 4); else if (campo === "valor") cents = tira(cents, 7); else peso = tira(peso, 5);
+  tela();
+}
+const acao = () => { if (campo === "comanda") { if (parseInt(comanda || "0", 10) > 0) { campo = "valor"; tela(); } } else registrar(); };
+
+async function registrar() {
+  const n = parseInt(comanda || "0", 10), v = valorAtual(), c = cfg(); if (!(n > 0 && v > 0) || enviando) return;
+  if (v > c.alerta && !confirm("Valor alto: " + brl(v) + ". Está certo?")) return;
+  if (ultimoReg && ultimoReg.n === n && ultimoReg.v === v && Date.now() - ultimoReg.t < 20000 && !confirm("Esse mesmo valor foi lançado agora há pouco na comanda " + n + ". Lançar de novo?")) return;
+  enviando = true; uidLanc = uidLanc || novoUid();
+  const ok = await enviarItem({ comanda: n, valor: v, peso: peso ? parseInt(peso, 10) : 0, cliente: ($("#nome-cmd").value || "").trim(), uid: uidLanc }, "Comanda " + n + ": " + brl(v) + " registrado");
+  enviando = false; if (ok) { $("#nome-cmd").value = ""; comanda = cents = peso = ""; campo = "comanda"; uidLanc = null; tela(); $("#lista").scrollTop = 0; }
+}
+async function enviarItem(it, rotulo) { // prato pesado ou bebida: manda pro servidor (ou guarda se estiver sem conexão)
+  try {
+    const r = await aut("/api/balanca", { method: "POST", headers: JSONH, body: JSON.stringify(it) }), j = await r.json().catch(() => ({}));
+    if (r.status === 401) throw 0; if (r.status >= 400 && r.status < 500) { bip(false); alert(j.erro || "O servidor recusou o lançamento."); return false; }
+    if (!r.ok) throw 0;
+    ultimoReg = { n: it.comanda, v: it.valor, t: Date.now(), id: j.id, idx: j.itens.length - 1 }; mostrarUndo(rotulo);
+  } catch (e) { salvar("filaBalanca", [...ler("filaBalanca", []), it]); ultimoReg = { n: it.comanda, v: it.valor, t: Date.now() }; toast("Sem conexão: guardado, será enviado sozinho."); }
+  bip(true); status(); carregar(); return true;
+}
+function mostrarUndo(txt) {
+  const u = $("#undo"); u.innerHTML = `<span>✓ ${txt}</span><button data-a="desfazer">Desfazer</button>`; u.classList.add("show");
+  clearTimeout(tUndo); tUndo = setTimeout(() => u.classList.remove("show"), (cfg().undoSeg || 9) * 1000);
+}
+async function patchItem(id, i) {
+  try { const r = await aut("/api/pedidos/" + id, { method: "PATCH", headers: JSONH, body: JSON.stringify({ removerItem: i }) }); if (!r.ok) throw new Error(((await r.json().catch(() => ({}))).erro) || "erro"); toast("Lançamento desfeito."); }
+  catch (e) { bip(false); toast("Não deu pra desfazer: " + e.message); }
+  carregar();
+}
+async function enviarFila() { // lançamentos guardados enquanto estava sem conexão
+  const fila = ler("filaBalanca", []); if (!fila.length) return; const resta = [];
+  for (const it of fila) { try { const r = await aut("/api/balanca", { method: "POST", headers: JSONH, body: JSON.stringify(it) }); if (!r.ok && (r.status >= 500 || r.status === 401)) resta.push(it); } catch (e) { resta.push(it); } }
+  const novos = ler("filaBalanca", []).filter((x) => !fila.some((f) => f.uid === x.uid)); salvar("filaBalanca", resta.concat(novos));
+  if (resta.length < fila.length) carregar(); status();
+}
+function status() { const p = ler("filaBalanca", []).length, el = $("#status"); el.className = "pill" + (offline ? " off" : ""); el.textContent = (offline ? "SEM CONEXÃO" : "online") + (p ? " - " + p + " pendente" + (p > 1 ? "s" : "") : ""); }
+const pesado = (p) => p.itens.filter((c) => !c.origem && c.tipo !== "bebida");
+const ICO = { "Pratos hoje": "🍽️", "Total das comandas": "💰", "Ticket médio": "📈", "Comandas abertas": "📋", "Bebidas": "🥤", "Peso total": "⚖️" };
+function estat() {
+  const ps = pedidosB.filter((p) => p.status !== "cancelado"), pr = ps.flatMap(pesado), total = soma(ps, (p) => p.valor), g = soma(pr, (c) => c.peso || 0), beb = soma(ps, (p) => p.itens.filter((c) => c.tipo === "bebida").length);
+  $("#stats").innerHTML = [["Pratos hoje", pr.length], ["Total das comandas", brl(total)], ["Ticket médio", brl(ps.length ? total / ps.length : 0)], ["Comandas abertas", abertas().length], ["Bebidas", beb], ...(g ? [["Peso total", (g / 1000).toFixed(1).replace(".", ",") + " kg"]] : [])]
+    .map(([t, v]) => `<div><span class="ic">${ICO[t] || ""}</span><small>${t}</small><b>${v}</b></div>`).join("");
+}
+const catB = (b) => (/água/i.test(b.nome) ? "Águas" : /suco|del valle/i.test(b.nome) ? "Sucos" : /long neck|cerveja/i.test(b.nome) ? "Cervejas" : "Refrigerantes");
+const rotItem = (c) => (c.origem === "totem" || c.tipo === "bebida")
+  ? `${c.origem === "totem" ? "🍱 " : "🥤 "}${c.qtd > 1 ? c.qtd + "x " : ""}${esc(c.nome)} - ${brl(c.preco * (c.qtd || 1))}` : `${brl(c.preco)}${c.peso ? " - " + c.peso + " g" : ""}`;
+function listar() {
+  document.querySelectorAll(".aba-b").forEach((x) => x.classList.toggle("on", x.dataset.t === aba));
+  $("#lista").innerHTML = aba === "bebidas" ? htmlBebidas() : htmlComandas();
+}
+function htmlBebidas() {
+  const n = parseInt(comanda || "0", 10), ab = abertas().find((p) => p.numero === n), cats = ["Todas", ...new Set(bebidas.map(catB))];
+  const qtdNa = (nome) => (ab ? ab.itens.filter((c) => c.tipo === "bebida" && c.nome === nome).length : 0);
+  return `<h3>Bebidas ${n ? `<small>na comanda ${n}${ab ? " (" + brl(ab.valor) + ")" : ""}</small>` : `<small>digite a comanda e toque na bebida</small>`}</h3>
+    <div class="pillsb">${cats.map((c) => `<button class="pillb ${c === catAtual ? "on" : ""}" data-cat="${c}">${c}</button>`).join("")}</div>
+    <div class="gradeb">${bebidas.map((x, i) => ({ x, i })).filter((o) => catAtual === "Todas" || catB(o.x) === catAtual).map(({ x, i }) => `<button class="beb" data-b="${i}">${qtdNa(x.nome) ? `<em>${qtdNa(x.nome)}</em>` : ""}<b>${esc(x.nome)}</b><small>${brl(x.preco)}</small></button>`).join("")}</div>`;
+}
+function htmlComandas() {
+  const n = parseInt(comanda || "0", 10), f = comanda ? abertas().filter((p) => String(p.numero).startsWith(comanda)) : abertas(), pend = ler("filaBalanca", []), fech = fechadas();
+  const card = (p) => {
+    const kg = soma(pesado(p), (c) => c.peso || 0), min = Math.max(0, Math.round((Date.now() - ultimaAtiv(p)) / 60000)), novo = ultimoReg && ultimoReg.n === p.numero && Date.now() - ultimoReg.t < 4000, np = pesado(p).length, parada = cfg().alertaParada > 0 && min >= cfg().alertaParada;
+    return `<article class="card ${p.numero === n ? "sel" : ""} ${novo ? "novo-lanc" : ""} ${parada ? "parada" : ""}"><div class="topo"><span class="num">Comanda ${p.numero}${p.nome ? " - " + esc(p.nome) : ""}<button class="ed-nome" data-nm="${p.id}" title="Nome da comanda">✎ nome</button></span><span>${brl(p.valor)}</span></div>
+      <div class="sub">${np} prato${np === 1 ? "" : "s"}${kg ? " - " + (kg / 1000).toFixed(2).replace(".", ",") + " kg" : ""} - último há ${min} min${parada ? " - ⚠ parada há muito tempo" : ""}</div>
+      ${p.itens.map((c, i) => `<div class="it"><span>${hora(c.hora || p.quando)} - ${rotItem(c)}${c.pago ? ` <b class="pg-ok">✓ pago (${NOMEF[c.pago.forma] || c.pago.forma})</b>` : ""}</span>${c.pago ? "" : `<button data-rm="${p.id}|${i}">✕</button>`}</div>`).join("")}
+      <button class="mais" data-add="${p.numero}">＋ Novo prato nesta comanda</button></article>`;
+  };
+  return `<h3>Comandas abertas ${comanda ? `<small>filtrando por "${comanda}"</small>` : ""}</h3>
+    ${pend.map((it) => `<article class="card pend"><div class="topo"><span class="num">Comanda ${it.comanda}</span><span>${brl(it.valor)}</span></div><div class="sub">⏳ ${it.nome ? esc(it.nome) + " - " : ""}guardado, aguardando conexão</div></article>`).join("")}
+    ${f.map(card).join("") || `<p class="vazio">${comanda ? "Nenhuma comanda aberta com esse número." : "Nenhuma comanda aberta."}</p>`}
+    <details class="fech" ${fechadasAberto ? "open" : ""}><summary><span>✓ Já fechadas hoje</span><span class="fech-n">${fech.length}</span>${fech.length ? `<span class="fech-tot">${brl(soma(fech, (p) => p.valor))}</span>` : ""}</summary>${fech.map((p) => `<div class="fc ${p.status === "conta" ? "conta" : "paga"}"><span class="fc-ic">${p.status === "conta" ? "📒" : "✓"}</span><div class="fc-info"><b>Comanda ${p.numero}</b>${p.nome ? `<span>${esc(p.nome)}</span>` : ""}</div><div class="fc-dir"><strong>${brl(p.valor)}</strong><em>${p.status === "conta" ? "Na conta" : "Paga"} · ${hora(p.quando)}</em></div></div>`).join("") || `<p class="vazio">Nenhuma ainda.</p>`}</details>`;
+}
+function abrirNome(id) { // dar (ou corrigir) o nome da pessoa na comanda
+  const p = pedidosB.find((x) => x.id === id); if (!p) return; $("#modal").hidden = false;
+  $("#modal").innerHTML = `<div class="caixa-modal"><h2>Nome na comanda ${p.numero}</h2><input id="nm-input" maxlength="40" placeholder="Nome do cliente" value="${esc(p.nome || "")}"><div class="acoes"><button data-a="fechar">Cancelar</button><button class="ok" data-a="salvarNome" data-id="${id}">Salvar</button></div></div>`;
+  Promise.resolve().then(() => { const i = $("#nm-input"); if (i) i.focus(); });
+}
+async function salvarNome(id) {
+  const nome = ($("#nm-input").value || "").trim();
+  try { const r = await aut("/api/pedidos/" + id, { method: "PATCH", headers: JSONH, body: JSON.stringify({ nome }) }); if (!r.ok) throw new Error(((await r.json().catch(() => ({}))).erro) || "erro"); $("#modal").hidden = true; toast("Nome salvo!"); }
+  catch (e) { toast("Não salvou: " + e.message); }
+  carregar();
+}
+async function carregarBebidas() { // respeita o que o admin do totem ligou/desligou e as bebidas que ele criou
+  try {
+    const d = ((await (await aut("/api/config")).json()).dados) || {}, j = (k, p) => { try { return d[k] ? JSON.parse(d[k]) : p; } catch (e) { return p; } };
+    const rem = j("removidos", []), off = j("indisponiveis", []), extras = j("bebidasExtras", []);
+    bebidas = [...BEBIDAS, ...extras].filter((x, i, a) => a.findIndex((y) => y.nome === x.nome) === i && !rem.includes("bebida:" + x.nome) && !off.includes("bebida:" + x.nome));
+  } catch (e) {}
+}
+async function carregar() {
+  try { const r = await aut("/api/pedidos?dia=" + hoje()); if (!r.ok) throw 0; pedidosB = (await r.json()).filter((p) => p.tipo === "balanca"); offline = false; } catch (e) { offline = true; }
+  status(); estat(); listar(); const res = $("#resumo"); if (res) res.innerHTML = resumo(); atualizarAviso();
+}
+function abrirCfg() {
+  const c = cfg(), sel = (v, a) => (v === a ? "selected" : ""), chk = (v) => (v ? "checked" : ""); $("#modal").hidden = false;
+  $("#modal").innerHTML = `<div class="caixa-modal cfg"><h2>⚙ Ajustes da balança</h2><div class="cm-corpo">
+    <div class="cfg-sec">Pesagem</div>
+    <label class="cfg-row"><span>Registrar também o peso (g)</span><input type="checkbox" id="c-peso" ${chk(c.usarPeso)}></label>
+    <div class="cfg-row"><span>Preço por kg (R$)<small>Se preencher, dá pra lançar só o peso e o valor sai calculado</small></span><input id="c-kg" inputmode="decimal" placeholder="0,00" value="${c.precoKg ? String(c.precoKg).replace(".", ",") : ""}"></div>
+    <div class="cfg-row"><span>Avisar quando um prato passar de (R$)</span><input id="c-alerta" inputmode="decimal" value="${String(c.alerta).replace(".", ",")}"></div>
+    <div class="cfg-sec">Comandas</div>
+    <div class="cfg-row"><span>Destacar comanda parada há mais de (min)<small>0 desliga o aviso</small></span><input id="c-parada" inputmode="numeric" value="${c.alertaParada}"></div>
+    <div class="cfg-row"><span>Tempo do botão "Desfazer"</span><select id="c-undo"><option value="5" ${sel(+c.undoSeg, 5)}>5 segundos</option><option value="9" ${sel(+c.undoSeg, 9)}>9 segundos</option><option value="15" ${sel(+c.undoSeg, 15)}>15 segundos</option></select></div>
+    <div class="cfg-row"><span>Abrir já na aba</span><select id="c-aba"><option value="comandas" ${sel(c.abaInicial, "comandas")}>Comandas abertas</option><option value="bebidas" ${sel(c.abaInicial, "bebidas")}>Bebidas</option></select></div>
+    <div class="cfg-sec">Visual</div>
+    <label class="cfg-row"><span>Mostrar cards de resumo no topo</span><input type="checkbox" id="c-stats" ${chk(c.mostrarStats)}></label>
+    <label class="cfg-row"><span>Mostrar resumo da comanda acima do teclado</span><input type="checkbox" id="c-resumo" ${chk(c.mostrarResumo)}></label>
+    <div class="cfg-row"><span>Tamanho dos números do teclado</span><select id="c-teclas"><option value="normal" ${sel(c.teclas, "normal")}>Normal</option><option value="grande" ${sel(c.teclas, "grande")}>Grande</option></select></div>
+    <div class="cfg-sec">Som</div>
+    <label class="cfg-row"><span>Som ao registrar</span><input type="checkbox" id="c-som" ${chk(c.som)}></label>
+    <div class="cfg-row"><span>Volume do som</span><select id="c-vol"><option value="baixo" ${sel(c.volume, "baixo")}>Baixo</option><option value="medio" ${sel(c.volume, "medio")}>Médio</option><option value="alto" ${sel(c.volume, "alto")}>Alto</option></select></div>
+    <div class="cfg-sec">Conta</div>
+    <button class="sair" data-a="sair">⎋ Sair da balança</button>
+  </div><div class="acoes"><button data-a="fechar">Cancelar</button><button class="ok" data-a="salvarCfg">Salvar</button></div></div>`;
+}
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("button"); if (!t) return; const d = t.dataset;
+  if (d.c) { campo = d.c; return tela(); }
+  if (d.t) { aba = d.t; listar(); $("#lista").scrollTop = 0; return; }
+  if (d.cat) { catAtual = d.cat; return listar(); }
+  if (d.b !== undefined) {
+    const x = bebidas[+d.b], n = parseInt(comanda || "0", 10); if (!x) return;
+    if (!(n > 0)) { bip(false); toast("Digite o número da comanda primeiro."); campo = "comanda"; aba = "comandas"; return tela(); }
+    enviarItem({ comanda: n, valor: x.preco, nome: x.nome, uid: novoUid() }, "🥤 " + x.nome + " na comanda " + n); return;
+  }
+  if (d.k !== undefined) return digitar(d.k);
+  if (t.id === "reg") return acao();
+  if (t.id === "limpar") { comanda = cents = peso = ""; campo = "comanda"; uidLanc = null; return tela(); }
+  if (t.id === "som") { const c = cfg(); salvar("balancaCfg", { ...c, som: !c.som }); return tela(); }
+  if (t.id === "cfgBtn") return abrirCfg();
+  if (d.nm) return abrirNome(d.nm);
+  if (d.a === "salvarNome") return salvarNome(d.id);
+  if (d.add) { comanda = d.add; cents = ""; peso = ""; campo = "valor"; return tela(); }
+  if (d.rm) { const [id, i] = d.rm.split("|"); if (confirm("Apagar este lançamento?")) patchItem(id, +i); return; }
+  if (d.a === "desfazer") { $("#undo").classList.remove("show"); if (ultimoReg && ultimoReg.id) patchItem(ultimoReg.id, ultimoReg.idx); return; }
+  if (d.a === "login") return entrar();
+  if (d.a === "sair") { localStorage.removeItem("tokenBalanca"); return mostrarLogin("Você saiu. Digite a senha para entrar de novo."); }
+  if (d.a === "fechar") $("#modal").hidden = true;
+  if (d.a === "salvarCfg") {
+    const num = (id, p) => { const v = parseFloat($(id).value.replace(",", ".")); return v >= 0 ? v : p; };
+    salvar("balancaCfg", { ...cfg(), usarPeso: $("#c-peso").checked, precoKg: num("#c-kg", 0), alerta: num("#c-alerta", 150) || 150, som: $("#c-som").checked, alertaParada: Math.round(num("#c-parada", 40)), undoSeg: +$("#c-undo").value, abaInicial: $("#c-aba").value, mostrarStats: $("#c-stats").checked, mostrarResumo: $("#c-resumo").checked, teclas: $("#c-teclas").value, volume: $("#c-vol").value });
+    $("#modal").hidden = true; campo = "comanda"; peso = ""; toast("Salvo!"); tela(); estat(); bip(true);
+  }
+});
+document.addEventListener("toggle", (e) => { if (e.target.classList && e.target.classList.contains("fech")) fechadasAberto = e.target.open; }, true);
+document.addEventListener("keydown", (e) => { // teclado físico (se tiver um no PC)
+  if (!$("#modal").hidden || /INPUT|TEXTAREA/.test((document.activeElement || {}).tagName || "")) return;
+  if (/^\d$/.test(e.key)) digitar(e.key); else if (e.key === "Backspace") digitar("<"); else if (e.key === "Enter") acao();
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.id === "lg-pin") entrar(); });
+async function avisoPadrao() {
+  try { const s = await (await fetch("/api/saude")).json(); if (s.senhasPadrao && !$("#aviso-padrao")) { const d = document.createElement("div"); d.id = "aviso-padrao"; d.style.cssText = "background:#fde0e0;color:#a50f14;font-weight:700;padding:10px 22px;margin:10px 22px 0;border-radius:12px"; d.textContent = "⚠ O sistema ainda usa senhas padrão. Peça ao administrador pra trocar."; $("header").after(d); } } catch (e) {}
+}
+avisoPadrao();
+if (!token()) mostrarLogin();
+tela(); status(); carregar(); carregarBebidas(); setInterval(carregar, 4000); setInterval(carregarBebidas, 60000); setInterval(enviarFila, 5000);
+</script>
+</body>
+</html>

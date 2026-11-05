@@ -1,0 +1,17 @@
+{
+ "name": "Totem Da Lúcia",
+ "short_name": "Totem",
+ "start_url": "/",
+ "display": "fullscreen",
+ "orientation": "landscape",
+ "background_color": "#A50F14",
+ "theme_color": "#A50F14",
+ "icons": [
+  {
+   "src": "img/icone.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  }
+ ]
+}

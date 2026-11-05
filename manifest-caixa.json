@@ -1,0 +1,17 @@
+{
+ "name": "Caixa Da Lúcia",
+ "short_name": "Caixa",
+ "start_url": "/caixa.html",
+ "display": "fullscreen",
+ "orientation": "landscape",
+ "background_color": "#A50F14",
+ "theme_color": "#A50F14",
+ "icons": [
+  {
+   "src": "img/icone.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  }
+ ]
+}

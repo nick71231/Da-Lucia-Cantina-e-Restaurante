@@ -1,0 +1,62 @@
+/* ===== base de interface compartilhada (totem, caixa e balança) ===== */
+:root { --ui-borda: #e6d5c3; }
+html { -webkit-text-size-adjust: 100%; }
+button, input, select, textarea, a { touch-action: manipulation; }
+
+/* todo botão e campo tem um visual decente e tamanho bom pro toque (especificidade 0: as classes de cada tela continuam mandando) */
+:where(button) { font: inherit; font-weight: 700; padding: 12px 18px; min-height: 46px; border: 2px solid var(--ui-borda); border-radius: 14px; background: #fff; color: var(--tinta, #2B1710); cursor: pointer; }
+:where(button:disabled) { opacity: .45; cursor: not-allowed; }
+:where(input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]):not([type=range]), select, textarea) { font: inherit; font-size: 1rem; min-height: 46px; padding: 10px 14px; border: 2px solid var(--ui-borda); border-radius: 14px; background: #fff; color: var(--tinta, #2B1710); }
+:where(input:focus, select:focus, textarea:focus) { outline: 0; border-color: var(--laranja, #FFA500); box-shadow: 0 0 0 4px rgba(255,165,0,.25); }
+:where(input[type=checkbox], input[type=radio]) { width: 22px; height: 22px; accent-color: var(--vermelho, #A50F14); }
+:where(input[type=file]) { font: inherit; padding: 8px; }
+::placeholder { color: #a8917f; }
+
+/* janelas sempre por cima de tudo (corrige a tabela passando por cima da janela) */
+.modal { z-index: 1000; } #toast, .toast { z-index: 1100; }
+.gradewrap { position: relative; z-index: 0; isolation: isolate; }
+.caixa-modal { max-height: 92vh; overflow-y: auto; }
+.caixa-modal .acoes input { flex: 1 1 150px; min-width: 0; }
+
+/* detalhes */
+.btn { white-space: nowrap; } .acoes { flex-wrap: wrap; }
+.mini { min-height: 36px; } .controles button, .it button { min-height: 0; }
+.bloco input[data-inf], .bloco input[data-imp="ip"] { width: min(360px, 100%); }
+
+/* tablet na horizontal, mais estreito */
+@media (max-width: 1100px) and (min-width: 901px) {
+  body { grid-template-columns: 1fr clamp(210px, 26%, 300px); }
+  .produto { width: clamp(220px, 28vw, 300px); }
+}
+/* tablet na vertical */
+@media (max-width: 900px) {
+  .adm-corpo { flex-direction: column; padding-left: 0; }
+  .menu-adm { width: auto; flex-direction: row; overflow-x: auto; padding: 4px 12px 8px; gap: 6px; }
+  .menu-adm small { display: none; } .menu-adm button { white-space: nowrap; padding: 12px 14px; }
+  .adm-corpo .conteudo { padding: 4px 14px 24px; }
+  .conteudo { padding-left: 16px; padding-right: 16px; } .topo { padding: 14px 16px 8px; } .logo { width: 72px; height: 72px; }
+  .barra { margin: 0 12px 12px; flex-wrap: wrap; } .progresso { padding-left: 16px; padding-right: 16px; }
+  .regras, .lay { display: block; overflow-x: auto; }
+  .card .topo { flex-wrap: wrap; } header, nav, main { padding-left: 14px; padding-right: 14px; }
+  .gradewrap { max-height: calc(100vh - 230px); } .campos { grid-template-columns: 1fr; }
+}
+
+/* ===== v14: tablet em pé, botão Início, carrinho, pedido na comanda ===== */
+.btn-inicio { position: static; margin-left: auto; flex-shrink: 0; align-self: center; }
+.topo h1 { flex: 1; min-width: 0; }
+.controles { flex-wrap: wrap; } .controles span { flex: 1 1 100%; font-weight: 700; }
+.modal-caixa.larga { width: min(460px, 92vw); text-align: left; }
+.modal-caixa .op-pag { display: block; width: 100%; margin: 10px 0; padding: 18px; text-align: left; font-size: 1.15rem; border: 2px solid var(--laranja, #FFA500); border-radius: 18px; background: #fff7ee; }
+.modal-caixa .op-pag small { display: block; font-weight: 400; color: #8a6f60; margin-top: 4px; font-size: .85rem; }
+.campo-comanda { width: 100%; font-size: 2rem; text-align: center; margin: 8px 0 14px; }
+.op-botoes { display: flex; gap: 10px; justify-content: flex-end; }
+.na-comanda { background: #e9f6ec; color: #16793a; font-weight: 700; padding: 14px 20px; border-radius: 16px; display: inline-block; font-size: 1.15rem; margin: 8px 0; }
+@media (max-width: 900px) {
+  body { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
+  body.sem-carrinho { grid-template-rows: minmax(0, 1fr); }
+  #carrinho { margin: 0 10px 10px; max-height: 36vh; border-radius: 22px; padding: 12px 14px; }
+  #carrinho h2 { font-size: 1.1rem; margin-bottom: 8px; }
+  .rodape { flex-direction: row; align-items: center; margin-top: 8px; padding-top: 8px; } .btn-finalizar { width: auto; padding: 12px 22px; }
+  .topo h1 { font-size: clamp(1.15rem, 4.4vw, 1.7rem); } .topo h1::after { margin-top: 4px; }
+  .btn-inicio { padding: 10px 14px; }
+}

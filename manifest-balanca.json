@@ -1,0 +1,17 @@
+{
+ "name": "Balança Da Lúcia",
+ "short_name": "Balança",
+ "start_url": "/balanca.html",
+ "display": "fullscreen",
+ "orientation": "landscape",
+ "background_color": "#A50F14",
+ "theme_color": "#A50F14",
+ "icons": [
+  {
+   "src": "img/icone.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  }
+ ]
+}

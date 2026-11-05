@@ -1,0 +1,15 @@
+{
+  "name": "totem-da-lucia",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Totem de pedidos, caixa e balança do restaurante Da Lúcia",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node testes.js && node testes-telas.js",
+    "restaurar": "node restaurar.js",
+    "empacotar": "node empacotar.js"
+  },
+  "devDependencies": {
+    "jsdom": "^30.1.3"
+  }
+}
