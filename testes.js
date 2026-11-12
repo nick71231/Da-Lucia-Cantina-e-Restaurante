@@ -209,6 +209,8 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   t(!!d59 && d59.status === "pago" && d59.pagamento === "cartao" && d59.itens.every((c) => c.pago), "cartão na entrega chega recebido como cartão");
   t(!!d57 && d57.itens.some((c) => c.nome === "Taxa de entrega" && c.preco === 7) && d57.endereco.bairro === "Centro" && d57.pagPrevisto === "pix", "a taxa de entrega vira item, e o endereço e a forma de pagamento vêm junto");
   t(marcados.length === 3, "o site é avisado de que os pedidos foram pro caixa");
+  const fw = (() => { try { return JSON.parse(fs.readFileSync(path.join(dirD, "whats-fila.json"), "utf8")); } catch (e) { return []; } })(), w58 = fw.find((x) => /#58/.test(x.texto));
+  t(fw.length === 3 && fw.every((x) => x.tel === "12999998888") && !!w58 && /Rita/.test(w58.texto) && /troco pra R\$ 100,00/.test(w58.texto) && /\/\?p=22222222-/.test(w58.texto), "cada pedido do site entra na fila do robô de WhatsApp com a confirmação certa");
   marcados = []; await dorme(1500); // o aviso "se perdeu": o site manda de novo
   t((await delDe()).length === 3, "pedido reenviado pelo site não duplica no caixa (nem paga de novo)");
   t((await reqEm(sd.base, "POST", "/api/pedidos", { uid: "d-tot", itens: [{ nome: "X", preco: 10, qtd: 1 }] }, "")).j.numero === 1, "pedido do totem continua começando no #1 (delivery tem numeração própria)");

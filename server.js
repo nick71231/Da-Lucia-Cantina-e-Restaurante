@@ -170,6 +170,23 @@ function pagarDoSite(p) {
   const r = acertar(p, p.itens.map((c) => ({ iid: c.iid, forma })), forma === "dinheiro" ? Math.max(p.valor, p.trocoPara || 0) : 0, "site");
   if (r.ok) { p.pagoAuto = true; p.pagamentos.forEach((g) => (g.auto = "site")); } else console.error("delivery: não consegui lançar o pagamento de D" + p.numero + ": " + r.erro);
 }
+// fila do robô de WhatsApp (pasta WHATS-BOT): o servidor só anota a mensagem; quem manda é o robô. Se o robô estiver parado, nada trava.
+const ARQ_WHATS = path.join(DIR_DADOS, "whats-fila.json");
+let filaWhats = []; try { filaWhats = JSON.parse(fs.readFileSync(ARQ_WHATS, "utf8")) || []; } catch (e) {}
+const rs = (n) => "R$ " + Number(n || 0).toFixed(2).replace(".", ",");
+function avisarWhats(p) {
+  const tel = String(p.telefone || "").replace(/\D/g, ""); if (tel.length < 10) return;
+  const e = p.endereco || {}, PG = { pix: "Pix", dinheiro: "Dinheiro", cartao_entrega: "Cartão na entrega" };
+  const texto = [
+    `Olá, ${String(p.nome || "").trim().split(" ")[0] || "tudo bem"}! 😊 Recebemos seu pedido *#${p.numero}* na Da Lúcia.`,
+    `Total: *${rs(p.valor)}* · ${PG[p.pagPrevisto] || ""}${p.pagPrevisto === "dinheiro" && p.trocoPara ? " (troco pra " + rs(p.trocoPara) + ")" : ""}`,
+    p.entrega === "retirada" ? "Retirada na loja." : `Entrega em: ${[e.rua && e.rua + ", " + (e.numero || ""), e.bairro].filter(Boolean).join(" - ")}`,
+    p.siteToken && DEL_URL ? `Acompanhe aqui: ${DEL_URL}/?p=${p.siteToken}` : "",
+    "Obrigado pela preferência!",
+  ].filter(Boolean).join("\n");
+  filaWhats.push({ id: p.id, tel, texto, quando: Date.now() }); filaWhats = filaWhats.slice(-200);
+  gravarArquivo(ARQ_WHATS, filaWhats).catch(() => {});
+}
 let sincronizando = false;
 async function sincronizarDelivery() {
   if (!delEstado.ativo || sincronizando) return;
@@ -179,7 +196,7 @@ async function sincronizarDelivery() {
     for (const s of pedidos) {
       if (!s || !TOKEN_SITE.test(String(s.token || ""))) continue;
       let p = db.pedidos.find((x) => x.uid === "site:" + s.token); // já veio antes (o aviso pro site falhou): não duplica
-      if (!p) { p = pedidoDoSite(s); pagarDoSite(p); db.pedidos.push(p); await gravar(); delEstado.importados++; }
+      if (!p) { p = pedidoDoSite(s); pagarDoSite(p); db.pedidos.push(p); await gravar(); delEstado.importados++; avisarWhats(p); }
       await delApi("importado", { token: s.token, id_local: p.id }); // só avisa o site depois de gravar aqui
     }
     // cancelado no site depois de vir pro caixa: cancela aqui também (o pago automático sai das vendas; o recebido à mão no caixa, não)
