@@ -564,7 +564,14 @@ main #aviso-gav, #app > #aviso-gav { width: calc(100% - 56px); }
 @media (max-width: 560px) { .ac-tiles { grid-template-columns: repeat(3, 1fr); } }
 .ac-resumo-it { padding: 2px 0 6px; } .ac-li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 2px; border-bottom: 1px solid #f5ede4; } .ac-li b { font-family: var(--num); white-space: nowrap; }
 .ac-dividir { width: 100%; margin-top: 10px; min-height: 46px; background: transparent; border: 1px dashed #d9c3ab; box-shadow: none; color: #7a5a48; font-weight: 600; }
-@media (min-width: 1101px) { nav { flex-wrap: nowrap; } .abas { flex: 1 1 auto; } #busca { width: 190px; } }
+/* barra de abas: NUNCA rola pro lado. Se não couber, a busca/data descem pra linha de baixo; se ainda não couber, as abas quebram linha */
+nav { flex-wrap: wrap; }
+.abas { flex: 1 1 auto; flex-wrap: wrap; overflow: visible; border-radius: 22px; }
+.abas .btn { padding: 9px 14px; }
+.filtros { margin-left: auto; min-width: 0; max-width: 100%; }
+#busca { min-width: 0; }
+@media (min-width: 1101px) { #busca { width: 190px; } }
+@media (max-width: 560px) { .filtros { flex: 1 1 100%; } #busca { flex: 1 1 auto; width: auto; } #dia { flex: 0 1 auto; width: 150px; } }
 @media (max-width: 760px) { .topo-fixo header { padding: 8px 12px; } .marca-logo { width: 44px; height: 44px; } .marca-txt b { font-size: 1.2rem; } #status { display: none; } }
 </style>
 </head>
