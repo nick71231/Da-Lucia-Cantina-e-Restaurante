@@ -163,6 +163,13 @@ function pedidoDoSite(s) { // converte o pedido do site pro formato do caixa (o 
   if (Math.abs(p.valor - (Number(s.total) || 0)) > 0.01) console.error(`delivery: D${numero} somou ${p.valor} mas o site diz ${s.total}`);
   return p;
 }
+// pedido do site chega no caixa JÁ RECEBIDO, na forma que o cliente escolheu (Pix, dinheiro com troco, cartão na entrega)
+const FORMA_DO_SITE = { pix: "pix", dinheiro: "dinheiro", cartao_entrega: "cartao" };
+function pagarDoSite(p) {
+  const forma = FORMA_DO_SITE[p.pagPrevisto]; if (!forma || !p.itens.length) return;
+  const r = acertar(p, p.itens.map((c) => ({ iid: c.iid, forma })), forma === "dinheiro" ? Math.max(p.valor, p.trocoPara || 0) : 0, "site");
+  if (r.ok) { p.pagoAuto = true; p.pagamentos.forEach((g) => (g.auto = "site")); } else console.error("delivery: não consegui lançar o pagamento de D" + p.numero + ": " + r.erro);
+}
 let sincronizando = false;
 async function sincronizarDelivery() {
   if (!delEstado.ativo || sincronizando) return;
@@ -172,17 +179,17 @@ async function sincronizarDelivery() {
     for (const s of pedidos) {
       if (!s || !TOKEN_SITE.test(String(s.token || ""))) continue;
       let p = db.pedidos.find((x) => x.uid === "site:" + s.token); // já veio antes (o aviso pro site falhou): não duplica
-      if (!p) { p = pedidoDoSite(s); db.pedidos.push(p); await gravar(); delEstado.importados++; }
+      if (!p) { p = pedidoDoSite(s); pagarDoSite(p); db.pedidos.push(p); await gravar(); delEstado.importados++; }
       await delApi("importado", { token: s.token, id_local: p.id }); // só avisa o site depois de gravar aqui
     }
-    // cancelado no site depois de vir pro caixa: cancela aqui também, se ninguém recebeu nada ainda
-    const abertos = db.pedidos.filter((x) => x.tipo === "delivery" && x.status === "aguardando" && x.siteToken).slice(-100);
+    // cancelado no site depois de vir pro caixa: cancela aqui também (o pago automático sai das vendas; o recebido à mão no caixa, não)
+    const abertos = db.pedidos.filter((x) => x.tipo === "delivery" && x.siteToken && (x.status === "aguardando" || (x.status === "pago" && x.pagoAuto && Date.now() - x.quando < 2 * 864e5))).slice(-100);
     if (abertos.length) {
       const { pedidos: sit = [] } = await delApi("situacao", { tokens: abertos.map((x) => x.siteToken) });
       let mudou = false;
       sit.filter((x) => x && x.status === "cancelado").forEach((x) => {
         const p = abertos.find((y) => y.siteToken === x.token);
-        if (p && !pagsDe(p).length && !p.itens.some((c) => c.pago)) { p.status = "cancelado"; p.motivoCancelamento = "cancelado no site"; mudou = true; }
+        if (p && (p.pagoAuto ? p.status === "pago" : !pagsDe(p).length && !p.itens.some((c) => c.pago))) { p.status = "cancelado"; p.motivoCancelamento = "cancelado no site"; mudou = true; }
       });
       if (mudou) await gravar();
     }

@@ -191,10 +191,11 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   const PS = { token: "11111111-2222-3333-4444-555555555555", numero: 57, dia: hoje, criado_em: new Date().toISOString(), nome: "Rita", telefone: "12999998888", tipo_entrega: "entrega",
     endereco: { rua: "Rua A", numero: "10", bairro: "Centro" }, forma_pagamento: "pix", troco_para: null, obs: "portão azul", status: "preparando", subtotal: 54.5, taxa_entrega: 7, total: 61.5,
     itens: [{ nome: "Marmitex", preco: 24, qtd: 2, grupos: [{ rotulo: "Carne", itens: ["Frango"] }] }, { tipo: "bebida", nome: "Suco", preco: 6.5, qtd: 1 }] };
+  const PS2 = { ...PS, token: "22222222-2222-3333-4444-555555555555", numero: 58, forma_pagamento: "dinheiro", troco_para: 100 }, PS3 = { ...PS, token: "33333333-2222-3333-4444-555555555555", numero: 59, forma_pagamento: "cartao_entrega" };
   const site = require("http").createServer((rq, rs) => { let b = ""; rq.on("data", (c) => (b += c)); rq.on("end", () => {
     const j = JSON.parse(b || "{}"), out = (o, s = 200) => { rs.writeHead(s, { "Content-Type": "application/json" }); rs.end(JSON.stringify(o)); };
     if (rq.headers["x-caixa-token"] !== "tk-teste") return out({ erro: "token inválido" }, 401);
-    if (j.acao === "novos") return out({ pedidos: marcados.includes(PS.token) ? [] : [PS] });
+    if (j.acao === "novos") return out({ pedidos: [PS, PS2, PS3].filter((x) => !marcados.includes(x.token)) });
     if (j.acao === "importado") { marcados.push(j.token); return out({ ok: true }); }
     if (j.acao === "situacao") return out({ pedidos: j.tokens.map((x) => ({ token: x, status: cancelarNoSite ? "cancelado" : "preparando" })) });
     out({ erro: "?" }, 400);
@@ -202,15 +203,17 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   const dirD = fs.mkdtempSync(path.join(os.tmpdir(), "totem-delivery-")), sd = sobe(3993, dirD, { DELIVERY_URL: "http://localhost:3994/", DELIVERY_TOKEN: "tk-teste", DELIVERY_INTERVALO_MS: "700" });
   await sd.pronto; await dorme(2600);
   const tkD = (await reqEm(sd.base, "POST", "/api/login", { role: "caixa", pin: "2222" }, "")).j.token, delDe = async () => (await reqEm(sd.base, "GET", "/api/pedidos?dia=" + hoje, undefined, tkD)).j.filter((p) => p.tipo === "delivery");
-  const lD = await delDe();
-  t(lD.length === 1 && lD[0].numero === 57 && lD[0].valor === 61.5 && lD[0].status === "aguardando", "pedido aceito no site aparece no caixa como delivery, com o total certo (61,50)");
-  t(!!lD[0] && lD[0].itens.some((c) => c.nome === "Taxa de entrega" && c.preco === 7) && lD[0].endereco.bairro === "Centro" && lD[0].pagPrevisto === "pix", "a taxa de entrega vira item, e o endereço e a forma de pagamento vêm junto");
-  t(marcados.length === 1, "o site é avisado de que o pedido foi pro caixa");
+  const lD0 = await delDe(), lD = lD0, d57 = lD.find((x) => x.numero === 57), d58 = lD.find((x) => x.numero === 58), d59 = lD.find((x) => x.numero === 59);
+  t(lD.length === 3 && !!d57 && d57.valor === 61.5 && d57.status === "pago" && d57.pagamento === "pix", "pedido do site chega no caixa já recebido, na forma escolhida pelo cliente (Pix, 61,50)");
+  t(!!d58 && d58.status === "pago" && d58.pagamento === "dinheiro" && d58.recebido === 100 && d58.troco === 38.5, "dinheiro chega recebido com o troco calculado (troco p/ 100 → 38,50)");
+  t(!!d59 && d59.status === "pago" && d59.pagamento === "cartao" && d59.itens.every((c) => c.pago), "cartão na entrega chega recebido como cartão");
+  t(!!d57 && d57.itens.some((c) => c.nome === "Taxa de entrega" && c.preco === 7) && d57.endereco.bairro === "Centro" && d57.pagPrevisto === "pix", "a taxa de entrega vira item, e o endereço e a forma de pagamento vêm junto");
+  t(marcados.length === 3, "o site é avisado de que os pedidos foram pro caixa");
   marcados = []; await dorme(1500); // o aviso "se perdeu": o site manda de novo
-  t((await delDe()).length === 1, "pedido reenviado pelo site não duplica no caixa");
+  t((await delDe()).length === 3, "pedido reenviado pelo site não duplica no caixa (nem paga de novo)");
   t((await reqEm(sd.base, "POST", "/api/pedidos", { uid: "d-tot", itens: [{ nome: "X", preco: 10, qtd: 1 }] }, "")).j.numero === 1, "pedido do totem continua começando no #1 (delivery tem numeração própria)");
   cancelarNoSite = true; await dorme(1600);
-  t((await delDe())[0].status === "cancelado", "cancelado no site (sem pagamento) é cancelado no caixa também");
+  t((await delDe()).every((x) => x.status === "cancelado"), "cancelado no site depois de chegar pago: cancela no caixa e sai das vendas");
   const sa = (await reqEm(sd.base, "GET", "/api/saude", undefined, "")).j;
   t(!!sa.delivery && sa.delivery.ligado && !sa.delivery.erro && !JSON.stringify(sa).includes("tk-teste"), "a saúde do servidor mostra a busca do delivery (sem mostrar a senha)");
   sd.srv.kill(); site.close();

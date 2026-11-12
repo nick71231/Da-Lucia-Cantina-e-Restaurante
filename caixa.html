@@ -584,7 +584,7 @@ const PAG_SITE = { pix: "Pix", dinheiro: "Dinheiro", cartao_entrega: "Cartão na
 const infoDel = (p) => { // endereço, telefone e como o cliente disse que vai pagar
   const e = p.endereco || {}, onde = p.entrega === "entrega" ? `🛵 ${esc([e.rua && e.rua + ", " + (e.numero || "s/n"), e.bairro, e.complemento].filter(Boolean).join(" - "))}` : "🏃 Retira na loja";
   const tel = p.telefone ? ` · 📞 ${esc(String(p.telefone).replace(/^(\d{2})(\d{4,5})(\d{4})$/, "($1) $2-$3"))}` : "";
-  const pg = p.pagPrevisto ? ` · vai pagar: <b>${esc(PAG_SITE[p.pagPrevisto] || p.pagPrevisto)}</b>${p.trocoPara ? " (troco p/ " + brl(p.trocoPara) + ")" : ""}` : "";
+  const pg = p.pagPrevisto ? ` · ${p.status === "pago" ? "pagamento" : "vai pagar"}: <b>${esc(PAG_SITE[p.pagPrevisto] || p.pagPrevisto)}</b>${p.trocoPara ? " (troco p/ " + brl(p.trocoPara) + ")" : ""}` : "";
   return `<p class="dl-info">${onde}${tel}${pg}${p.obsPedido ? `<br><i>Obs: ${esc(p.obsPedido)}</i>` : ""}</p>`;
 };
 const $ = (s) => document.querySelector(s);
