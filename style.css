@@ -391,3 +391,7 @@ button:active:not(:disabled) { transform: scale(.96); }
 .bloco-topo button { min-height: 46px; padding: 10px 18px; border: 2px solid #eadccb; border-radius: 14px; background: #fff; font-weight: 700; color: var(--tinta); }
 .bloco-topo button:first-of-type { border-color: var(--laranja); background: #fff8ec; color: #a35a00; }
 .chip:not(.on) { background: #f1ebe4; color: #a39384; }
+
+/* relatório do admin: aviso de onde vieram os dados */
+.rel-aviso { margin: 8px 0 0; padding: 10px 14px; border-radius: 12px; background: #FFF6E0; color: #7a5200; font-weight: 600; }
+.rel-aviso.erro { background: #FDECEC; color: #a11; }

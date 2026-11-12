@@ -387,6 +387,7 @@ document.addEventListener("click", (e) => {
   if (a === "cancelarPin") { $("#modal").hidden = true; if (VEIO_DA_BALANCA) location.href = "balanca.html"; return; }
   if (a === "aba") { abaAdmin = d.aba; modoApagar = false; filtroAdmin = ""; render(); $(".conteudo").scrollTop = 0; return; }
   if (a === "impRel") return imprimirTicket(linhasRelatorio());
+  if (a === "relAtualizar") { relCache = { dia: null, ps: null, erro: "", carregando: false }; return render(); }
   if (a === "apagarDia") { const dia = diaRel || hoje(); if (confirm("Apagar todos os pedidos de " + dataBR(dia) + "?")) { salvar("pedidos", ler("pedidos", []).filter((p) => p.dia !== dia)); render(); } return; }
   if (a === "imprimir") return imprimirEVoltar();
   if (a === "mais") return mudarQtd(+d.i, 1);
@@ -560,21 +561,37 @@ function adminAjustes() {
 
 const soma = (a, f) => a.reduce((s, x) => s + f(x), 0);
 const dataBR = (d) => d.split("-").reverse().join("/");
+// relCache: pedidos do totem buscados no servidor pro dia escolhido (o tablet só guarda os que ELE fez, e perde ao trocar de endereço)
+let relCache = { dia: null, ps: null, erro: "", carregando: false };
+async function carregarRel(dia) {
+  relCache = { dia, ps: null, erro: "", carregando: true };
+  try {
+    const r = await fetch("/api/pedidos?dia=" + dia, { headers: { Authorization: "Bearer " + (localStorage.getItem("tokenAdmin") || "") } });
+    if (r.status === 401 || r.status === 403) throw new Error("sessão do admin expirou: saia e entre de novo no admin");
+    if (!r.ok) throw new Error("o servidor respondeu " + r.status);
+    const L = await r.json();
+    relCache = { dia, ps: L.filter((p) => !p.tipo && p.status !== "cancelado"), erro: "", carregando: false };
+  } catch (e) { relCache = { dia, ps: null, erro: e.message === "Failed to fetch" ? "sem conexão com o servidor" : e.message, carregando: false }; }
+  if (tela === "admin" && abaAdmin === "relatorio" && (diaRel || hoje()) === dia) render();
+}
 function dadosDia() {
-  const dia = diaRel || hoje(), ps = ler("pedidos", []).filter((p) => p.dia === dia), tipo = {}, item = {};
+  const dia = diaRel || hoje();
+  if (relCache.dia !== dia && !relCache.carregando) carregarRel(dia);
+  const doServidor = relCache.dia === dia && Array.isArray(relCache.ps), ps = doServidor ? relCache.ps : ler("pedidos", []).filter((p) => p.dia === dia), tipo = {}, item = {};
   ps.forEach((p) => p.itens.forEach((c) => {
     const t = (tipo[c.nome] = tipo[c.nome] || { q: 0, v: 0 }); t.q += c.qtd; t.v += c.qtd * c.preco;
     ((c.grupos || []).length ? (c.grupos || []).flatMap((g) => g.itens) : [c.nome]).forEach((n) => { item[n] = (item[n] || 0) + c.qtd; });
   }));
   const un = soma(ps, (p) => soma(p.itens.filter((c) => c.tipo !== "bebida" && c.tipo !== "doce"), (c) => c.qtd)), beb = soma(ps, (p) => soma(p.itens.filter((c) => c.tipo === "bebida"), (c) => c.qtd)), val = soma(ps, (p) => p.valor);
-  return { dia, ps, tipo, un, beb, val, medio: ps.length ? val / ps.length : 0, rank: Object.entries(item).sort((a, b) => b[1] - a[1]).slice(0, 10) };
+  return { dia, ps, tipo, un, beb, val, medio: ps.length ? val / ps.length : 0, rank: Object.entries(item).sort((a, b) => b[1] - a[1]).slice(0, 10), doServidor };
 }
 
 function adminRelatorio() {
   const r = dadosDia(), max = r.rank.length ? r.rank[0][1] : 1;
-  const dias = [...new Set([...ler("pedidos", []).map((p) => p.dia), hoje()])].sort().reverse();
+  const dias = [...new Set([...Array.from({ length: 60 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - i); return d.toLocaleDateString("en-CA"); }), ...ler("pedidos", []).map((p) => p.dia)])].sort().reverse();
+  const aviso = relCache.dia === r.dia && relCache.carregando && !r.doServidor ? `<p class="rel-aviso">Buscando as vendas no servidor…</p>` : !r.doServidor && relCache.dia === r.dia && relCache.erro ? `<p class="rel-aviso erro">Não consegui buscar no servidor (${esc(relCache.erro)}). Mostrando só os pedidos guardados neste aparelho.</p>` : "";
   return `<div class="rel-topo"><label>Dia: <select id="sel-dia">${dias.map((x) => `<option value="${x}" ${x === r.dia ? "selected" : ""}>${dataBR(x)}</option>`).join("")}</select></label>
-    <button class="btn-sec" data-acao="impRel">Imprimir resumo</button><button class="btn-sec" data-acao="apagarDia">Apagar este dia</button></div>
+    <button class="btn-sec" data-acao="impRel">Imprimir resumo</button><button class="btn-sec" data-acao="relAtualizar">Atualizar</button></div>${aviso}
     <div class="cards"><div><b>${r.ps.length}</b>pedidos</div><div><b>${r.un}</b>marmitex</div><div><b>${r.beb}</b>bebidas</div><div><b>${brl(r.val)}</b>faturamento</div><div><b>${brl(r.medio)}</b>ticket médio</div></div>
     <h3>Por tipo</h3><table>${Object.entries(r.tipo).map(([n, t]) => `<tr><td>${esc(n)}</td><td>${t.q}x</td><td>${brl(t.v)}</td></tr>`).join("") || "<tr><td>Sem vendas.</td></tr>"}</table>
     <h3>Itens mais pedidos</h3>${r.rank.map(([n, q]) => `<div class="rank"><span>${esc(n)}</span><i style="width:${(q / max) * 60}%"></i><b>${q}</b></div>`).join("") || "<p>Sem vendas.</p>"}
