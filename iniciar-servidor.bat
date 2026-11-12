@@ -7,7 +7,10 @@ REM Cópia extra do backup diário (pendrive, outro disco ou pasta da nuvem). Ti
 REM set BACKUP_EXTRA=D:\Backups-Da-Lucia
 :inicio
 echo [%date% %time%] Iniciando o servidor...
+echo [%date% %time%] Iniciando o servidor... >> logs\servidor.log
 node server.js 2>> logs\erros.log
 echo [%date% %time%] O servidor parou. Reiniciando em 5 segundos... (veja logs\erros.log)
-timeout /t 5 /nobreak >nul
+echo [%date% %time%] O servidor parou (codigo %errorlevel%). Reiniciando em 5 segundos... >> logs\servidor.log
+REM espera 5 segundos (o "timeout" não funciona quando roda escondido, como serviço)
+ping -n 6 127.0.0.1 >nul
 goto inicio

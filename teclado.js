@@ -12,24 +12,24 @@
 
   const st = document.createElement("style");
   st.textContent = `
-#tec{position:fixed;left:0;right:0;bottom:0;z-index:2000;background:#eceae6;border-top:1px solid #d6d2cc;padding:6px 8px 8px;transform:translateY(105%);transition:transform .16s ease-out;user-select:none;-webkit-user-select:none;touch-action:none;font-family:Inter,Arial,sans-serif}
+#tec{position:fixed;left:0;right:0;bottom:0;z-index:2000;background:#eceae6;border-top:1px solid #d6d2cc;padding:10px 12px 14px;transform:translateY(105%);transition:transform .16s ease-out;user-select:none;-webkit-user-select:none;touch-action:none;font-family:Inter,Arial,sans-serif}
 #tec.on{transform:none}
-#tec .tk-corpo{max-width:900px;margin:0 auto}
-#tec .tk-top{display:flex;gap:6px;height:36px;margin-bottom:5px}
-#tec .tk-var{flex:1;display:flex;gap:6px;overflow:hidden}
-#tec .tk-lin{display:flex;gap:5px;margin-bottom:5px}
-#tec .tk{flex:1;min-width:0;min-height:0;height:clamp(40px,5.8vh,50px);padding:0;border:0;border-radius:7px;background:#fff;color:#222;font:500 1.15rem/1 Inter,Arial,sans-serif;box-shadow:0 1px 0 rgba(0,0,0,.18);text-transform:none}
+#tec .tk-corpo{max-width:1100px;margin:0 auto}
+#tec .tk-top{display:flex;gap:8px;height:54px;margin-bottom:8px}
+#tec .tk-var{flex:1;display:flex;gap:8px;overflow:hidden}
+#tec .tk-lin{display:flex;gap:8px;margin-bottom:8px}
+#tec .tk{flex:1;min-width:0;min-height:0;height:clamp(56px,8.4vh,80px);padding:0;border:0;border-radius:12px;background:#fff;color:#222;font:600 1.65rem/1 Inter,Arial,sans-serif;box-shadow:0 2px 0 rgba(0,0,0,.2);text-transform:none}
 #tec .tk:active{background:#d8d5d0;transform:none}
 #tec .tk-up .tk-lin .tk:not(.tk-esp):not(.tk-ok):not(.tk-esc):not(.tk-sw){text-transform:uppercase}
-#tec .tk-v{flex:0 0 56px;height:100%;background:#fff;border:1px solid #bbb}
-#tec .tk-x{flex:0 0 52px;height:100%;min-height:0;padding:0;border:0;border-radius:7px;background:#d8d5d0;color:#444;font-size:1rem}
+#tec .tk-v{flex:0 0 76px;height:100%;background:#fff;border:1px solid #bbb}
+#tec .tk-x{flex:0 0 76px;height:100%;min-height:0;padding:0;border:0;border-radius:12px;background:#d8d5d0;color:#444;font-size:1.4rem}
 #tec .tk-esc,#tec .tk-sh,#tec .tk-sw{flex:1.4;background:#d8d5d0}
 #tec .tk-esp{flex:5}
-#tec .tk-ok{flex:1.8;background:#2b7a4b;color:#fff;font-weight:700}
+#tec .tk-ok{flex:1.8;background:#2b7a4b;color:#fff;font-weight:700;font-size:1.5rem}
 #tec .tk-sh.on{background:#444;color:#fff}
-#tec .tk-num{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;max-width:420px;margin:0 auto 5px}
-#tec .tk-num .tk{height:clamp(44px,6.4vh,54px);font-size:1.35rem}
-#tec .tk-oklg{display:block;width:100%;max-width:420px;margin:0 auto;height:clamp(44px,6.2vh,52px)}
+#tec .tk-num{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:560px;margin:0 auto 8px}
+#tec .tk-num .tk{height:clamp(64px,9.4vh,92px);font-size:2.1rem}
+#tec .tk-oklg{display:block;width:100%;max-width:560px;margin:0 auto;height:clamp(60px,8.6vh,80px)}
 #tec .tk-vazio{background:transparent;box-shadow:none;pointer-events:none}
 body.tec-on{padding-bottom:var(--tec-h,0px)!important}
 body.tec-on .modal{align-items:flex-start;padding:10px 10px var(--tec-h,0px)}

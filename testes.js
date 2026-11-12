@@ -130,7 +130,7 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   t(p1.s === 200 && p1.j.status === "aguardando" && p1.j.pagamentos.length === 2 && p1.j.troco === 10, "paga A em dinheiro (troco 10) e B no pix; o resto fica em aberto");
   t((await req("GET", "/api/gaveta")).j.vendasDinheiro === vend0 + 10, "na gaveta entra só o dinheiro do item A (10), não o pix");
   t((await req("PATCH", "/api/pedidos/" + op.id, { acertar: [{ iid: iA, forma: "pix" }] })).s === 409, "item já pago não paga de novo");
-  t((await req("PATCH", "/api/pedidos/" + op.id, { status: "conta", clienteId: "x" })).s === 409, "pedido com recebimento parcial não vai pra conta");
+  t((await req("PATCH", "/api/pedidos/" + op.id, { status: "conta", clienteId: "x" })).s === 400, "pedido com recebimento parcial pode ir pra conta, mas o cliente tem que existir");
   t((await req("PATCH", "/api/pedidos/" + op.id, { status: "cancelado" })).s === 400, "cancelar pedido com recebimento exige motivo");
   const p2 = await req("PATCH", "/api/pedidos/" + op.id, { acertar: [{ iid: iC, forma: "cartao" }] });
   t(p2.j.status === "pago" && p2.j.pagamento === "misto", "pagando o último item o pedido fecha como pagamento misto");
@@ -158,7 +158,7 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   console.log("\nImpressão pública com limites");
   await req("PUT", "/api/config", { t: 5, dados: { impCfg: JSON.stringify({ ip: "192.168.255.254", porta: 9100 }) } });
   t((await req("POST", "/api/imprimir", { dados: Buffer.from("texto qualquer").toString("base64") }, "")).s === 400, "conteúdo que não é comanda (sem ESC @) é recusado");
-  t((await req("POST", "/api/imprimir", { dados: Buffer.concat([Buffer.from([0x1b, 0x40]), Buffer.alloc(30000, 65)]).toString("base64") }, "")).s === 400, "conteúdo grande demais é recusado");
+  t((await req("POST", "/api/imprimir", { dados: Buffer.concat([Buffer.from([0x1b, 0x40]), Buffer.alloc(130000, 65)]).toString("base64") }, "")).s === 400, "conteúdo grande demais é recusado (mais de 120 KB)");
   const ticket = Buffer.concat([Buffer.from([0x1b, 0x40]), Buffer.from("TESTE\n")]).toString("base64");
   const rajada = await Promise.all(Array.from({ length: 34 }, () => req("POST", "/api/imprimir", { dados: ticket }, "")));
   t(rajada.some((r) => r.s === 429), "rajada de impressões é freada (429)");
@@ -185,6 +185,35 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   t(restaurar(arq, dirN).guardadoEm !== null, "ao restaurar sobre dados existentes, a versão anterior fica guardada");
   let recusou = false; try { fs.writeFileSync(arq + ".ruim", "{\"qualquer\":1}"); restaurar(arq + ".ruim", dirN); } catch (e) { recusou = true; }
   t(recusou, "arquivo que não é backup é recusado");
+
+  console.log("\nPedidos do site de delivery (com um site de mentira)");
+  let marcados = [], cancelarNoSite = false;
+  const PS = { token: "11111111-2222-3333-4444-555555555555", numero: 57, dia: hoje, criado_em: new Date().toISOString(), nome: "Rita", telefone: "12999998888", tipo_entrega: "entrega",
+    endereco: { rua: "Rua A", numero: "10", bairro: "Centro" }, forma_pagamento: "pix", troco_para: null, obs: "portão azul", status: "preparando", subtotal: 54.5, taxa_entrega: 7, total: 61.5,
+    itens: [{ nome: "Marmitex", preco: 24, qtd: 2, grupos: [{ rotulo: "Carne", itens: ["Frango"] }] }, { tipo: "bebida", nome: "Suco", preco: 6.5, qtd: 1 }] };
+  const site = require("http").createServer((rq, rs) => { let b = ""; rq.on("data", (c) => (b += c)); rq.on("end", () => {
+    const j = JSON.parse(b || "{}"), out = (o, s = 200) => { rs.writeHead(s, { "Content-Type": "application/json" }); rs.end(JSON.stringify(o)); };
+    if (rq.headers["x-caixa-token"] !== "tk-teste") return out({ erro: "token inválido" }, 401);
+    if (j.acao === "novos") return out({ pedidos: marcados.includes(PS.token) ? [] : [PS] });
+    if (j.acao === "importado") { marcados.push(j.token); return out({ ok: true }); }
+    if (j.acao === "situacao") return out({ pedidos: j.tokens.map((x) => ({ token: x, status: cancelarNoSite ? "cancelado" : "preparando" })) });
+    out({ erro: "?" }, 400);
+  }); }).listen(3994);
+  const dirD = fs.mkdtempSync(path.join(os.tmpdir(), "totem-delivery-")), sd = sobe(3993, dirD, { DELIVERY_URL: "http://localhost:3994/", DELIVERY_TOKEN: "tk-teste", DELIVERY_INTERVALO_MS: "700" });
+  await sd.pronto; await dorme(2600);
+  const tkD = (await reqEm(sd.base, "POST", "/api/login", { role: "caixa", pin: "2222" }, "")).j.token, delDe = async () => (await reqEm(sd.base, "GET", "/api/pedidos?dia=" + hoje, undefined, tkD)).j.filter((p) => p.tipo === "delivery");
+  const lD = await delDe();
+  t(lD.length === 1 && lD[0].numero === 57 && lD[0].valor === 61.5 && lD[0].status === "aguardando", "pedido aceito no site aparece no caixa como delivery, com o total certo (61,50)");
+  t(!!lD[0] && lD[0].itens.some((c) => c.nome === "Taxa de entrega" && c.preco === 7) && lD[0].endereco.bairro === "Centro" && lD[0].pagPrevisto === "pix", "a taxa de entrega vira item, e o endereço e a forma de pagamento vêm junto");
+  t(marcados.length === 1, "o site é avisado de que o pedido foi pro caixa");
+  marcados = []; await dorme(1500); // o aviso "se perdeu": o site manda de novo
+  t((await delDe()).length === 1, "pedido reenviado pelo site não duplica no caixa");
+  t((await reqEm(sd.base, "POST", "/api/pedidos", { uid: "d-tot", itens: [{ nome: "X", preco: 10, qtd: 1 }] }, "")).j.numero === 1, "pedido do totem continua começando no #1 (delivery tem numeração própria)");
+  cancelarNoSite = true; await dorme(1600);
+  t((await delDe())[0].status === "cancelado", "cancelado no site (sem pagamento) é cancelado no caixa também");
+  const sa = (await reqEm(sd.base, "GET", "/api/saude", undefined, "")).j;
+  t(!!sa.delivery && sa.delivery.ligado && !sa.delivery.erro && !JSON.stringify(sa).includes("tk-teste"), "a saúde do servidor mostra a busca do delivery (sem mostrar a senha)");
+  sd.srv.kill(); site.close();
 
   console.log("\nProteção contra adivinhar senha");
   for (let i = 0; i < 5; i++) await req("POST", "/api/login", { role: "balanca", pin: "9999" }, "");

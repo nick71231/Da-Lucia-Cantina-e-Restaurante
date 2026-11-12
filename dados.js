@@ -103,3 +103,13 @@ const BEBIDAS = [
   { nome: "Guaraná Antártica 600ml Zero", preco: 10 },
   { nome: "Guaraná Antártica 600ml", preco: 10 },
 ];
+
+// Doces vendidos no totem (aparecem em "Doces" depois da 1ª marmitex). O admin do totem pode criar/esconder outros.
+// (nome DOCES_TOTEM pra não bater com a lista DOCES do caixa.html, que também carrega este arquivo)
+const DOCES_TOTEM = [
+  { nome: "Pingo de Leite", preco: 1.5 },
+  { nome: "Bala de Goma", preco: 3.5 },
+  { nome: "Paçocão", preco: 3 },
+  { nome: "Pé de Moça", preco: 3.5 },
+  { nome: "Twix", preco: 5 },
+];

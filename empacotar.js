@@ -1,15 +1,21 @@
 // Monta uma cópia LIMPA do programa para entregar ou compartilhar: só o código, sem dados do restaurante.
 // Uso:  node empacotar.js        (cria entrega/totem-da-lucia/)  — não apaga nem mexe em nada da sua instalação.
 const fs = require("fs"), path = require("path");
-const INCLUIR = ["index.html", "caixa.html", "balanca.html", "app.js", "dados.js", "server.js", "teclado.js", "style.css", "ui.css", "manifest.json", "manifest-caixa.json", "manifest-balanca.json",
-  "iniciar-servidor.bat", "LEIA-ME.md", "package.json", "testes.js", "testes-telas.js", "restaurar.js", "empacotar.js", ".gitignore"];
+const INCLUIR = ["index.html", "caixa.html", "balanca.html", "garcom.html", "app.js", "dados.js", "server.js", "teclado.js", "style.css", "ui.css", "manifest.json", "manifest-caixa.json", "manifest-balanca.json",
+  "iniciar-servidor.bat", "servico.bat", "servico.ps1","LEIA-ME.md", "package.json", "testes.js", "testes-telas.js", "restaurar.js", "empacotar.js", ".gitignore"];
 const saida = path.join(__dirname, "entrega", "totem-da-lucia");
 fs.rmSync(saida, { recursive: true, force: true }); // só a pasta gerada por este script
 fs.mkdirSync(saida, { recursive: true });
 let n = 0;
 INCLUIR.forEach((a) => { const o = path.join(__dirname, a); if (fs.existsSync(o)) { fs.copyFileSync(o, path.join(saida, a)); n++; } });
-const img = path.join(__dirname, "img");
-if (fs.existsSync(img)) { fs.mkdirSync(path.join(saida, "img")); fs.readdirSync(img).filter((f) => /\.(png|jpe?g|webp|svg)$/i.test(f)).forEach((f) => { fs.copyFileSync(path.join(img, f), path.join(saida, "img", f)); n++; }); }
+const copiaImagens = (orig, dest) => { // copia só imagens, mantendo as subpastas (ex.: fotos/bebidas/)
+  fs.readdirSync(orig, { withFileTypes: true }).forEach((e) => {
+    const o = path.join(orig, e.name), d = path.join(dest, e.name);
+    if (e.isDirectory()) copiaImagens(o, d);
+    else if (/\.(png|jpe?g|webp|svg)$/i.test(e.name)) { fs.mkdirSync(dest, { recursive: true }); fs.copyFileSync(o, d); n++; }
+  });
+};
+["img", "fotos"].forEach((pasta) => { const o = path.join(__dirname, pasta); if (fs.existsSync(o)) copiaImagens(o, path.join(saida, pasta)); });
 const proibidos = ["dados", "logs", "node_modules", "pedidos.json", "config.json", "sessoes.json", "seguranca.json"];
 const achou = fs.readdirSync(saida).filter((f) => proibidos.includes(f));
 if (achou.length) { console.error("ERRO: a cópia ficou com dados do restaurante: " + achou.join(", ")); process.exit(1); }

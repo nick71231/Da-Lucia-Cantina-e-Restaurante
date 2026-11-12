@@ -1,8 +1,0 @@
-# dados do restaurante e arquivos gerados: nunca vão junto com o código
-dados/
-logs/
-node_modules/
-entrega/
-pedidos.json
-config.json
-*.tmp

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Garçom - Da Lúcia</title>
+<meta name="theme-color" content="#A50F14">
+<style>
+:root { --laranja:#FFA500; --vermelho:#A50F14; --verm-esc:#7d0a0e; --lar-esc:#FF8A00; --tinta:#2B1710; --verde:#1f9a45; --verde-esc:#16793a; --creme:#FFF6E8; --bege:#F6E9D8; --bege-esc:#EAD7BF; --muted:#8a6f60;
+  --sombra:0 1px 2px rgba(80,35,10,.06),0 8px 24px rgba(120,50,10,.10); --sombra-sm:0 1px 2px rgba(80,35,10,.08),0 3px 10px rgba(120,50,10,.08); --barra:84px; }
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
+input { user-select:text; -webkit-user-select:text; font:inherit; }
+button { font:inherit; color:inherit; cursor:pointer; touch-action:manipulation; }
+html, body { height:100%; }
+body { font-family:Inter,"Segoe UI",system-ui,Arial,sans-serif; color:var(--tinta); height:100dvh; display:flex; flex-direction:column; overflow:hidden;
+  background:radial-gradient(900px 480px at 0% -8%,#fff 0,transparent 62%),radial-gradient(700px 400px at 100% 100%,#ffe9c9 0,transparent 60%),var(--creme); }
+
+/* ===== topo ===== */
+header { flex-shrink:0; background:linear-gradient(135deg,var(--vermelho),var(--verm-esc)); color:#fff; padding:10px 16px; padding-top:calc(10px + env(safe-area-inset-top,0px)); display:flex; align-items:center; gap:12px; border-bottom:3px solid var(--laranja); box-shadow:0 4px 18px rgba(125,10,14,.30); z-index:5; }
+header h1 { flex:1; font:700 1.35rem Georgia,serif; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.voltar { display:none; align-items:center; gap:8px; min-height:0; height:48px; padding:0 20px 0 14px; border:0; border-radius:16px; background:#fff; color:var(--vermelho); font-weight:700; font-size:1.05rem; box-shadow:0 4px 12px rgba(0,0,0,.18); }
+.voltar b { font-size:1.4rem; line-height:1; }
+.voltar:active { transform:scale(.96); background:#ffe9c4; }
+body.em-cmd .voltar { display:flex; }
+.pill { display:inline-flex; align-items:center; gap:7px; font-size:.8rem; font-weight:600; background:rgba(255,255,255,.16); padding:6px 12px; border-radius:999px; white-space:nowrap; }
+.pill::before { content:""; width:9px; height:9px; border-radius:50%; background:#4ee07f; box-shadow:0 0 0 3px rgba(78,224,127,.25); }
+.pill.off { background:#ffe1e1; color:var(--vermelho); font-weight:700; } .pill.off::before { background:var(--vermelho); box-shadow:none; }
+
+main { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; padding:16px 16px 28px; }
+.miolo { max-width:1100px; margin:0 auto; }
+body.em-cmd main { padding-bottom:calc(var(--barra) + 28px + env(safe-area-inset-bottom,0px)); }
+
+/* ===== tela 1: comandas ===== */
+.busca-w { position:relative; margin-bottom:6px; }
+.busca { width:100%; height:60px; padding:0 20px; border:2px solid var(--bege-esc); border-radius:20px; background:#fff; font-size:1.25rem; font-weight:700; box-shadow:var(--sombra-sm); }
+.busca:focus { outline:none; border-color:var(--laranja); box-shadow:0 0 0 5px rgba(255,165,0,.2); }
+.cont { color:var(--muted); font-weight:600; font-size:.9rem; margin:10px 4px 12px; }
+.grade-c { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:14px; }
+.cmd { position:relative; min-height:128px; padding:14px 14px 12px 18px; border:1px solid rgba(234,215,191,.7); border-radius:22px; background:#fff; box-shadow:var(--sombra); text-align:left; display:flex; flex-direction:column; justify-content:space-between; gap:6px; overflow:hidden; transition:transform .1s, background .12s; }
+.cmd::before { content:""; position:absolute; left:0; top:0; bottom:0; width:8px; background:linear-gradient(var(--laranja),var(--lar-esc)); }
+.cmd.parada::before { background:var(--vermelho); }
+.cmd:active { transform:scale(.96); background:#FFE3A8; }
+.cmd .n { font:700 2.6rem/1 Georgia,serif; color:var(--vermelho); font-variant-numeric:tabular-nums; }
+.cmd .nm { font-weight:700; font-size:1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-height:1.25em; }
+.cmd .rd { display:flex; justify-content:space-between; align-items:baseline; gap:8px; color:var(--muted); font-size:.85rem; font-weight:600; font-variant-numeric:tabular-nums; }
+.cmd .rd b { color:var(--tinta); font-size:1.05rem; }
+.cmd.parada .rd span { color:var(--vermelho); font-weight:700; }
+.vazio { color:var(--muted); padding:40px 10px; text-align:center; line-height:1.6; font-size:1.05rem; }
+
+/* ===== tela 2: bebidas ===== */
+.hero { display:flex; align-items:center; gap:16px; padding:14px 18px; margin-bottom:14px; background:#fff; border:1px solid rgba(234,215,191,.7); border-radius:26px; box-shadow:var(--sombra); }
+.hnum { flex-shrink:0; min-width:92px; padding:8px 14px; text-align:center; border-radius:20px; background:linear-gradient(135deg,var(--vermelho),var(--verm-esc)); color:#fff; box-shadow:0 6px 16px rgba(165,15,20,.30); }
+.hnum small { display:block; font-size:.7rem; font-weight:600; letter-spacing:.3px; opacity:.85; }
+.hnum b { display:block; font:700 2.4rem/1.05 Georgia,serif; font-variant-numeric:tabular-nums; }
+.hinfo { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.hinfo strong { font:700 1.4rem Georgia,serif; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hinfo span { color:var(--muted); font-weight:600; font-size:.95rem; }
+.htotal { text-align:right; flex-shrink:0; } .htotal small { display:block; color:var(--muted); font-weight:600; font-size:.75rem; } .htotal b { font:700 1.6rem Georgia,serif; font-variant-numeric:tabular-nums; }
+.pillsb { position:sticky; top:-16px; z-index:3; display:flex; gap:10px; overflow-x:auto; margin:0 -16px 14px; padding:10px 16px; background:linear-gradient(var(--creme) 75%,rgba(255,246,232,0)); scrollbar-width:none; }
+.pillsb::-webkit-scrollbar { display:none; }
+.pillb { flex-shrink:0; min-height:0; padding:12px 20px; border:2px solid var(--bege-esc); border-radius:999px; background:#fff; font-weight:700; font-size:1rem; color:#6b4a38; box-shadow:var(--sombra-sm); }
+.pillb.on { background:var(--vermelho); color:#fff; border-color:var(--vermelho); box-shadow:0 4px 12px rgba(165,15,20,.28); }
+.gradeb { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px; }
+.beb { position:relative; --cc:var(--vermelho); min-height:150px; padding:14px 10px 12px; border:2px solid transparent; border-top:6px solid var(--cc); border-radius:22px; background:#fff; box-shadow:var(--sombra-sm); display:flex; flex-direction:column; gap:4px; align-items:center; justify-content:center; text-align:center; transition:transform .08s, background .12s, border-color .15s; }
+.beb .ico { font-size:1.5rem; line-height:1; height:72px; display:flex; align-items:center; justify-content:center; }
+.beb .foto { height:72px; width:100%; object-fit:contain; pointer-events:none; -webkit-user-drag:none; }
+.beb b { font-size:1.05rem; line-height:1.2; }
+.beb small { color:var(--vermelho); font-weight:700; font-size:1.1rem; font-variant-numeric:tabular-nums; }
+.beb:active { background:#FFE3A8; transform:scale(.95); }
+.beb.tem { border-color:var(--verde); border-top-color:var(--verde); background:#f6fcf8; }
+.beb.ok { animation:ok .5s; }
+@keyframes ok { 0% { background:#b9ebc8; transform:scale(.95); } 100% { background:#f6fcf8; transform:none; } }
+.beb em { position:absolute; top:-10px; right:-8px; min-width:34px; height:34px; padding:0 8px; background:var(--verde); color:#fff; border-radius:999px; display:flex; align-items:center; justify-content:center; font-style:normal; font-weight:700; font-size:1.05rem; box-shadow:0 4px 10px rgba(31,154,69,.45); border:3px solid #fff; }
+
+/* ===== barra de baixo (sair da comanda) ===== */
+#barra { position:fixed; left:0; right:0; bottom:0; z-index:20; display:none; align-items:center; gap:14px; padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px)); background:rgba(255,255,255,.96); backdrop-filter:blur(10px); border-top:1px solid var(--bege-esc); box-shadow:0 -8px 24px rgba(120,50,10,.12); }
+body.em-cmd #barra { display:flex; }
+#barra .bt { flex:1; min-width:0; line-height:1.2; } #barra .bt small { display:block; color:var(--muted); font-weight:600; font-size:.8rem; } #barra .bt b { font:700 1.35rem Georgia,serif; font-variant-numeric:tabular-nums; }
+#barra .bt i { font-style:normal; color:var(--verde-esc); font-weight:700; font-size:.9rem; margin-left:6px; }
+.pronto { flex-shrink:0; min-height:0; height:60px; padding:0 34px; border:0; border-radius:20px; background:linear-gradient(135deg,var(--verde),var(--verde-esc)); color:#fff; font-weight:700; font-size:1.2rem; box-shadow:0 10px 22px rgba(26,127,55,.32), inset 0 1px 0 rgba(255,255,255,.25); }
+.pronto:active { transform:scale(.97); }
+
+/* ===== avisos ===== */
+#undo { position:fixed; left:12px; right:12px; bottom:calc(14px + env(safe-area-inset-bottom,0px)); transform:translateY(30px); opacity:0; visibility:hidden; pointer-events:none; transition:transform .22s, opacity .22s, visibility 0s .22s; z-index:50; background:rgba(43,23,16,.97); color:#fff; padding:10px 10px 10px 20px; border-radius:40px; display:flex; align-items:center; justify-content:space-between; gap:12px; font-weight:700; box-shadow:0 12px 30px rgba(0,0,0,.3); max-width:560px; margin:0 auto; }
+body.em-cmd #undo { bottom:calc(var(--barra) + 12px + env(safe-area-inset-bottom,0px)); }
+#undo.show { transform:translateY(0); opacity:1; visibility:visible; pointer-events:auto; transition:transform .22s, opacity .22s; } #undo span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#undo button { flex-shrink:0; min-height:0; border:0; border-radius:30px; padding:13px 22px; background:var(--laranja); color:#fff; font-weight:700; }
+#toast { position:fixed; top:90px; left:50%; transform:translateX(-50%); background:rgba(43,23,16,.96); color:#fff; padding:12px 22px; border-radius:30px; font-weight:700; opacity:0; transition:opacity .25s; pointer-events:none; z-index:60; max-width:92vw; text-align:center; }
+#toast.show { opacity:1; }
+.modal { position:fixed; inset:0; z-index:70; background:rgba(43,23,16,.55); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; } .modal[hidden] { display:none; }
+.caixa-modal { background:#fff; padding:24px; border-radius:26px; width:min(420px,92vw); border-top:6px solid var(--vermelho); box-shadow:0 24px 60px rgba(0,0,0,.3); }
+.caixa-modal h2 { font:700 1.4rem Georgia,serif; } .caixa-modal p { margin:10px 0; line-height:1.4; }
+.caixa-modal input { width:100%; height:52px; padding:0 14px; border:2px solid var(--bege-esc); border-radius:14px; font-size:1.2rem; }
+.acoes { display:flex; justify-content:flex-end; margin-top:16px; }
+.acoes button { padding:14px 26px; border:0; border-radius:14px; background:linear-gradient(135deg,var(--verde),var(--verde-esc)); color:#fff; font-weight:700; font-size:1.05rem; }
+@media (max-width:520px) { .hero { gap:12px; padding:12px 14px; } .hnum { min-width:76px; } .hnum b { font-size:2rem; } .hinfo strong { font-size:1.15rem; } .htotal b { font-size:1.3rem; } .pronto { padding:0 24px; } }
+
+.na-cmd { margin-bottom:12px; padding:10px 14px 12px; background:#fff; border:1px solid rgba(234,215,191,.7); border-radius:18px; box-shadow:var(--sombra-sm); }
+.na-cmd h4 { font-size:.72rem; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--muted); margin-bottom:7px; }
+.chips { display:flex; flex-wrap:wrap; gap:6px; }
+.chip { background:var(--bege); border-radius:999px; padding:5px 12px; font-weight:600; font-size:.88rem; line-height:1.2; }
+.chip b { color:var(--vermelho); margin-right:3px; font-variant-numeric:tabular-nums; }
+.chips .nada { color:var(--muted); font-size:.88rem; }
+.chip .rm { min-height:0; min-width:0; width:28px; height:28px; padding:0; margin:-4px -8px -4px 8px; border:0; border-radius:50%; background:rgba(165,15,20,.12); color:var(--vermelho); font-weight:700; font-size:1.1rem; line-height:1; vertical-align:middle; }
+.chip .rm:active { background:var(--vermelho); color:#fff; }
+/* ===== celular: tudo mais compacto ===== */
+@media (max-width:600px) {
+  :root { --barra:66px; }
+  header { padding:8px 12px; padding-top:calc(8px + env(safe-area-inset-top,0px)); gap:8px; }
+  header h1 { font-size:1.1rem; }
+  .voltar { height:40px; padding:0 14px 0 10px; font-size:.95rem; border-radius:13px; }
+  .voltar b { font-size:1.2rem; }
+  .pill { font-size:.7rem; padding:4px 9px; }
+  main { padding:10px 10px 20px; }
+  .busca { height:48px; font-size:1.05rem; border-radius:16px; padding:0 16px; }
+  .cont { margin:8px 2px 10px; font-size:.8rem; }
+  .grade-c { grid-template-columns:repeat(2,1fr); gap:10px; }
+  .cmd { min-height:92px; padding:10px 10px 9px 14px; border-radius:16px; }
+  .cmd::before { width:6px; }
+  .cmd .n { font-size:2rem; } .cmd .nm { font-size:.85rem; } .cmd .rd { font-size:.74rem; } .cmd .rd b { font-size:.9rem; }
+  .hero { padding:8px 12px; gap:10px; margin-bottom:8px; border-radius:18px; }
+  .hnum { min-width:60px; padding:5px 10px; border-radius:14px; } .hnum small { font-size:.56rem; } .hnum b { font-size:1.6rem; }
+  .hinfo strong { font-size:1rem; } .hinfo span { font-size:.76rem; }
+  .htotal small { font-size:.65rem; } .htotal b { font-size:1.1rem; }
+  .na-cmd { padding:8px 12px 10px; margin-bottom:8px; border-radius:14px; }
+  .na-cmd h4 { font-size:.65rem; margin-bottom:5px; }
+  .chip { padding:4px 10px; font-size:.78rem; } .chips .nada { font-size:.8rem; }
+  .pillsb { top:-10px; gap:6px; margin:0 -10px 6px; padding:6px 10px; }
+  .pillb { padding:8px 14px; font-size:.82rem; border-width:1.5px; }
+  .gradeb { grid-template-columns:repeat(3,1fr); gap:8px; }
+  .beb { min-height:100px; padding:8px 4px; border-radius:14px; border-top-width:4px; gap:2px; }
+  .beb .ico, .beb .foto { height:48px; } .beb .ico { font-size:1.2rem; }
+  .beb b { font-size:.74rem; } .beb small { font-size:.84rem; }
+  .beb em { min-width:24px; height:24px; padding:0 6px; font-size:.8rem; top:-7px; right:-5px; border-width:2px; }
+  #barra { gap:10px; padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px)); }
+  #barra .bt small { font-size:.7rem; } #barra .bt b { font-size:1.1rem; } #barra .bt i { font-size:.78rem; }
+  .pronto { height:46px; padding:0 22px; font-size:1rem; border-radius:15px; }
+  #undo { padding:6px 6px 6px 14px; font-size:.82rem; } #undo button { padding:10px 16px; }
+}
+/* ===== trava de tela (contra toque no bolso) ===== */
+#trava { position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center; padding:24px; background:#2b1710; color:#fff; touch-action:none; }
+#trava[hidden] { display:none; }
+.tv-box { width:min(420px,100%); display:flex; flex-direction:column; align-items:center; gap:10px; text-align:center; }
+.tv-ic { font-size:3.4rem; line-height:1; } .tv-box > b { font:700 1.6rem Georgia,serif; } .tv-box > span { color:#e8d6c6; font-size:1rem; line-height:1.4; }
+.tv-cmd { margin-top:6px; padding:8px 16px; border-radius:999px; background:rgba(255,255,255,.1); font-weight:700; }
+/* destrava ARRASTANDO a bolinha até o fim (o tecido do bolso não faz esse movimento) */
+#tv-trilho { position:relative; width:100%; height:76px; margin-top:26px; border:2px solid rgba(255,255,255,.35); border-radius:999px; background:rgba(255,255,255,.08); touch-action:none; display:flex; align-items:center; justify-content:center; color:#e8d6c6; font-weight:700; font-size:1.05rem; }
+#tv-trilho span { padding-left:56px; pointer-events:none; }
+#tv-bola { position:absolute; left:6px; top:6px; width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg,var(--laranja),var(--lar-esc)); display:grid; place-items:center; font-size:1.6rem; box-shadow:0 4px 12px rgba(0,0,0,.35); touch-action:none; transition:transform .25s; }
+#tv-bola.arrastando { transition:none; }
+/* celular simples: sem desfoque e sombras pesadas (deixa tudo mais rápido) */
+#barra, .modal { backdrop-filter:none !important; } #barra { background:#fff; }
+.beb, .cmd { box-shadow:0 1px 3px rgba(80,35,10,.10); }
+.beb { transition:none; } .beb:active { transform:none; }
+</style>
+</head>
+<body>
+<header><button class="voltar" id="voltar"><b>←</b> Voltar</button><h1 id="titulo">Garçom - Da Lúcia</h1><span id="status" class="pill">...</span></header>
+<main id="tela"></main>
+<footer id="barra"></footer>
+<div id="undo"></div><div id="toast"></div><div id="modal" class="modal" hidden></div>
+<div id="trava" hidden><div class="tv-box"><div class="tv-ic">🔒</div><b>Tela travada</b><span>Pra não lançar bebida sem querer com o celular no bolso.</span><span class="tv-cmd" id="tv-cmd" hidden></span><div id="tv-trilho"><div id="tv-bola" aria-hidden="true">🔓</div><span>Arraste pra destravar →</span></div></div></div>
+<script src="dados.js"></script>
+<script>
+const $ = (s) => document.querySelector(s);
+const numTxt = (n) => (n > 10000 ? "M" + (n - 10000) : String(n)); // marmitex do totem que virou comanda
+const brl = (n) => "R$" + Number(n).toFixed(2).replace(".", ",");
+const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const hoje = () => new Date().toLocaleDateString("en-CA");
+const ler = (k, p) => { try { const v = localStorage.getItem(k); return v === null ? p : JSON.parse(v); } catch (e) { return p; } };
+const salvar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const novoUid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+const JSONH = { "Content-Type": "application/json" };
+// foto da bebida: mesma regra do totem (arquivo em fotos/bebidas/ pelo nome; sem foto = emoji)
+function fotoBebida(nome) {
+  const n = String(nome).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const zero = /zero|sem acucar|diet|light/.test(n), grande = /600|pet|garrafa/.test(n), lata = /lata|350/.test(n);
+  if (/h2o/.test(n)) return "h2oh-limao";
+  if (/guaran/.test(n)) return grande ? (zero ? "guarana-600-zero" : "guarana-600") : (zero ? "guarana-zero-lata" : "guarana-lata");
+  if (/sprite/.test(n)) return zero ? "sprite-zero-lata" : "sprite-lata";
+  if (/pepsi/.test(n)) return zero || /black/.test(n) ? "pepsi-black-lata" : "pepsi-lata";
+  if (/fanta/.test(n)) return /uva/.test(n) ? "fanta-uva" : /maracuj/.test(n) ? "fanta-maracuja" : /laranja/.test(n) ? "fanta-laranja" : null;
+  if (/del ?valle|dell ?valle/.test(n)) return /uva/.test(n) ? "del-valle-uva" : /pessego/.test(n) ? "del-valle-pessego" : /maracuj/.test(n) ? "del-valle-maracuja" : /manga/.test(n) ? "del-valle-manga" : /goiaba/.test(n) ? "del-valle-goiaba" : null;
+  if (/schwepp|scheppez/.test(n) && /citrus/.test(n)) return "schweppes-citrus";
+  if (/\bcha\b|ice ?tea|leao/.test(n)) return /pessego/.test(n) ? "cha-pessego" : /limao/.test(n) ? "cha-limao" : null;
+  if (/suco/.test(n)) return /viag|levar/.test(n) ? "suco-natural-g-viagem" : /\bp\b|pequeno|300/.test(n) ? "suco-natural-p" : "suco-natural-g";
+  if (/tonica|schweppes/.test(n)) return "agua-tonica";
+  if (/agua/.test(n)) return /com ?gas|gasosa/.test(n) ? "agua-com-gas" : "agua-sem-gas";
+  if (/coca/.test(n) && /\bks\b|retorn|vidro|290/.test(n)) return zero ? "coca-ks-zero" : "coca-ks";
+  if (/coca/.test(n)) return zero ? (grande ? "coca-600-zero" : "coca-lata-zero") : (lata ? "coca-lata" : "coca-600");
+  return null;
+}
+const ICO = { Sucos: "🧃", "Águas": "💧", Cervejas: "🍺", Refrigerantes: "🥤" }, COR = { Sucos: "#FF8A00", "Águas": "#3d9bc9", Cervejas: "#d9a400", Refrigerantes: "#A50F14" };
+
+let enviando = 0, tCarregar = null; // envios em andamento (enquanto tiver, não zera a contagem otimista)
+const carregarLogo = () => { clearTimeout(tCarregar); tCarregar = setTimeout(carregar, 350); }; // vários toques seguidos = 1 consulta só
+let pedidos = [], bebidas = BEBIDAS.slice(), atual = null, filtro = "", catAtual = "Todas", otim = {}, sessao = 0, ultimo = null, tUndo, tToast, offline = false;
+
+/* ---- login (mesma senha/token da balança) ---- */
+const token = () => localStorage.getItem("tokenBalanca") || "";
+const aut = async (url, opt = {}) => {
+  const r = await fetch(url, { ...opt, headers: { ...(opt.headers || {}), Authorization: "Bearer " + token() } });
+  if (r.status === 401) mostrarLogin();
+  return r;
+};
+function mostrarLogin(msg) {
+  $("#modal").hidden = false;
+  $("#modal").innerHTML = `<div class="caixa-modal"><h2>Entrar</h2><p>${msg || "Digite a senha."}</p><input id="lg-pin" type="password" inputmode="numeric" maxlength="8" placeholder="Senha"><div class="acoes"><button data-a="login">Entrar</button></div></div>`;
+  Promise.resolve().then(() => { const i = $("#lg-pin"); if (i) i.focus(); });
+}
+async function entrar() {
+  const pin = ($("#lg-pin").value || "").trim(); if (!pin) return;
+  try {
+    const r = await fetch("/api/login", { method: "POST", headers: JSONH, body: JSON.stringify({ role: "balanca", pin }) }), j = await r.json().catch(() => ({}));
+    if (r.ok) { localStorage.setItem("tokenBalanca", j.token); $("#modal").hidden = true; carregar(); carregarBebidas(); enviarFila(); return; }
+    mostrarLogin(r.status === 429 ? "Muitas tentativas. Aguarde alguns minutos." : "Senha incorreta, tente de novo.");
+  } catch (e) { mostrarLogin("Sem conexão com o servidor."); }
+}
+
+/* ---- dados ---- */
+const abertas = () => pedidos.filter((p) => p.status === "aguardando").sort((a, b) => a.numero - b.numero);
+const doNumero = (n) => abertas().find((p) => p.numero === n);
+const catB = (b) => (/água/i.test(b.nome) ? "Águas" : /suco|del valle/i.test(b.nome) ? "Sucos" : /long neck|cerveja/i.test(b.nome) ? "Cervejas" : "Refrigerantes");
+const ultimaAtiv = (p) => Math.max(p.quando, ...p.itens.map((c) => c.hora || 0));
+const minutos = (p) => Math.max(0, Math.round((Date.now() - ultimaAtiv(p)) / 60000));
+const tempo = (m) => (m < 60 ? m + " min" : Math.floor(m / 60) + "h" + String(m % 60).padStart(2, "0"));
+
+async function carregar() {
+  try { const r = await aut("/api/pedidos?dia=" + hoje()); if (!r.ok) throw 0; const novos = (await r.json()).filter((p) => p.tipo === "balanca"); if (enviando > 0) return; pedidos = novos; offline = false; otim = {}; }
+  catch (e) { offline = true; }
+  status(); desenhar(false);
+}
+async function carregarBebidas() {
+  try {
+    const d = ((await (await aut("/api/config")).json()).dados) || {}, j = (k, p) => { try { return d[k] ? JSON.parse(d[k]) : p; } catch (e) { return p; } };
+    const rem = j("removidos", []), off = j("indisponiveis", []), extras = j("bebidasExtras", []);
+    bebidas = [...BEBIDAS, ...extras].filter((x, i, a) => a.findIndex((y) => y.nome === x.nome) === i && !rem.includes("bebida:" + x.nome) && !off.includes("bebida:" + x.nome));
+  } catch (e) {}
+}
+function status() { const p = ler("filaGarcom", []).length, el = $("#status"); el.className = "pill" + (offline ? " off" : ""); el.textContent = (offline ? "SEM CONEXÃO" : "online") + (p ? " - " + p + " pendente" + (p > 1 ? "s" : "") : ""); }
+const toast = (m) => { const t = $("#toast"); t.textContent = m; t.classList.add("show"); clearTimeout(tToast); tToast = setTimeout(() => t.classList.remove("show"), 2400); };
+
+/* ---- telas ---- */
+const imgBeb = (nome, emoji) => { const f = fotoBebida(nome); return f ? `<img class="foto" src="fotos/bebidas/${f}.jpg" alt="" loading="lazy" draggable="false" onerror="this.outerHTML=\x27<span class=ico>${emoji}</span>\x27">` : `<span class="ico">${emoji}</span>`; };
+const qtdBeb = (p) => p.itens.filter((c) => c.tipo === "bebida").reduce((s, c) => s + (c.qtd || 1), 0) + Object.values(otim).reduce((s, q) => s + q, 0);
+const somaOtim = () => Object.entries(otim).reduce((s, [nome, q]) => { const b = bebidas.find((x) => x.nome === nome); return s + (b ? b.preco * q : 0); }, 0);
+
+function desenhar(reset) {
+  document.body.classList.toggle("em-cmd", atual !== null);
+  const el = $("#tela"), scroll = el.scrollTop;
+  if (atual === null) {
+    $("#titulo").textContent = "Comandas abertas";
+    if (!$("#busca")) el.innerHTML = `<div class="miolo"><div class="busca-w"><input id="busca" class="busca" inputmode="numeric" maxlength="4" placeholder="🔍  Digite o nº da comanda" value="${esc(filtro)}"></div><div id="cmds"></div></div>`;
+    htmlComandas();
+  } else {
+    const p = doNumero(atual);
+    $("#titulo").textContent = "Adicionar bebida";
+    const h = `<div class="miolo">${htmlBebidas(p)}</div>`; if (reset || h !== ultimoHtml) { ultimoHtml = h; el.innerHTML = h; } // só redesenha se mudou (fotos não recarregam)
+    desenharBarra(p);
+  }
+  el.scrollTop = reset ? 0 : scroll;
+}
+let ultimoHtml = "", ultimaBarra = "";
+function htmlComandas() {
+  const todas = abertas(), f = todas.filter((p) => !filtro || (String(p.numero).startsWith(filtro) || (p.numero > 10000 && String(p.numero - 10000).startsWith(filtro))));
+  const h = `<div class="cont">${filtro ? f.length + " de " : ""}${todas.length} comanda${todas.length === 1 ? "" : "s"} aberta${todas.length === 1 ? "" : "s"}</div>` + (f.length
+    ? `<div class="grade-c">${f.map((p) => { const m = minutos(p); return `<button class="cmd ${m >= 40 ? "parada" : ""}" data-cmd="${p.numero}"><span class="n">${numTxt(p.numero)}</span><span class="nm">${p.nome ? esc(p.nome) : "&nbsp;"}</span><span class="rd"><span>${tempo(m)}</span><b>${brl(p.valor)}</b></span></button>`; }).join("")}</div>`
+    : `<p class="vazio">${filtro ? "Nenhuma comanda aberta com esse número." : "Nenhuma comanda aberta no momento."}</p>`);
+  const c = $("#cmds"); if (c && c.innerHTML !== h && c._h !== h) { c._h = h; c.innerHTML = h; }
+}
+function naComanda(p) { // bebidas que já estão na comanda; o "−" tira a bebida (pede confirmação)
+  const m = new Map();
+  p.itens.forEach((c, i) => { if (c.tipo !== "bebida") return; const e = m.get(c.nome) || { q: 0, n: 0 }; e.q += c.qtd || 1; if (!c.pago) e.n++; m.set(c.nome, e); });
+  Object.entries(otim).forEach(([n, q]) => { const e = m.get(n) || { q: 0, n: 0 }; e.q += q; m.set(n, e); });
+  return `<div class="na-cmd"><h4>Na comanda</h4><div class="chips">${m.size ? [...m].map(([n, e]) => `<span class="chip"><b>${e.q}×</b>${esc(n)}${e.n ? `<button class="rm" data-rm="${encodeURIComponent(n)}" aria-label="Tirar ${esc(n)}">−</button>` : ""}</span>`).join("") : `<span class="nada">Nenhuma bebida ainda</span>`}</div></div>`;
+}
+function htmlBebidas(p) {
+  if (!p) return `<p class="vazio">Essa comanda não está mais aberta.<br>Toque em <b>Voltar</b>.</p>`;
+  const cats = ["Todas", ...new Set(bebidas.map(catB))], nb = qtdBeb(p), np = p.itens.filter((c) => c.tipo !== "bebida").length;
+  const qtd = (nome) => p.itens.filter((c) => c.tipo === "bebida" && c.nome === nome).reduce((s, c) => s + (c.qtd || 1), 0) + (otim[nome] || 0);
+  return `<div class="hero"><div class="hnum"><small>${p.numero > 10000 ? "MARMITEX" : "COMANDA"}</small><b>${numTxt(p.numero)}</b></div>
+      <div class="hinfo"><strong>${p.nome ? esc(p.nome) : "Sem nome"}</strong><span>${np ? np + " prato" + (np === 1 ? "" : "s") + " · " : ""}${nb} bebida${nb === 1 ? "" : "s"} · há ${tempo(Math.max(0, Math.round((Date.now() - p.quando) / 60000)))}</span></div>
+      <div class="htotal"><small>Total</small><b>${brl(p.valor + somaOtim())}</b></div></div>
+    ${naComanda(p)}
+    <div class="pillsb">${cats.map((c) => `<button class="pillb ${c === catAtual ? "on" : ""}" data-cat="${c}">${c === "Todas" ? "" : ICO[c] + " "}${c}</button>`).join("")}</div>
+    <div class="gradeb">${bebidas.map((x, i) => ({ x, i })).filter((o) => catAtual === "Todas" || catB(o.x) === catAtual).map(({ x, i }) => { const q = qtd(x.nome), c = catB(x); return `<button class="beb ${q ? "tem" : ""}" style="--cc:${COR[c]}" data-b="${i}">${q ? `<em>${q}</em>` : ""}${imgBeb(x.nome, ICO[c])}<b>${esc(x.nome)}</b><small>${brl(x.preco)}</small></button>`; }).join("")}</div>`;
+}
+function desenharBarra(p) {
+  const h = `<div class="bt"><small>Comanda ${numTxt(atual)}${p && p.nome ? " - " + esc(p.nome) : ""}</small><b>${p ? brl(p.valor + somaOtim()) : "—"}</b>${sessao > 0 ? `<i>+${sessao} agora</i>` : ""}</div><button class="pronto" id="pronto">✓ Pronto</button>`;
+  if (h !== ultimaBarra) { ultimaBarra = h; $("#barra").innerHTML = h; }
+}
+
+/* ---- lançar bebida: 1 toque ---- */
+async function lancar(i) {
+  const x = bebidas[i], p = doNumero(atual); if (!x || !p) return;
+  const it = { comanda: p.numero, valor: x.preco, nome: x.nome, uid: novoUid() };
+  if (navigator.vibrate) navigator.vibrate(25);
+  otim[x.nome] = (otim[x.nome] || 0) + 1; sessao++; desenhar(false); enviando++;
+  try {
+    const r = await aut("/api/balanca", { method: "POST", headers: JSONH, body: JSON.stringify(it) }), j = await r.json().catch(() => ({}));
+    if (r.status === 401) throw 0;
+    if (r.status >= 400 && r.status < 500) { otim[x.nome]--; sessao--; desenhar(false); alert(j.erro || "O servidor recusou o lançamento."); return; }
+    if (!r.ok) throw 0;
+    ultimo = { id: j.id, idx: j.itens.length - 1, nome: x.nome, n: p.numero }; mostrarUndo("🥤 " + x.nome + " → comanda " + numTxt(p.numero));
+  } catch (e) { salvar("filaGarcom", [...ler("filaGarcom", []), it]); ultimo = null; toast("Sem conexão: guardado, será enviado sozinho."); }
+  finally { enviando = Math.max(0, enviando - 1); }
+  status(); carregarLogo();
+}
+function mostrarUndo(txt) {
+  const u = $("#undo"); u.innerHTML = `<span>✓ ${txt}</span>` + (ultimo ? `<button data-a="desfazer">Desfazer</button>` : ""); u.classList.add("show");
+  clearTimeout(tUndo); tUndo = setTimeout(() => u.classList.remove("show"), 7000);
+}
+async function desfazer() {
+  $("#undo").classList.remove("show"); if (!ultimo || !ultimo.id) return; const u = ultimo; ultimo = null;
+  try { const r = await aut("/api/pedidos/" + u.id, { method: "PATCH", headers: JSONH, body: JSON.stringify({ removerItem: u.idx }) }); if (!r.ok) throw new Error(((await r.json().catch(() => ({}))).erro) || "erro"); sessao = Math.max(0, sessao - 1); toast("Desfeito: " + u.nome); }
+  catch (e) { toast("Não deu pra desfazer: " + e.message); }
+  carregar();
+}
+let tirando = false;
+async function tirar(nome) { // tira a última bebida lançada com esse nome
+  const p = doNumero(atual); if (!p || tirando) return;
+  let i = -1; p.itens.forEach((c, k) => { if (c.tipo === "bebida" && c.nome === nome && !c.pago) i = k; }); // só item ainda não pago
+  if (i < 0) return toast("Ainda sincronizando, tente de novo.");
+  const q = p.itens[i].qtd || 1;
+  const unico = p.itens.length === 1;
+  if (!confirm("Tirar " + (q > 1 ? q + "× " : "") + nome + " da comanda " + p.numero + "?" + (unico ? "\n\nÉ o único item: a comanda será cancelada." : ""))) return;
+  tirando = true;
+  try {
+    const r = await aut("/api/pedidos/" + p.id, { method: "PATCH", headers: JSONH, body: JSON.stringify({ removerItem: i }) });
+    if (!r.ok) throw new Error(((await r.json().catch(() => ({}))).erro) || "erro");
+    ultimo = null; $("#undo").classList.remove("show"); sessao = Math.max(0, sessao - 1); toast("Tirado: " + nome);
+  } catch (e) { toast("Não deu pra tirar: " + e.message); }
+  tirando = false; carregar();
+}
+async function enviarFila() {
+  const fila = ler("filaGarcom", []); if (!fila.length) return; const resta = [];
+  for (const it of fila) { try { const r = await aut("/api/balanca", { method: "POST", headers: JSONH, body: JSON.stringify(it) }); if (!r.ok && (r.status >= 500 || r.status === 401)) resta.push(it); } catch (e) { resta.push(it); } }
+  const novos = ler("filaGarcom", []).filter((x) => !fila.some((f) => f.uid === x.uid)); salvar("filaGarcom", resta.concat(novos));
+  if (resta.length < fila.length) carregar(); status();
+}
+function sairDaComanda() { ultimoHtml = ""; atual = null; filtro = ""; sessao = 0; otim = {}; ultimo = null; $("#undo").classList.remove("show"); $("#tela").innerHTML = ""; desenhar(true); }
+
+/* ---- trava de tela (Fully Kiosk não apaga a tela, então no bolso tudo vira toque) ----
+   trava sozinha: 20 s sem uso de verdade, ao apagar a tela/sair do app, ou numa rajada de bebidas; destrava ARRASTANDO a bolinha.
+   Com a "JavaScript Interface" do Fully ligada, a tela também APAGA de verdade depois de travar. */
+const TRAVA_PARADO_MS = 20000, APAGAR_MS = 3000, RAJADA_N = 6, RAJADA_MS = 3000;
+let travado = false, ultToque = Date.now(), visivelDesde = Date.now(), toqueRuim = false, tApaga = null, lancs = [];
+const fully = () => (window.fully && typeof window.fully.turnScreenOff === "function" ? window.fully : null);
+function travar() {
+  if (travado) return; travado = true; $("#trava").hidden = false; voltaBola();
+  const p = atual !== null ? doNumero(atual) : null, c = $("#tv-cmd"); c.hidden = !p; if (p) c.textContent = "Comanda " + numTxt(p.numero) + (p.nome ? " - " + p.nome : "") + " aberta";
+  $("#undo").classList.remove("show");
+  clearTimeout(tApaga); tApaga = setTimeout(() => { try { if (travado && fully()) fully().turnScreenOff(true); } catch (e) {} }, APAGAR_MS); // apaga a tela de verdade (Fully)
+}
+function destravar() { travado = false; clearTimeout(tApaga); $("#trava").hidden = true; ultToque = Date.now(); lancs = []; if (navigator.vibrate) navigator.vibrate(15); }
+document.addEventListener("visibilitychange", () => { if (document.hidden) travar(); else visivelDesde = Date.now(); });
+window.addEventListener("pagehide", travar); window.addEventListener("blur", () => { if (document.hidden) travar(); });
+setInterval(() => { if (!travado && $("#modal").hidden && Date.now() - ultToque > TRAVA_PARADO_MS) travar(); }, 1000);
+// toque "ruim": vários dedos/contato grande (palma, tecido do bolso) ou logo depois da tela acender -> ignora e NÃO conta como uso
+const contatoGrande = (e) => e.pointerType === "touch" && ((e.width || 0) > 45 || (e.height || 0) > 45);
+document.addEventListener("pointerdown", (e) => {
+  toqueRuim = travado || !e.isPrimary || contatoGrande(e) || Date.now() - visivelDesde < 800;
+  if (!toqueRuim) ultToque = Date.now(); // antes qualquer encostada no bolso zerava o tempo e a tela nunca travava
+}, true);
+document.addEventListener("touchstart", (e) => { if (e.touches.length > 1) { toqueRuim = true; cancelaArrasto(); } }, { capture: true, passive: true });
+// rajada: muita bebida em poucos segundos é bolso, não garçom -> trava antes de lançar mais
+function rajada() { const t = Date.now(); lancs = lancs.filter((x) => t - x < RAJADA_MS); if (lancs.length >= RAJADA_N) return true; lancs.push(t); return false; }
+// arrastar pra destravar: um dedo só, contato pequeno, movimento na horizontal até o fim do trilho
+const bola = $("#tv-bola"), trilho = $("#tv-trilho"); let arr = null;
+const maxArr = () => trilho.clientWidth - bola.offsetWidth - 12;
+function voltaBola() { arr = null; bola.classList.remove("arrastando"); bola.style.transform = ""; }
+function cancelaArrasto() { if (arr) voltaBola(); }
+bola.addEventListener("pointerdown", (e) => { e.preventDefault(); if (!e.isPrimary || contatoGrande(e)) return; arr = { x0: e.clientX, y0: e.clientY, dx: 0 }; bola.classList.add("arrastando"); try { bola.setPointerCapture(e.pointerId); } catch (er) {} });
+bola.addEventListener("pointermove", (e) => {
+  if (!arr) return; if (contatoGrande(e) || Math.abs(e.clientY - arr.y0) > 50) return voltaBola(); // saiu do trilho: começa de novo
+  arr.dx = Math.max(0, Math.min(maxArr(), e.clientX - arr.x0)); bola.style.transform = `translateX(${arr.dx}px)`;
+});
+bola.addEventListener("pointerup", () => { if (arr && arr.dx >= maxArr() * 0.92) destravar(); voltaBola(); });
+["pointercancel", "lostpointercapture"].forEach((ev) => bola.addEventListener(ev, () => { if (arr) voltaBola(); }));
+bola.addEventListener("contextmenu", (e) => e.preventDefault());
+
+/* ---- eventos ---- */
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("button"); if (!t) return; const d = t.dataset;
+  if (travado || (toqueRuim && (d.b !== undefined || d.rm !== undefined || d.cmd))) { e.preventDefault(); return; } // no bolso não lança nada
+  if (d.cmd) { atual = +d.cmd; catAtual = "Todas"; otim = {}; sessao = 0; return desenhar(true); }
+  if (t.id === "voltar" || t.id === "pronto") return sairDaComanda();
+  if (d.cat) { catAtual = d.cat; return desenhar(false); }
+  if (d.b !== undefined) { if (rajada()) { travar(); return toast("Muitos toques seguidos: tela travada"); } t.classList.remove("ok"); void t.offsetWidth; t.classList.add("ok"); return lancar(+d.b); }
+  if (d.rm !== undefined) return tirar(decodeURIComponent(d.rm));
+  if (d.a === "desfazer") return desfazer();
+  if (d.a === "login") return entrar();
+});
+document.addEventListener("input", (e) => { if (e.target.id === "busca") { filtro = e.target.value.replace(/\D/g, "").replace(/^0+/, ""); e.target.value = filtro; htmlComandas(); } });
+document.addEventListener("keydown", (e) => { ultToque = Date.now(); if (e.key === "Enter" && e.target.id === "lg-pin") entrar(); if (e.key === "Escape" && atual !== null) sairDaComanda(); });
+
+if (!token()) mostrarLogin();
+desenhar(true); status(); carregar(); carregarBebidas();
+setInterval(carregar, 4000); setInterval(carregarBebidas, 60000); setInterval(enviarFila, 5000);
+</script>
+</body>
+</html>
