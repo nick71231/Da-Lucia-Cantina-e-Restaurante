@@ -562,6 +562,10 @@ function adminAjustes() {
 const soma = (a, f) => a.reduce((s, x) => s + f(x), 0);
 const dataBR = (d) => d.split("-").reverse().join("/");
 // relCache: pedidos do totem buscados no servidor pro dia escolhido (o tablet só guarda os que ELE fez, e perde ao trocar de endereço)
+// só o que foi vendido NO TOTEM: fora comandas da balança, delivery e os doces que o caixa lança (marcados origem "caixa";
+// os antigos, sem marca, são os pedidos só de doce sem nome de cliente ou com nome "Doces - ...")
+const ehDoce = (c) => c.tipo === "doce" || String(c.key || "").startsWith("doce|");
+const doTotem = (p) => !p.tipo && p.status !== "cancelado" && p.origem !== "caixa" && !((p.itens || []).length && p.itens.every(ehDoce) && (!p.nome || /^Doces - /.test(p.nome)));
 let relCache = { dia: null, ps: null, erro: "", carregando: false };
 async function carregarRel(dia) {
   relCache = { dia, ps: null, erro: "", carregando: true };
@@ -570,7 +574,7 @@ async function carregarRel(dia) {
     if (r.status === 401 || r.status === 403) throw new Error("sessão do admin expirou: saia e entre de novo no admin");
     if (!r.ok) throw new Error("o servidor respondeu " + r.status);
     const L = await r.json();
-    relCache = { dia, ps: L.filter((p) => !p.tipo && p.status !== "cancelado"), erro: "", carregando: false };
+    relCache = { dia, ps: L.filter(doTotem), erro: "", carregando: false };
   } catch (e) { relCache = { dia, ps: null, erro: e.message === "Failed to fetch" ? "sem conexão com o servidor" : e.message, carregando: false }; }
   if (tela === "admin" && abaAdmin === "relatorio" && (diaRel || hoje()) === dia) render();
 }

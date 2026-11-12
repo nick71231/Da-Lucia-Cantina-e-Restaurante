@@ -213,7 +213,7 @@ async function tratar(req, res) {
     if (com && (!Number.isInteger(com) || com < 1 || com > 9999)) return json(res, 400, { erro: "número de comanda inválido" });
     if (uidp) { const ja = db.pedidos.find((x) => x.uid === uidp); if (ja) return json(res, 200, ja); } // mesmo pedido reenviado: não duplica
     const numero = Math.max(0, ...db.pedidos.filter((x) => x.dia === base.dia && !x.tipo).map((x) => x.numero)) + 1; // quem dá o número é o servidor (comandas e delivery têm numeração própria)
-    const novo = { ...base, uid: uidp || undefined, numero, numeroLocal: Number(b.numero) || undefined, id: Date.now() + "-" + numero, status: com ? "comanda" : "aguardando", pagamento: null, comanda: com || undefined };
+    const novo = { ...base, uid: uidp || undefined, numero, numeroLocal: Number(b.numero) || undefined, origem: b.origem === "caixa" ? "caixa" : undefined, id: Date.now() + "-" + numero, status: com ? "comanda" : "aguardando", pagamento: null, comanda: com || undefined };
     if (com) { // entra na comanda aberta (se ainda não existir, abre uma); quem paga é o caixa, tudo junto
       let cmd = db.pedidos.find((x) => x.tipo === "balanca" && x.dia === base.dia && x.numero === com && x.status === "aguardando");
       if (!cmd) { cmd = { id: Date.now() + "-c" + com, tipo: "balanca", dia: base.dia, numero: com, nome: "", quando: Date.now(), itens: [], unidades: 0, valor: 0, status: "aguardando", pagamento: null }; db.pedidos.push(cmd); }

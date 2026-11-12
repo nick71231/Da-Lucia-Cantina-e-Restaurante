@@ -1435,7 +1435,7 @@ function acJuntar() { // põe outra comanda aberta na mesma tela de pagamento
 }
 const esperaCarregar = async () => { while (carregando) await new Promise((r) => setTimeout(r, 60)); await carregar(); };
 async function criarPedidoDoces(dl, base) { // os doces viram um pedido novo (separado) que é pago junto com a comanda
-  const uid = novoUid(), ped = { uid, dia: base.dia || dia, nome: "Doces - " + (base.nome || rotPed(base)), quando: Date.now(),
+  const uid = novoUid(), ped = { uid, origem: "caixa", dia: base.dia || dia, nome: "Doces - " + (base.nome || rotPed(base)), quando: Date.now(),
     itens: dl.map((d) => ({ key: "doce|" + d.nome, nome: d.nome, preco: d.preco, grupos: [], obs: "", qtd: d.qtd, tipo: "doce", origem: "caixa" })), unidades: soma(dl, (d) => d.qtd), valor: round2(soma(dl, (d) => d.preco * d.qtd)) };
   let j; try { const r = await aut("/api/pedidos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(ped) }); j = await r.json().catch(() => ({})); if (!r.ok) { alert(j.erro || "O servidor recusou os doces."); return null; } }
   catch (e) { alert("Sem conexão com o servidor. Nada foi alterado."); return null; }
@@ -1446,7 +1446,7 @@ async function criarPedidoDoces(dl, base) { // os doces viram um pedido novo (se
 }
 async function lancarDocesNaComanda(dl, com) { // doces entram DENTRO da comanda aberta (o servidor já faz isso) e saem juntos no pagamento
   const antes = new Set(((pedidos.find((x) => x.id === com.id) || com).itens || []).map((x) => x.iid));
-  const ped = { uid: novoUid(), dia: com.dia || dia, comanda: com.numero, quando: Date.now(), itens: dl.map((d) => ({ key: "doce|" + d.nome, nome: d.nome, preco: d.preco, grupos: [], obs: "", qtd: d.qtd })), unidades: soma(dl, (d) => d.qtd), valor: round2(soma(dl, (d) => d.preco * d.qtd)) };
+  const ped = { uid: novoUid(), origem: "caixa", dia: com.dia || dia, comanda: com.numero, quando: Date.now(), itens: dl.map((d) => ({ key: "doce|" + d.nome, nome: d.nome, preco: d.preco, grupos: [], obs: "", qtd: d.qtd })), unidades: soma(dl, (d) => d.qtd), valor: round2(soma(dl, (d) => d.preco * d.qtd)) };
   try { const r = await aut("/api/pedidos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(ped) }); if (!r.ok) { alert(((await r.json().catch(() => ({}))).erro) || "O servidor recusou os doces."); return null; } }
   catch (e) { alert("Sem conexão com o servidor. Nada foi alterado."); return null; }
   await esperaCarregar(); const fresco = pedidos.find((x) => x.id === com.id), novos = fresco ? fresco.itens.filter((x) => !antes.has(x.iid)) : [];
