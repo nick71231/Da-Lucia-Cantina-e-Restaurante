@@ -20,7 +20,8 @@ function DonoDaPorta { # processo que esta usando a porta do servidor (ou nada)
   return $null
 }
 function Saude { # o servidor responde?
-  try { return Invoke-RestMethod -Uri "http://localhost:$PORTA/api/saude" -TimeoutSec 3 } catch { return $null }
+  # 127.0.0.1 e nao "localhost": em rede com IPv6 o Windows tenta ::1 primeiro e perde ~2,5 s (o servidor so escuta IPv4)
+  try { return Invoke-RestMethod -Uri "http://127.0.0.1:$PORTA/api/saude" -TimeoutSec 6 } catch { return $null }
 }
 function EsperaSubir {
   for ($i = 0; $i -lt 20; $i++) { $s = Saude; if ($s) { return $s }; Start-Sleep -Milliseconds 750 }
