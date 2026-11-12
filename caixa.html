@@ -209,6 +209,20 @@ body.tec-on .caixa-modal:has(#lista-cli) { max-height: calc(100vh - var(--tec-h,
 .card.parado { border-left-color: var(--vermelho); background: #fff7f6; box-shadow: 0 0 0 2px rgba(165,15,20,.18), var(--sombra); }
 .par-badge { background: #fde0e0; color: var(--vermelho); font-weight: 700; font-size: .8rem; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
 
+/* ===== fechamento das entregas ===== */
+.ent { display: flex; flex-direction: column; gap: 14px; }
+.ent-topo { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ent-seg { display: flex; gap: 6px; flex-wrap: wrap; } .ent-seg .btn small { opacity: .7; margin-left: 4px; }
+.ent-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.ec { background: #fff; border: 1px solid #ece4d9; border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.ec small { color: #8a7468; font-weight: 600; } .ec b { font-size: 1.5rem; } .ec span { color: #8a7468; font-size: .82rem; }
+.ec.din { border-color: #1e8e3e; background: #f0faf3; } .ec.din b { color: #157a3e; } .ec.tot b { color: #a30d12; }
+.ent-tab { overflow-x: auto; background: #fff; border: 1px solid #ece4d9; border-radius: 14px; }
+.ent-tab table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+.ent-tab th { text-align: left; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: #8a7468; padding: 10px 12px; border-bottom: 1px solid #ece4d9; }
+.ent-tab td { padding: 10px 12px; border-bottom: 1px solid #f3ece2; vertical-align: top; } .ent-tab tr:last-child td { border-bottom: 0; }
+.ent-tab td small { display: block; color: #8a7468; font-size: .8rem; } .ent-tab .n { text-align: right; white-space: nowrap; }
+.ent-tab .f-dinheiro { color: #157a3e; font-weight: 600; } .ent-tab tr.ab { background: #fff8e8; } .ent-tab small.ab { color: #9a5b00; font-weight: 600; }
 /* ===== tela de pagamento: formas em linha própria, doces, juntar comandas ===== */
 .ac-item .ac-formas { grid-column: 1 / -1; } .ac-item .ac-formas .btn { flex: 1; justify-content: center; }
 .ac-grupo { display: flex; align-items: center; gap: 8px; margin: 12px 0 8px; padding: 6px 12px; background: var(--bege); border-radius: 12px; font-size: .9rem; } .ac-grupo .btn { margin-left: auto; min-height: 34px; padding: 4px 12px; }
@@ -560,7 +574,7 @@ main #aviso-gav, #app > #aviso-gav { width: calc(100% - 56px); }
   <div class="topo-fixo"><header><div class="marca"><span class="marca-logo"><img id="logo-topo" alt="Da Lúcia"><i>DL</i></span><div class="marca-txt"><b>Da Lúcia</b><small>Caixa</small></div></div><div class="hd-dir"><span id="status">...</span><button class="btn mini" data-a="parado" id="btn-parado" title="Aviso de pedido parado">⏱</button><button class="btn mini" data-a="somCx" id="som-cx" title="Som de pedido novo">🔔</button><button class="btn mini" data-a="impCx" title="Impressora do caixa">🖨</button></div></header>
   <nav>
     <div class="abas"><button class="btn" data-aba="aberto">Em aberto (<span id="n-aberto">0</span>)</button><button class="btn" data-aba="pagos">Pagos</button>
-    <button class="btn" data-aba="conta">Na conta</button><button class="btn" data-aba="cancelados">Cancelados</button><button class="btn" data-aba="fechamento">Fechamento</button><button class="btn" data-aba="painel">📈 Painel</button><button class="btn" data-aba="gaveta">💵 Gaveta</button><button class="btn" data-aba="contas">📒 Contas</button><button class="btn" data-aba="clientes">👥 Clientes</button></div>
+    <button class="btn" data-aba="conta">Na conta</button><button class="btn" data-aba="cancelados">Cancelados</button><button class="btn" data-aba="fechamento">Fechamento</button><button class="btn" data-aba="entregas">🛵 Entregas</button><button class="btn" data-aba="painel">📈 Painel</button><button class="btn" data-aba="gaveta">💵 Gaveta</button><button class="btn" data-aba="contas">📒 Contas</button><button class="btn" data-aba="clientes">👥 Clientes</button></div>
     <div class="filtros"><input id="busca" placeholder="🔍 Buscar nº ou nome"><input id="dia" type="date"></div>
   </nav></div>
   <main id="lista"></main>
@@ -632,10 +646,11 @@ async function carregar() {
 function desenhar() {
   document.querySelectorAll("[data-aba]").forEach((b) => b.classList.toggle("on", b.dataset.aba === aba));
   const outra = aba === "contas" || aba === "clientes" || aba === "gaveta"; if (outra || aba === "painel") ultimoHtml = "";
-  $("#busca").style.display = outra ? "none" : ""; $("#dia").style.display = outra || aba === "fechamento" || aba === "painel" ? "none" : ""; $("#lista").classList.toggle("largo", aba === "contas");
+  $("#busca").style.display = outra || aba === "entregas" ? "none" : ""; $("#dia").style.display = outra || aba === "fechamento" || aba === "painel" ? "none" : ""; $("#lista").classList.toggle("largo", aba === "contas");
   if (aba === "painel") return desenharPainel(); if (aba === "gaveta") return abrirGaveta(); if (aba === "contas") return abrirContas(); if (aba === "clientes") return abrirClientes();
   $("#n-aberto").textContent = pedidos.filter((p) => p.status === "aguardando").length;
   if (aba === "fechamento") return desenharFechamento();
+  if (aba === "entregas") return desenharEntregas();
   const st = { aberto: "aguardando", pagos: "pago", conta: "conta", cancelados: "cancelado" }[aba], q = $("#busca").value.trim().toLowerCase().replace("#", "");
   const lista = pedidos.filter((p) => p.status === st && (!q || casaBusca(p, q))).sort((a, b) => b.quando - a.quando);
   juntar.forEach((id) => { const x = pedidos.find((y) => y.id === id); if (!x || x.status !== "aguardando") juntar.delete(id); });
@@ -1060,6 +1075,45 @@ function pintarPeriodo(h) { // a barra de datas fica quieta (não some enquanto 
   if (bar !== ultBarra) { ultBarra = bar; $("#per-wrap").innerHTML = bar; }
   if (h !== ultCorpo) { ultCorpo = h; $("#per-corpo").innerHTML = h; }
 }
+// ===== FECHAMENTO DAS ENTREGAS (pedidos do site): quanto o motoboy traz em dinheiro, quanto passou no cartão, Pix e taxas =====
+let entFil = "entrega";
+const formaEnt = (p) => (p.pagPrevisto === "cartao_entrega" ? "cartao" : p.pagPrevisto || p.pagamento || "");
+const taxaEnt = (p) => round2(soma(p.itens.filter((c) => c.tipo === "taxa"), (c) => c.preco * (c.qtd || 1)));
+const trocoEnt = (p) => (formaEnt(p) === "dinheiro" && p.trocoPara > p.valor ? round2(p.trocoPara - p.valor) : 0);
+function resumoEntregas() {
+  const ds = pedidos.filter((p) => p.tipo === "delivery"), canc = ds.filter((p) => p.status === "cancelado");
+  const sel = ds.filter((p) => p.status !== "cancelado" && (entFil === "todos" || (p.entrega || "entrega") === entFil)).sort((a, b) => a.quando - b.quando);
+  const por = (f) => round2(soma(sel.filter((p) => formaEnt(p) === f), (p) => p.valor));
+  return { ds, canc, sel, din: por("dinheiro"), car: por("cartao"), pix: por("pix"), troco: round2(soma(sel, trocoEnt)), taxas: round2(soma(sel, taxaEnt)), total: round2(soma(sel, (p) => p.valor)) };
+}
+function desenharEntregas() {
+  const r = resumoEntregas(), nE = r.ds.filter((p) => p.status !== "cancelado" && (p.entrega || "entrega") === "entrega").length, nR = r.ds.filter((p) => p.status !== "cancelado" && p.entrega === "retirada").length;
+  const seg = [["entrega", "Entregas", nE], ["retirada", "Retiradas", nR], ["todos", "Todos", nE + nR]].map(([k, n, q]) => `<button class="btn ${entFil === k ? "on" : ""}" data-a="entFil" data-k="${k}">${n} <small>${q}</small></button>`).join("");
+  const fp = (p) => { const f = formaEnt(p); return f === "dinheiro" ? `Dinheiro${p.trocoPara ? ` <small>troco p/ ${brl(p.trocoPara)} → levar ${brl(trocoEnt(p))}</small>` : " <small>sem troco</small>"}` : f === "cartao" ? "Cartão (maquininha)" : f === "pix" ? "Pix" : esc(f || "-"); };
+  const linhas = r.sel.map((p) => { const e = p.endereco || {}; return `<tr class="${p.status === "aguardando" ? "ab" : ""}"><td><b>D${p.numero}</b></td><td>${hora(p.quando)}</td><td>${esc(p.nome || "-")}<small>${p.entrega === "retirada" ? "retirada na loja" : esc([e.rua && e.rua + ", " + (e.numero || ""), e.bairro].filter(Boolean).join(" · "))}</small></td><td class="f-${formaEnt(p)}">${fp(p)}</td><td class="n">${taxaEnt(p) ? brl(taxaEnt(p)) : "-"}</td><td class="n"><b>${brl(p.valor)}</b>${p.status === "aguardando" ? '<small class="ab">em aberto no caixa</small>' : ""}</td></tr>`; }).join("");
+  pintar(`<div class="ent">
+  <div class="ent-topo"><div class="ent-seg">${seg}</div><button class="btn" data-a="entImp" ${r.sel.length ? "" : "disabled"}>🖨 Imprimir fechamento</button></div>
+  <div class="ent-cards">
+    <div class="ec din"><small>Receber em dinheiro</small><b>${brl(r.din)}</b><span>${r.troco ? "troco levado: " + brl(r.troco) : "nenhum troco"}</span></div>
+    <div class="ec car"><small>Cartão (maquininha)</small><b>${brl(r.car)}</b><span>conferir no extrato da máquina</span></div>
+    <div class="ec pix"><small>Pix</small><b>${brl(r.pix)}</b><span>conferir no app do banco</span></div>
+    <div class="ec tx"><small>Taxas de entrega</small><b>${brl(r.taxas)}</b><span>${r.sel.length} ${r.sel.length === 1 ? "pedido" : "pedidos"}</span></div>
+    <div class="ec tot"><small>Total</small><b>${brl(r.total)}</b><span>${r.canc.length ? r.canc.length + " cancelado(s) fora da conta" : "sem cancelados"}</span></div>
+  </div>
+  ${r.sel.length ? `<div class="ent-tab"><table><thead><tr><th>Pedido</th><th>Hora</th><th>Cliente</th><th>Pagamento</th><th class="n">Taxa</th><th class="n">Total</th></tr></thead><tbody>${linhas}</tbody></table></div>` : `<div class="vazio-box"><span>🛵</span>Nenhum pedido do site neste dia.</div>`}
+  </div>`);
+}
+async function imprimirEntregas() {
+  const r = resumoEntregas(); if (!r.sel.length) return;
+  const nome = { entrega: "ENTREGAS", retirada: "RETIRADAS", todos: "PEDIDOS DO SITE" }[entFil];
+  const L = [{ t: "FECHAMENTO - " + nome, a: "c", b: 1 }, { t: dataBR(dia), a: "c" }, { hr: 1 }];
+  r.sel.forEach((p) => { const f = formaEnt(p); L.push({ e: `D${p.numero} ${hora(p.quando)} ${p.nome || ""}`.slice(0, 40), d: brl(p.valor), b: 1 }, { det: (f === "dinheiro" ? "Dinheiro" + (p.trocoPara ? " (troco p/ " + brl(p.trocoPara) + ")" : "") : f === "cartao" ? "Cartao" : f === "pix" ? "Pix" : f) + (taxaEnt(p) ? " - taxa " + brl(taxaEnt(p)) : "") }); });
+  L.push({ hr: 1 }, { e: "Receber em dinheiro", d: brl(r.din), b: 1 }, { e: "Troco levado", d: brl(r.troco) }, { e: "Cartao (maquininha)", d: brl(r.car), b: 1 }, { e: "Pix", d: brl(r.pix) }, { e: "Taxas de entrega", d: brl(r.taxas) }, { hr: 1 }, { e: "TOTAL", d: brl(r.total), b: 1, s: "alta" });
+  if (r.canc.length) L.push({ det: r.canc.length + " cancelado(s) nao entram na conta" });
+  try { const k = await cfgImp(), img = await logoImp(k.logo); avisoImp("🖨 Imprimindo...", ""); const x = await mandarImp(escposDoc(L, k, img)); avisoImp(x.ok ? "✓ Impresso" : "✕ Não imprimiu: " + x.erro, x.ok ? "" : "erro"); } catch (e) { avisoImp("✕ Não imprimiu", "erro"); }
+}
+document.addEventListener("click", (e) => { const b = e.target.closest("[data-a]"); if (!b) return;
+  if (b.dataset.a === "entFil") { entFil = b.dataset.k; ultimoHtml = ""; desenharEntregas(); } else if (b.dataset.a === "entImp") imprimirEntregas(); });
 async function desenharFechamento() {
   pintarPeriodo(periodoPronto() ? fechamento() : '<p class="vazio">Carregando…</p>');
   await garantirPeriodo(); if (aba !== "fechamento") return;
