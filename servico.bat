@@ -11,14 +11,17 @@ cd /d "%~dp0"
 :menu
 cls
 echo ===== Servidor Da Lucia =====
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0servico.ps1" ip-curto
 echo.
 echo  1 - Instalar (liga sozinho com o Windows)
 echo  2 - Reiniciar (depois de atualizar o programa)
 echo  3 - Ver se esta funcionando
 echo  4 - Desinstalar
 echo  5 - Sair
+echo  6 - Ver o IP (enderecos para abrir nos tablets)
 echo.
-choice /c 12345 /n /m "Escolha (1-5): "
+choice /c 123456 /n /m "Escolha (1-6): "
+if errorlevel 6 set ACAO=ip& goto rodar
 if errorlevel 5 exit /b
 if errorlevel 4 set ACAO=desinstalar& goto rodar
 if errorlevel 3 set ACAO=status& goto rodar

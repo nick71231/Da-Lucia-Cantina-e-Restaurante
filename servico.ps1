@@ -1,7 +1,7 @@
 # Liga o servidor como tarefa do Windows: sobe sozinho quando o computador liga (mesmo sem ninguem fazer login),
 # roda escondido e reinicia sozinho se cair. Use pelo servico.bat (ele pede permissao de administrador).
 # Uso direto:  powershell -ExecutionPolicy Bypass -File servico.ps1 instalar|reiniciar|status|desinstalar
-param([ValidateSet("instalar", "reiniciar", "status", "desinstalar")][string]$acao = "status")
+param([ValidateSet("instalar", "reiniciar", "status", "desinstalar", "ip", "ip-curto")][string]$acao = "status")
 $ErrorActionPreference = "Stop"
 $NOME = "Servidor Da Lucia"
 $PORTA = 3000
@@ -22,6 +22,20 @@ function DonoDaPorta { # processo que esta usando a porta do servidor (ou nada)
 function Saude { # o servidor responde?
   # 127.0.0.1 e nao "localhost": em rede com IPv6 o Windows tenta ::1 primeiro e perde ~2,5 s (o servidor so escuta IPv4)
   try { return Invoke-RestMethod -Uri "http://127.0.0.1:$PORTA/api/saude" -TimeoutSec 6 } catch { return $null }
+}
+function MeusIPs { # IPv4 da rede atual (wifi/cabo). Prioriza a placa que tem gateway (a que esta de fato conectada no roteador)
+  $comGw = Get-NetIPConfiguration -ErrorAction SilentlyContinue | Where-Object { $_.IPv4DefaultGateway -and $_.NetAdapter.Status -eq "Up" }
+  $lista = foreach ($c in $comGw) { foreach ($a in $c.IPv4Address) { [pscustomobject]@{ IP = $a.IPAddress; Rede = $c.InterfaceAlias } } }
+  if (-not $lista) { # sem gateway: mostra qualquer IPv4 valido (menos loopback e 169.254 = sem rede)
+    $lista = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+      Where-Object { $_.IPAddress -ne "127.0.0.1" -and $_.IPAddress -notlike "169.254.*" } |
+      ForEach-Object { [pscustomobject]@{ IP = $_.IPAddress; Rede = $_.InterfaceAlias } }
+  }
+  return @($lista)
+}
+function NomeWifi { # nome da rede wifi conectada (ou vazio)
+  try { $l = netsh wlan show interfaces 2>$null | Where-Object { $_ -match "^\s*SSID\s*:" } | Select-Object -First 1; if ($l) { return ($l -split ":", 2)[1].Trim() } } catch {}
+  return ""
 }
 function EsperaSubir {
   for ($i = 0; $i -lt 20; $i++) { $s = Saude; if ($s) { return $s }; Start-Sleep -Milliseconds 750 }
@@ -82,6 +96,28 @@ switch ($acao) {
     Parar
     Unregister-ScheduledTask -TaskName $NOME -Confirm:$false
     Write-Host "Servico removido. O servidor nao liga mais sozinho (use o iniciar-servidor.bat se precisar)."
+  }
+  "ip-curto" { # uma linha, para o topo do menu
+    $ips = @(MeusIPs)
+    if ($ips.Count) { Write-Host (" IP atual: " + (($ips | ForEach-Object { "http://$($_.IP):$PORTA" }) -join "   ")) -ForegroundColor Green }
+    else { Write-Host " IP atual: sem rede (conecte no wifi)" -ForegroundColor Yellow }
+  }
+  "ip" {
+    $ips = @(MeusIPs)
+    if (-not $ips.Count) { Write-Host "Este computador nao esta conectado em nenhuma rede. Conecte no wifi e tente de novo." -ForegroundColor Yellow; break }
+    $w = NomeWifi
+    if ($w) { Write-Host "Rede wifi: $w" }
+    foreach ($i in $ips) {
+      Write-Host ""
+      Write-Host ("IP: " + $i.IP + "   (" + $i.Rede + ")") -ForegroundColor Green
+      Write-Host "  Totem:   http://$($i.IP):$PORTA"
+      Write-Host "  Caixa:   http://$($i.IP):$PORTA/caixa.html"
+      Write-Host "  Balanca: http://$($i.IP):$PORTA/balanca.html"
+      Write-Host "  Garcom:  http://$($i.IP):$PORTA/garcom.html"
+    }
+    Write-Host ""
+    Write-Host "Os tablets precisam estar na MESMA rede wifi. Se o IP mudou, abra esses enderecos de novo neles."
+    if (-not (Saude)) { Write-Host "Atencao: o servidor NAO esta respondendo agora (use a opcao 2 - Reiniciar)." -ForegroundColor Red }
   }
   "status" {
     $t = Tarefa

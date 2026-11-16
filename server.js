@@ -37,11 +37,50 @@ function acertar(ped, sel, recebido, papel) { // sel = [{ iid, forma }]: cada it
   fecharSePago(ped);
   return { ok: true };
 }
+// pagar o que está em aberto com 2 (até 4) formas POR VALOR (ex.: marmita R$24 = R$18 no dinheiro + R$6 no Pix).
+// Cada parte vira um recebimento com o seu valor (o fechamento soma certo em cada forma); as partes ficam ligadas
+// por "dividido" e o estorno de uma desfaz todas.
+function acertarValores(ped, partes, recebido, papel) {
+  if (ped.status !== "aguardando") return { s: 409, erro: "o pedido não está em aberto" };
+  const abertos = ped.itens.filter((c) => !c.pago), total = cents(abertos.reduce((s, c) => s + valorItem(c), 0));
+  if (!abertos.length) return { s: 400, erro: "nada em aberto" };
+  if (!Array.isArray(partes) || partes.length < 2 || partes.length > 4) return { s: 400, erro: "informe de 2 a 4 formas" };
+  const ps = partes.map((x) => ({ forma: String(x && x.forma), valor: cents(Number(x && x.valor)) }));
+  if (ps.some((x) => !FORMAS_VALIDAS.includes(x.forma) || !(x.valor > 0)) || new Set(ps.map((x) => x.forma)).size !== ps.length) return { s: 400, erro: "formas ou valores inválidos" };
+  if (Math.abs(cents(ps.reduce((s, x) => s + x.valor, 0)) - total) > 0.009) return { s: 400, erro: "a soma das partes tem que dar " + total.toFixed(2).replace(".", ",") };
+  const agora = Date.now(), grupo = uid("d"), recs = ps.map((x) => ({ id: uid("g"), forma: x.forma, itens: abertos.map((c) => c.iid), valor: x.valor, dia: hoje(), quando: agora, operador: papel, dividido: grupo }));
+  const din = recs.find((r) => r.forma === "dinheiro");
+  if (din) { const rec = recebido === undefined || recebido === null || recebido === "" ? din.valor : cents(recebido); if (!(rec >= din.valor)) return { s: 400, erro: "o valor recebido é menor que a parte em dinheiro" }; din.recebido = rec; din.troco = cents(rec - din.valor); ped.recebido = rec; ped.troco = din.troco; }
+  ped.pagamentos = ped.pagamentos || []; recs.forEach((r) => ped.pagamentos.push(r));
+  abertos.forEach((c) => { c.pago = { forma: "dividido", pagId: recs[0].id, dividido: grupo, quando: agora }; });
+  fecharSePago(ped);
+  return { ok: true };
+}
 const TRANS = { aguardando: ["pago", "conta", "cancelado"], conta: ["aguardando", "cancelado"], pago: ["cancelado"], cancelado: [] }; // mudanças de estado permitidas
 let db = { pedidos: [] };
 try { db = JSON.parse(fs.readFileSync(ARQ, "utf8")); } catch (e) {}
 db.pedidos = db.pedidos || []; db.caixa = db.caixa || {};
 db.clientes = db.clientes || []; db.lancamentos = db.lancamentos || []; db.pagamentos = db.pagamentos || []; db.enviados = db.enviados || {};
+db.entregadores = Array.isArray(db.entregadores) ? db.entregadores : []; // motoboys (nomes)
+// cartão na entrega dos pedidos do site entrava como "Cartão" genérico: passa pra crédito/débito/refeição (o tipo que o cliente escolheu)
+db.pedidos.forEach((p) => {
+  if (p.tipo !== "delivery" || p.pagPrevisto !== "cartao_entrega" || !["credito", "debito", "refeicao"].includes(p.cartaoTipo)) return;
+  let mudou = false; (p.pagamentos || []).forEach((g) => { if (g.forma === "cartao" && g.auto === "site") { g.forma = p.cartaoTipo; mudou = true; } });
+  if (mudou) { p.itens.forEach((c) => { if (c.pago && c.pago.forma === "cartao") c.pago.forma = p.cartaoTipo; }); if (p.pagamento === "cartao") p.pagamento = p.cartaoTipo; }
+});
+// limpeza pontual: se existir dados/apagar-pedidos.json (lista de uid/id), apaga SÓ esses pedidos ao ligar,
+// guarda uma cópia de tudo antes (dados/antes-de-apagar-*.json) e renomeia a lista pra não repetir
+try {
+  const ARQ_AP = path.join(DIR_DADOS, "apagar-pedidos.json"), alvo = new Set(JSON.parse(fs.readFileSync(ARQ_AP, "utf8")).map(String));
+  const sai = (p) => alvo.has(String(p.uid)) || alvo.has(String(p.id)), n = db.pedidos.filter(sai).length;
+  if (n) {
+    fs.writeFileSync(path.join(DIR_DADOS, "antes-de-apagar-" + Date.now() + ".json"), JSON.stringify(db));
+    db.pedidos = db.pedidos.filter((p) => !sai(p));
+    fs.writeFileSync(ARQ + ".tmp", JSON.stringify(db)); fs.renameSync(ARQ + ".tmp", ARQ);
+  }
+  fs.renameSync(ARQ_AP, ARQ_AP + ".feito-" + Date.now());
+  console.log(`apagar-pedidos.json: ${n} pedido(s) apagado(s)`);
+} catch (e) { if (e.code !== "ENOENT") console.error("apagar-pedidos.json: " + e.message); }
 db.pedidos.forEach((p) => (p.itens || []).forEach((c) => { c.grupos = c.grupos || []; })); // dados antigos: todo item tem "grupos"
 const uid = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 db.pedidos.forEach((p) => (p.itens || []).forEach((c) => { c.iid = c.iid || uid("i"); })); // dados antigos: todo item tem identificador
@@ -150,23 +189,47 @@ function pedidoDoSite(s) { // converte o pedido do site pro formato do caixa (o 
   const t = (v, n) => String(v || "").trim().slice(0, n), e = s.endereco && typeof s.endereco === "object" ? s.endereco : null;
   const itens = (Array.isArray(s.itens) ? s.itens : []).slice(0, 60).map((c) => ({ iid: uid("i"), key: t(c.key, 400), tipo: c.tipo === "bebida" ? "bebida" : undefined, nome: t(c.nome, 80),
     preco: cents(Math.max(0, Number(c.preco) || 0)), qtd: Math.max(1, Math.min(99, parseInt(c.qtd, 10) || 1)), obs: t(c.obs, 120),
-    grupos: (Array.isArray(c.grupos) ? c.grupos : []).slice(0, 15).map((g) => ({ rotulo: t(g && g.rotulo, 40), itens: (Array.isArray(g && g.itens) ? g.itens : []).slice(0, 20).map((x) => t(x, 80)) })) }));
+    grupos: (Array.isArray(c.grupos) ? c.grupos : []).slice(0, 15).map((g) => ({ rotulo: t(g && g.rotulo, 40), itens: (Array.isArray(g && g.itens) ? g.itens : []).slice(0, 20).map((x) => t(x, 80)), ...(g && g.adicional === true ? { adicional: true } : {}) })) }));
   const taxa = cents(Math.max(0, Number(s.taxa_entrega) || 0));
   if (taxa > 0) itens.push({ iid: uid("i"), tipo: "taxa", nome: "Taxa de entrega", preco: taxa, qtd: 1, obs: "", grupos: [] }); // vira item: dá pra receber por item como o resto
   const quando = Date.parse(s.criado_em) || Date.now(), numero = Number(s.numero) || 0;
   const p = { id: quando + "-d" + numero, uid: "site:" + s.token, siteToken: s.token, tipo: "delivery", numero, dia: /^\d{4}-\d\d-\d\d$/.test(s.dia || "") ? s.dia : hoje(), quando,
     nome: t(s.nome, 40), telefone: t(s.telefone, 15), entrega: s.tipo_entrega === "entrega" ? "entrega" : "retirada",
     endereco: e ? { rua: t(e.rua, 80), numero: t(e.numero, 10), bairro: t(e.bairro, 50), complemento: t(e.complemento, 60) } : null,
-    pagPrevisto: t(s.forma_pagamento, 20), trocoPara: Number(s.troco_para) > 0 ? cents(Number(s.troco_para)) : null, obsPedido: t(s.obs, 200),
+    pagPrevisto: t(s.forma_pagamento, 20), cartaoTipo: ["credito", "debito", "refeicao"].includes(s.cartao_tipo) ? s.cartao_tipo : undefined, trocoPara: Number(s.troco_para) > 0 ? cents(Number(s.troco_para)) : null, obsPedido: t(s.obs, 200),
     itens, status: "aguardando", pagamento: null };
   p.valor = cents(itens.reduce((x, c) => x + c.preco * c.qtd, 0)); p.unidades = itens.reduce((x, c) => x + c.qtd, 0);
   if (Math.abs(p.valor - (Number(s.total) || 0)) > 0.01) console.error(`delivery: D${numero} somou ${p.valor} mas o site diz ${s.total}`);
   return p;
 }
+// cliente da conta pra um pedido de marmita: pelo telefone; senão pelo nome sem "marmita/mta" ("Polyana - MARMITA" = "POLYANA MARMITA")
+const semAcS = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const nomeBase = (s) => semAcS(s).replace(/[^a-z ]/g, " ").split(/\s+/).filter((w) => w && !/^(marmitas?|marmit|mta)$/.test(w)).join(" ");
+const brl2 = (v) => "R$" + Number(v || 0).toFixed(2).replace(".", ",");
+function clienteDoPedido(p) {
+  const ativos = db.clientes.filter((c) => c.ativo !== false), fim = (t) => String(t || "").replace(/\D/g, "").slice(-8), tel = fim(p.telefone);
+  if (tel.length === 8) { const c = ativos.find((x) => fim(x.telefone) === tel); if (c) return c; }
+  const nb = nomeBase(p.nome); if (!nb) return null;
+  let l = ativos.filter((c) => nomeBase(c.nome) === nb); if (l.length === 1) return l[0];
+  const pri = nb.split(" ")[0]; l = ativos.filter((c) => /marmit|mta/.test(semAcS(c.nome)) && nomeBase(c.nome).split(" ")[0] === pri); // só o 1º nome, entre os clientes de marmita
+  return l.length === 1 ? l[0] : null;
+}
 // pedido do site chega no caixa JÁ RECEBIDO, na forma que o cliente escolheu (Pix, dinheiro com troco, cartão na entrega)
 const FORMA_DO_SITE = { pix: "pix", dinheiro: "dinheiro", cartao_entrega: "cartao" };
 function pagarDoSite(p) {
-  const forma = FORMA_DO_SITE[p.pagPrevisto]; if (!forma || !p.itens.length) return;
+  // cliente de marmita (pedido pelo robô, "conta"): não cobra nada aqui. Sem nada a receber, já fecha; se pediu algo pago (ex.: bebida), fica em aberto pro caixa
+  if (p.pagPrevisto === "conta") {
+    // marmita: lança sozinho na conta do cliente (valor da marmita dele) e fecha. Não achou a conta, ou é "valor livre": fica em aberto pro caixa lançar.
+    const marm = p.itens.filter((c) => /^marmita$/i.test(c.nome)), cli = marm.length ? clienteDoPedido(p) : null;
+    if (cli) {
+      const n = marm.reduce((s, c) => s + c.qtd, 0), valor = cents((Number(cli.valorRefeicao) || 0) * n);
+      if (!cli.telefone && p.telefone) cli.telefone = p.telefone; // da próxima vez acha direto pelo telefone
+      if (valor > 0) { db.lancamentos.push({ id: uid("l"), clienteId: cli.id, dia: p.dia, qtd: 0, valor, obs: `${n}x marmita ${brl2(cli.valorRefeicao)} (WhatsApp) - pedido ${p.entrega === "retirada" ? "R" : "E"}${p.numero}`.slice(0, 120), pedidoId: p.id }); p.contaCliente = cli.id; }
+    }
+    if (p.valor === 0 && (!marm.length || p.contaCliente)) { p.status = "pago"; p.pagamento = "marmita"; p.pagoEm = Date.now(); p.pagoAuto = true; }
+    return;
+  }
+  const forma = p.pagPrevisto === "cartao_entrega" && ["credito", "debito", "refeicao"].includes(p.cartaoTipo) ? p.cartaoTipo : FORMA_DO_SITE[p.pagPrevisto]; // cartão na entrega: crédito/débito/refeição (o que o cliente escolheu); sem tipo: "Cartão" if (!forma || !p.itens.length) return;
   const r = acertar(p, p.itens.map((c) => ({ iid: c.iid, forma })), forma === "dinheiro" ? Math.max(p.valor, p.trocoPara || 0) : 0, "site");
   if (r.ok) { p.pagoAuto = true; p.pagamentos.forEach((g) => (g.auto = "site")); } else console.error("delivery: não consegui lançar o pagamento de D" + p.numero + ": " + r.erro);
 }
@@ -174,16 +237,43 @@ function pagarDoSite(p) {
 const ARQ_WHATS = path.join(DIR_DADOS, "whats-fila.json");
 let filaWhats = []; try { filaWhats = JSON.parse(fs.readFileSync(ARQ_WHATS, "utf8")) || []; } catch (e) {}
 const rs = (n) => "R$ " + Number(n || 0).toFixed(2).replace(".", ",");
-function avisarWhats(p) {
+// mensagem de confirmação no WhatsApp (o pedido do site só chega aqui depois de aceito, por isso "já está em produção")
+function textoWhats(p, loja = {}, agora = Date.now()) {
+  const e = p.endereco || {}, ent = p.entrega !== "retirada", S = (v) => String(v || "").trim();
+  const PG = { conta: "📒 Na sua conta", pix: "💠 Pix", dinheiro: "💵 Dinheiro", cartao_entrega: "💳 Cartão na entrega" };
+  const min = Number(ent ? loja.tempo_entrega_min ?? loja.tempo_estimado_min : loja.tempo_retirada_min ?? loja.tempo_estimado_min) || (ent ? 45 : 20);
+  const hm = (ms) => new Date(ms).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
+  const de = agora + Math.max(5, min - 15) * 60e3, ate = agora + (min + 15) * 60e3; // janela de 30 min em volta do tempo do site
+  const cidade = S(loja.cidade_entrega).replace(/\s*[,-]\s*[A-Z]{2}$/, ""); // "Cachoeira Paulista, SP" -> "Cachoeira Paulista"
+  const taxa = p.itens.filter((c) => c.tipo === "taxa").reduce((x, c) => x + c.preco * c.qtd, 0);
+  const SEP = "-".repeat(30); // tracinhos separando as partes da mensagem
+  const L = ["Da Lúcia por aqui! 😄🍽️", "Seu pedido já está em produção — feito com muito carinho e sabor! 👩‍🍳🔥", "", `*Pedido nº ${p.numero}*`, SEP, "*DETALHES DO PEDIDO*"];
+  const M = (v) => S(v).toLocaleUpperCase("pt-BR");
+  p.itens.filter((c) => c.tipo !== "taxa").forEach((c, i) => { // um bloco por produto: nome, quantidade, valor e cada etapa com o que foi escolhido
+    L.push(i ? SEP : "", `Produto: ${M(c.nome)}`, `Quantidade: ${c.qtd}`); if (c.preco > 0) L.push(`Valor: ${rs(c.preco * c.qtd)}`);
+    for (const g of c.grupos || []) {
+      const rot = M(g.rotulo); L.push(`  ${rot}${g.adicional && !/ADICIONAL/.test(rot) ? " ADICIONAL" : ""}`);
+      (g.itens || []).forEach((x) => L.push(`    1 ${M(x)}`));
+    }
+    if (c.tipo !== "bebida") L.push(`Observação: ${S(c.obs)}`);
+  });
+  L.push(SEP);
+  if (p.obsPedido) L.push(`📝 Obs: ${S(p.obsPedido)}`, "");
+  L.push((PG[p.pagPrevisto] || "💳 " + S(p.pagPrevisto)) + (p.cartaoTipo ? ({ debito: " (débito)", credito: " (crédito)", refeicao: " - cartão refeição" })[p.cartaoTipo] : "") + (p.pagPrevisto === "dinheiro" && p.trocoPara ? ` (troco para ${rs(p.trocoPara)})` : ""), "");
+  if (ent) {
+    L.push(p.pagPrevisto === "conta" ? "🛵 Delivery" : `🛵 Delivery (${taxa > 0 ? "taxa de: " + rs(taxa) : "entrega grátis"})`);
+    L.push("🏠 " + [S(e.rua) + (S(e.numero) ? ", Nº " + S(e.numero) : "") + (S(e.complemento) ? " - " + S(e.complemento) : ""), S(e.bairro), cidade].filter(Boolean).join(", "));
+    L.push(`(Previsão de Entrega: entre ${hm(de)} e ${hm(ate)})`);
+  } else L.push("🏃 Retirada na loja", `(Previsão: pronto entre ${hm(de)} e ${hm(ate)})`);
+  if (p.pagPrevisto !== "conta" || p.valor > 0) L.push(SEP, `*Total: ${rs(p.valor)}*`); L.push(SEP);
+  // Pix: a loja não tem como ver sozinha que o dinheiro caiu, então a marmitex só entra em produção com o comprovante
+  if (p.pagPrevisto === "pix" && p.status !== "pago") L.push("⚠ *Pagamento no Pix:* pra gente começar a preparar sua marmitex, mande o *comprovante do Pix* aqui nesta conversa 🙏", "");
+  L.push("Obrigado pela preferência, se precisar de algo é só chamar! 😉");
+  return L.join("\n");
+}
+function avisarWhats(p, loja) {
   const tel = String(p.telefone || "").replace(/\D/g, ""); if (tel.length < 10) return;
-  const e = p.endereco || {}, PG = { pix: "Pix", dinheiro: "Dinheiro", cartao_entrega: "Cartão na entrega" };
-  const texto = [
-    `Olá, ${String(p.nome || "").trim().split(" ")[0] || "tudo bem"}! 😊 Recebemos seu pedido *#${p.numero}* na Da Lúcia.`,
-    `Total: *${rs(p.valor)}* · ${PG[p.pagPrevisto] || ""}${p.pagPrevisto === "dinheiro" && p.trocoPara ? " (troco pra " + rs(p.trocoPara) + ")" : ""}`,
-    p.entrega === "retirada" ? "Retirada na loja." : `Entrega em: ${[e.rua && e.rua + ", " + (e.numero || ""), e.bairro].filter(Boolean).join(" - ")}`,
-    p.siteToken && DEL_URL ? `Acompanhe aqui: ${DEL_URL}/?p=${p.siteToken}` : "",
-    "Obrigado pela preferência!",
-  ].filter(Boolean).join("\n");
+  const texto = textoWhats(p, loja);
   filaWhats.push({ id: p.id, tel, texto, quando: Date.now() }); filaWhats = filaWhats.slice(-200);
   gravarArquivo(ARQ_WHATS, filaWhats).catch(() => {});
 }
@@ -192,11 +282,11 @@ async function sincronizarDelivery() {
   if (!delEstado.ativo || sincronizando) return;
   sincronizando = true;
   try {
-    const { pedidos = [] } = await delApi("novos");
+    const { pedidos = [], loja = {} } = await delApi("novos");
     for (const s of pedidos) {
       if (!s || !TOKEN_SITE.test(String(s.token || ""))) continue;
       let p = db.pedidos.find((x) => x.uid === "site:" + s.token); // já veio antes (o aviso pro site falhou): não duplica
-      if (!p) { p = pedidoDoSite(s); pagarDoSite(p); db.pedidos.push(p); await gravar(); delEstado.importados++; avisarWhats(p); }
+      if (!p) { p = pedidoDoSite(s); pagarDoSite(p); db.pedidos.push(p); await gravar(); delEstado.importados++; if (!/^\[WhatsApp\]/.test(String(s.obs || ""))) avisarWhats(p, loja); } // pedido do WhatsApp: o robô já mandou a confirmação (com o Pix); não manda outra
       await delApi("importado", { token: s.token, id_local: p.id }); // só avisa o site depois de gravar aqui
     }
     // cancelado no site depois de vir pro caixa: cancela aqui também (o pago automático sai das vendas; o recebido à mão no caixa, não)
@@ -210,6 +300,7 @@ async function sincronizarDelivery() {
       });
       if (mudou) await gravar();
     }
+    await conferirWhats();
     delEstado.ultimo = Date.now(); delEstado.erro = null;
   } catch (e) {
     const m = e.name === "TimeoutError" ? "o site não respondeu" : e.message;
@@ -217,7 +308,60 @@ async function sincronizarDelivery() {
     delEstado.erro = m;
   } finally { sincronizando = false; }
 }
-if (delEstado.ativo) { setInterval(sincronizarDelivery, Number(process.env.DELIVERY_INTERVALO_MS) || 20000); setTimeout(sincronizarDelivery, 2000); }
+// resultado do robô de WhatsApp (WHATS-BOT\enviados.json): marca o pedido do site com "tem WhatsApp" ou "número SEM WhatsApp" e avisa o site
+const ARQ_WENV = process.env.WHATS_ENVIADOS || path.join(__dirname, "..", "WHATS-BOT", "enviados.json");
+async function conferirWhats() {
+  let env; try { env = JSON.parse(fs.readFileSync(ARQ_WENV, "utf8")) || {}; } catch (e) { return; }
+  let mudou = false;
+  for (const p of db.pedidos.filter((x) => x.tipo === "delivery" && !x.whats && Date.now() - x.quando < 2 * 864e5)) {
+    const r = env[p.id]; if (!r) continue;
+    const sem = !r.ok && r.erro === "número sem WhatsApp";
+    if (!r.ok && !sem) continue; // falha do robô/internet não diz nada sobre o número
+    try { if (p.siteToken) await delApi("whats", { token: p.siteToken, ok: !!r.ok, erro: sem ? "número sem WhatsApp" : null }); } catch (e) { continue; } // site fora: tenta na próxima
+    p.whats = r.ok ? "ok" : "sem"; mudou = true;
+  }
+  if (mudou) await gravar();
+}
+// ---------- ponte do cardápio: o totem manda no cardápio do site (o que está ligado hoje, produtos, preços, etapas, adicionais e bebidas) ----------
+// Mesma conta do app.js (etapasLista / marmitexLista / bebidasLista). Doces ficam só no totem. Desliga com "cardapio": false no dados\delivery.json.
+const vm = require("vm");
+function cardapioDoTotem() {
+  if (!cfg || !cfg.t || !cfg.dados) return null; // o totem ainda não mandou as configurações: não mexe no site
+  let P; try { P = vm.runInNewContext(fs.readFileSync(path.join(__dirname, "dados.js"), "utf8") + "\n;({ MARMITEX, CATEGORIAS, BEBIDAS })"); } catch (e) { return null; }
+  const d = cfg.dados, L = (k, p) => { try { return d[k] == null ? p : JSON.parse(d[k]); } catch (e) { return p; } };
+  const ind = new Set(L("indisponiveis", [])), rem = new Set(L("removidos", [])), extras = L("extras", {});
+  const valorNoNome = (nome) => { const m = String(nome || "").match(/R\$\s*(\d+(?:[.,]\d+)?)\s*$/); return m ? parseFloat(m[1].replace(",", ".")) : 0; };
+  const erem = L("etapasRemovidas", []), ad = L("etapasAdicional", {}), ord = L("etapasOrdem", []), inf = L("etapasInfo", {});
+  const ets = [...P.CATEGORIAS, ...L("etapasExtras", [])].filter((c) => c && c.id && !erem.includes(c.id)).map((c) => {
+    const i = inf[c.id] || {}, nome = i.nome || c.nome;
+    return { id: c.id, nome, pergunta: i.pergunta || c.pergunta || "Escolha: " + nome, adicional: Number(ad[c.id] !== undefined ? ad[c.id] : (c.adicional || valorNoNome(c.nome))) || 0,
+      itens: [...new Set([...(c.itens || []), ...(extras[c.id] || [])])].filter((n) => !rem.has(c.id + ":" + n)) };
+  }).sort((a, b) => { const i = ord.indexOf(a.id), j = ord.indexOf(b.id); return (i < 0 ? 999 : i) - (j < 0 ? 999 : j); });
+  const mc = L("marmitexCfg", {}), prem = L("produtosRemovidos", []);
+  const produtos = [...P.MARMITEX, ...L("produtosExtras", [])].filter((m) => m && m.id && !prem.includes(m.id)).map((m) => {
+    const o = mc[m.id] || {}, regras = {};
+    ets.forEach((c) => { const n = (m.regras && m.regras[c.id]) || 0, ov = (o.regras && o.regras[c.id]) || {}, max = ov.max !== undefined ? ov.max : n; regras[c.id] = { min: Math.min(ov.min !== undefined ? ov.min : (n ? 1 : 0), max), max }; });
+    return { id: m.id, nome: o.nome || m.nome, preco: Number(o.preco !== undefined ? o.preco : m.preco) || 0, disponivel: !ind.has("produto:" + m.id), regras };
+  });
+  const bebidas = [...P.BEBIDAS, ...L("bebidasExtras", [])].filter((b, i, a) => b && b.nome && a.findIndex((x) => x.nome === b.nome) === i && !rem.has("bebida:" + b.nome))
+    .map((b) => ({ nome: b.nome, preco: Number(b.preco) || 0, disponivel: !ind.has("bebida:" + b.nome) }));
+  return { etapas: ets.map((c) => ({ id: c.id, nome: c.nome, pergunta: c.pergunta, adicional: c.adicional, itens: c.itens.map((n) => ({ nome: n, disponivel: !ind.has(c.id + ":" + n) })) })), produtos, bebidas };
+}
+let cardEnviado = "", cardQuando = 0, enviandoCard = false;
+async function enviarCardapio() {
+  if (!delEstado.ativo || delCfg.cardapio === false || enviandoCard) return;
+  const c = cardapioDoTotem(); if (!c) return;
+  const s = JSON.stringify(c);
+  if (s === cardEnviado && Date.now() - cardQuando < 30 * 60e3) return; // só manda quando muda (e a cada 30 min, por garantia)
+  enviandoCard = true;
+  try { await delApi("cardapio", { cardapio: c }); cardEnviado = s; cardQuando = Date.now(); delEstado.cardapio = { quando: cardQuando, erro: null }; }
+  catch (e) { const m = e.name === "TimeoutError" ? "o site não respondeu" : e.message; if (!delEstado.cardapio || delEstado.cardapio.erro !== m) console.error("cardápio pro site: " + m); delEstado.cardapio = { quando: cardQuando || null, erro: m }; }
+  finally { enviandoCard = false; }
+}
+if (delEstado.ativo) {
+  setInterval(sincronizarDelivery, Number(process.env.DELIVERY_INTERVALO_MS) || 20000); setTimeout(sincronizarDelivery, 2000);
+  setInterval(enviarCardapio, Number(process.env.CARDAPIO_INTERVALO_MS) || 60000); setTimeout(enviarCardapio, 3000);
+}
 
 async function tratar(req, res) {
   const url = new URL(req.url, "http://x"), p = decodeURIComponent(url.pathname);
@@ -342,6 +486,18 @@ async function tratar(req, res) {
     const eu = sha(tokenDe(req) || ""); Object.keys(sessoes).forEach((h) => { if (sessoes[h].role === role && h !== eu) delete sessoes[h]; }); // quem entrou com a senha antiga sai
     await gravarArquivo(ARQ_SEG, seg); await gravarArquivo(ARQ_SES, sessoes); return json(res, 200, { ok: true, padrao: seg.padrao });
   }
+  if (p === "/api/entregadores" && req.method === "GET") return json(res, 200, db.entregadores);
+  if (p === "/api/entregadores" && req.method === "PUT") {      // nomes dos motoboys (os mesmos todo dia; o caixa edita)
+    const b = await corpo(req);
+    if (!Array.isArray(b.nomes)) return json(res, 400, { erro: "lista inválida" });
+    db.entregadores = [...new Set(b.nomes.map((n) => String(n || "").trim().slice(0, 30)).filter(Boolean))].slice(0, 8);
+    await gravar(); return json(res, 200, db.entregadores);
+  }
+  if (p === "/api/gaveta/motoboys" && req.method === "GET") { // o que foi pago aos motoboys (saiu da gaveta) num período
+    const de = url.searchParams.get("de") || hoje(), ate = url.searchParams.get("ate") || de;
+    const l = Object.keys(db.caixa).filter((d) => d >= de && d <= ate).flatMap((d) => (db.caixa[d].movimentos || []).filter((m) => m.categoria === "motoboy").map((m) => ({ dia: d, entregador: m.entregador, valor: m.valor, quando: m.quando, id: m.id })));
+    return json(res, 200, l);
+  }
   if (p === "/api/gaveta" && req.method === "GET") { // + o troco usado da última vez (pra abrir sozinha com ele)
     const d = url.searchParams.get("dia") || hoje(), ult = Object.keys(db.caixa).filter((x) => x < d && db.caixa[x].abertura).sort().pop();
     return json(res, 200, { ...gavetaDia(d), ultimoTroco: ult ? db.caixa[ult].abertura.valor : null });
@@ -360,7 +516,8 @@ async function tratar(req, res) {
       const motivo = String(b.motivo || "").trim().slice(0, 120);
       if (!g.abertura || g.fechamento) return json(res, 409, { erro: "abra a gaveta (ou ela já foi fechada)" });
       if (!["sangria", "suprimento"].includes(b.tipo) || !(valor > 0 && valor <= 20000) || motivo.length < 3) return json(res, 400, { erro: "informe tipo, valor e motivo" });
-      g.movimentos.push({ id: uid("m"), tipo: b.tipo, valor, motivo, quando: Date.now() });
+      const boy = b.tipo === "sangria" ? String(b.entregador || "").trim().slice(0, 40) : ""; // pagamento do motoboy: sai da gaveta e aparece no fechamento
+      g.movimentos.push({ id: uid("m"), tipo: b.tipo, valor, motivo, quando: Date.now(), ...(boy ? { categoria: "motoboy", entregador: boy } : {}) });
     } else if (b.acao === "fechar") {
       const contado = cents(b.contado);
       if (!g.abertura || g.fechamento) return json(res, 409, { erro: "a gaveta não está aberta" });
@@ -373,7 +530,7 @@ async function tratar(req, res) {
   if (p === "/api/saude") { // para conferir se está tudo de pé
     const dirB = path.join(DIR_DADOS, "backups"), bs = fs.existsSync(dirB) ? fs.readdirSync(dirB).filter((a) => a.startsWith("pedidos-")).sort() : [];
     return json(res, 200, { ok: true, senhasPadrao: Object.keys(seg.padrao).length > 0, agora: Date.now(), pedidosHoje: db.pedidos.filter((x) => x.dia === hoje()).length, clientes: db.clientes.length, ultimoBackup: bs.length ? bs[bs.length - 1] : null,
-      delivery: { ligado: delEstado.ativo, ultimaBusca: delEstado.ultimo, erro: delEstado.erro, importados: delEstado.importados } });
+      delivery: { ligado: delEstado.ativo, ultimaBusca: delEstado.ultimo, erro: delEstado.erro, importados: delEstado.importados, cardapio: delEstado.cardapio || null } });
   }
   if (p === "/api/backup") { // baixa uma cópia completa dos dados
     res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Content-Disposition": 'attachment; filename="backup-totem-' + hoje() + '.json"' });
@@ -384,7 +541,8 @@ async function tratar(req, res) {
     const b = await corpo(req, 12e6);
     if (!b || !b.t || !b.dados || typeof b.dados !== "object") return json(res, 400, { erro: "configuração inválida" });
     ["pin", "cfgT", "pedidos", "fila", "contador", "carrinho"].forEach((k) => delete b.dados[k]); // senha e dados de pedido nunca vão pra cópia
-    cfg = { t: Number(b.t), dados: b.dados }; await gravarArquivo(ARQ_CFG, cfg); return json(res, 200, { ok: true });
+    cfg = { t: Number(b.t), dados: b.dados }; await gravarArquivo(ARQ_CFG, cfg); setTimeout(enviarCardapio, 500); // mudou no totem: o site acompanha em segundos
+    return json(res, 200, { ok: true });
   }
   if (p === "/api/balanca" && req.method === "POST") {           // tablet da balança lança o valor na comanda
     const b = await corpo(req), dia = hoje(), num = Number(b.comanda), valor = cents(b.valor), peso = Math.round(Number(b.peso) || 0), nomeB = String(b.nome || "").slice(0, 60), cliente = String(b.cliente || "").trim().slice(0, 40), uidl = String(b.uid || "").slice(0, 80);
@@ -399,7 +557,7 @@ async function tratar(req, res) {
     let ped = db.pedidos.find((x) => x.tipo === "balanca" && x.dia === dia && x.numero === num && x.status === "aguardando");
     if (ped && uidl && ped.itens.some((c) => c.uid === uidl)) return json(res, 200, ped); // reenvio do mesmo lançamento: não soma duas vezes
     if (!ped) { ped = { id: Date.now() + "-c" + num, tipo: "balanca", dia, numero: num, nome: "", quando: Date.now(), itens: [], unidades: 0, valor: 0, status: "aguardando", pagamento: null }; db.pedidos.push(ped); }
-    ped.itens.push(nomeB ? { iid: uid("i"), qtd: 1, nome: nomeB, preco: valor, tipo: "bebida", grupos: [], obs: "", hora: Date.now(), uid: uidl || undefined }
+    ped.itens.push(nomeB ? { iid: uid("i"), qtd: 1, nome: nomeB, preco: valor, tipo: b.tipo === "doce" ? "doce" : "bebida", grupos: [], obs: "", hora: Date.now(), uid: uidl || undefined }
       : { iid: uid("i"), qtd: 1, nome: "Prato por quilo" + (peso ? " " + peso + " g" : "") + " (R$ " + valor.toFixed(2).replace(".", ",") + ")", preco: valor, peso: peso || undefined, grupos: [], obs: "", hora: Date.now(), uid: uidl || undefined });
     recalcComanda(ped); if (cliente) ped.nome = cliente; // nome da pessoa na comanda
     await gravar(); return json(res, 200, ped);
@@ -410,6 +568,13 @@ async function tratar(req, res) {
     if (!ped) return json(res, 404, { erro: "pedido não encontrado" });
     const u = await corpo(req);
     if (u.virarComanda) { u.paraComanda = 10000 + Number(ped.numero); u.criar = true; } // marmitex do totem vira comanda "M" (número 10000+pedido: nunca bate com cartão físico)
+    if (u.entregador !== undefined) {                            // qual motoboy levou essa entrega (fechamento por motoboy)
+      if (req.papel === "balanca") return json(res, 403, { erro: "sem permissão" });
+      if (ped.tipo !== "delivery") return json(res, 409, { erro: "só pedido do site tem motoboy" });
+      const nome = String(u.entregador || "").trim().slice(0, 30);
+      if (nome) ped.entregador = nome; else delete ped.entregador;
+      await gravar(); return json(res, 200, ped);
+    }
     if (req.papel === "balanca" && u.removerItem === undefined && u.nome === undefined && u.paraComanda === undefined) return json(res, 403, { erro: "a balança só pode desfazer lançamentos, dar nome e pôr pedido do totem na comanda" });
     if (u.paraComanda !== undefined) {                           // pedido do totem ("pagar no caixa") entra numa comanda aberta: paga tudo junto no final
       const num = Number(u.paraComanda);
@@ -452,13 +617,17 @@ async function tratar(req, res) {
       const r = acertar(ped, u.acertar, u.recebido, req.papel); if (!r.ok) return json(res, r.s, { erro: r.erro });
       await gravar(); return json(res, 200, ped);
     }
+    if (u.acertarValores !== undefined) {                        // pagar o que está em aberto com 2 formas, por valor
+      const r = acertarValores(ped, u.acertarValores && u.acertarValores.partes, u.acertarValores && u.acertarValores.recebido, req.papel); if (!r.ok) return json(res, r.s, { erro: r.erro });
+      await gravar(); return json(res, 200, ped);
+    }
     if (u.estornarPagamento !== undefined) {                     // desfaz UM recebimento (os itens voltam a ficar em aberto)
       const g = (ped.pagamentos || []).find((x) => x.id === u.estornarPagamento), mot = String(u.motivo || "").trim();
       if (!g || g.estornado || ped.status === "cancelado") return json(res, 404, { erro: "recebimento não encontrado" });
       if (ped.status === "conta") return json(res, 409, { erro: "esse pedido está na conta: desfaça a conta antes de estornar um recebimento" });
       if (mot.length < 3) return json(res, 400, { erro: "informe o motivo do estorno" });
-      g.estornado = { motivo: mot.slice(0, 200), quando: Date.now() };
-      g.itens.forEach((iid) => { const c = ped.itens.find((i) => i.iid === iid); if (c) delete c.pago; });
+      const juntos = g.dividido ? ped.pagamentos.filter((x) => x.dividido === g.dividido && !x.estornado) : [g]; // pago em 2 formas: estorna as duas partes
+      juntos.forEach((x) => { x.estornado = { motivo: mot.slice(0, 200), quando: Date.now() }; x.itens.forEach((iid) => { const c = ped.itens.find((i) => i.iid === iid); if (c) delete c.pago; }); });
       if (ped.status === "pago") { ped.status = "aguardando"; delete ped.pagoEm; ped.pagamento = null; }
       await gravar(); return json(res, 200, ped);
     }

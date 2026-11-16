@@ -1,0 +1,71 @@
+/* ==========================================================================
+   Balança - mesmo visual do caixa (caixa-tema.css): fundo neutro, superfícies
+   brancas com borda fina, uma fonte só, vermelho da marca só onde importa e
+   ícones de traço (caixa-tema.js troca os emojis). Vem por último e manda
+   sobre os estilos antigos do balanca.html.
+   ========================================================================== */
+:root {
+  --ff: "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, system-ui, sans-serif;
+  --fundo: #f4f3f1; --sup: #fff; --sup-2: #f8f7f5; --linha: #e7e4df; --linha-2: #efedea;
+  --tinta: #1c1917; --texto: #3a3430; --muted: #78716c; --muted-2: #a8a29e;
+  --marca: #a50f14; --marca-suave: #fbeeee; --verde: #15803d; --verde-suave: #ecf6ef;
+  --laranja: #a50f14; --vermelho: #a50f14; --num: var(--ff);
+}
+html, body { background: var(--fundo) !important; }
+body, body *:not(svg):not(svg *) { font-family: var(--ff) !important; }
+.ic { display: inline-flex; width: 1.15em; height: 1.15em; vertical-align: -.2em; flex-shrink: 0; pointer-events: none; }
+.ic svg { width: 100%; height: 100%; }
+span.ic.ic { background: none !important; border: 0 !important; padding: 0 !important; box-shadow: none !important; border-radius: 0 !important; }
+button > * { pointer-events: none; }
+
+/* topo */
+header { background: var(--sup) !important; border-bottom: 1px solid var(--linha) !important; box-shadow: none !important; }
+.marca-txt b { color: var(--tinta) !important; font-weight: 700 !important; font-size: 1.25rem !important; letter-spacing: -.02em; }
+.marca-txt small { color: var(--muted) !important; letter-spacing: .16em !important; font-weight: 600 !important; }
+.pill { background: var(--sup) !important; border: 1px solid var(--linha) !important; color: var(--muted) !important; font-weight: 500 !important; }
+.pill.off { background: var(--marca-suave) !important; color: var(--marca) !important; border-color: #f3d2d3 !important; font-weight: 600 !important; }
+header .ib { background: var(--sup) !important; border: 1px solid var(--linha) !important; color: var(--texto) !important; box-shadow: 0 1px 2px rgba(28,25,23,.05) !important; border-radius: 10px !important; }
+header .ib .ic { width: 20px; height: 20px; }
+#aviso-padrao { border-radius: 12px !important; background: var(--marca-suave) !important; border: 1px solid #f3d2d3; font-weight: 600 !important; }
+
+/* blocos */
+.painel, .direita { background: var(--sup) !important; border: 1px solid var(--linha) !important; border-radius: 16px !important; box-shadow: 0 1px 2px rgba(28,25,23,.05) !important; }
+.campo { background: var(--sup-2) !important; border: 1px solid var(--linha) !important; border-radius: 12px !important; }
+.campo.on { background: var(--sup) !important; border: 2px solid var(--tinta) !important; box-shadow: 0 0 0 3px rgba(28,25,23,.08) !important; }
+.campo small, .campo span { color: var(--muted) !important; letter-spacing: .06em; }
+.campo.on small, .campo.on span { color: var(--tinta) !important; }
+.campo b { font-weight: 700 !important; letter-spacing: -.02em !important; color: var(--tinta); font-variant-numeric: tabular-nums; }
+.nome-cmd { background: var(--sup-2) !important; border: 1px solid var(--linha) !important; border-radius: 12px !important; box-shadow: none !important; }
+.so-nome { background: var(--sup) !important; border: 1px solid var(--linha) !important; color: var(--texto) !important; border-radius: 12px !important; font-weight: 600 !important; }
+
+/* teclado: teclas brancas grandes; ao tocar fica escura (sem laranja) */
+.teclado button { border: 1px solid var(--linha) !important; border-radius: 14px !important; background: var(--sup) !important; box-shadow: 0 1px 2px rgba(28,25,23,.06) !important; color: var(--tinta) !important; font-weight: 600 !important; }
+.teclado button:nth-child(10), .teclado button:nth-child(12) { background: var(--sup-2) !important; color: var(--texto) !important; }
+.teclado button:active, .teclado button.tap { background: var(--tinta) !important; border-color: var(--tinta) !important; color: #fff !important; box-shadow: none !important; }
+.limpar { background: var(--sup) !important; color: var(--marca) !important; border: 1px solid #efcfd0 !important; border-radius: 12px !important; box-shadow: none !important; }
+.registrar { background: var(--verde) !important; color: #fff !important; border-radius: 12px !important; box-shadow: 0 1px 2px rgba(21,128,61,.3) !important; }
+.registrar.prox { background: var(--tinta) !important; box-shadow: none !important; }
+.registrar:disabled { background: #e9e7e3 !important; color: var(--muted-2) !important; box-shadow: none !important; }
+
+/* abas e lista de comandas */
+.abas-b { background: #e9e7e3 !important; border-radius: 10px !important; padding: 3px !important; }
+.aba-b { color: var(--muted) !important; font-weight: 500 !important; border-radius: 8px !important; }
+.aba-b.on { background: var(--sup) !important; color: var(--tinta) !important; font-weight: 600 !important; box-shadow: 0 1px 2px rgba(28,25,23,.08), 0 1px 6px rgba(28,25,23,.06) !important; }
+.direita h2, .direita h3 { font-weight: 700 !important; color: var(--tinta) !important; letter-spacing: -.01em; }
+.card { border: 1px solid var(--linha) !important; border-left: 1px solid var(--linha) !important; border-radius: 12px !important; box-shadow: 0 1px 2px rgba(28,25,23,.05) !important; }
+.card .topo { font-weight: 700 !important; color: var(--tinta) !important; }
+.card .topo b, .card .topo span:first-child { color: var(--tinta) !important; }
+.card .it { border-color: var(--linha-2) !important; }
+.card .mais { background: var(--sup-2) !important; border: 1px dashed #d6d3d1 !important; color: var(--texto) !important; border-radius: 10px !important; }
+.card .tn-x, .card .x, .card button[data-a="apagar"] { border-radius: 9px !important; }
+.vinc, .vinc-t { background: var(--sup-2) !important; border-color: var(--linha) !important; color: var(--muted) !important; }
+
+/* bebidas e sorvetes */
+.beb { background: var(--sup) !important; border: 1px solid var(--linha) !important; border-radius: 12px !important; box-shadow: 0 1px 2px rgba(28,25,23,.05) !important; }
+.beb:active { background: var(--sup-2) !important; }
+.direita button.pillb, .pillb { background: var(--sup) !important; border: 1px solid var(--linha) !important; color: var(--texto) !important; font-weight: 500 !important; }
+.direita button.pillb.on, .pillb.on { background: var(--tinta) !important; color: #fff !important; border-color: var(--tinta) !important; }
+
+/* janelas */
+.modal { background: rgba(28,25,23,.45) !important; backdrop-filter: blur(3px) !important; }
+.caixa-modal { border-radius: 16px !important; border: 1px solid var(--linha); box-shadow: 0 24px 60px rgba(28,25,23,.25) !important; }

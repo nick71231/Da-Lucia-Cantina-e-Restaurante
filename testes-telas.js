@@ -20,6 +20,7 @@ async function abre(caminho, antes) { // abre uma página do servidor como se fo
   await new Promise((r) => (dom.window.document.readyState === "complete" ? r() : dom.window.addEventListener("load", r))); await dorme(900); return dom.window;
 }
 const clica = async (w, sel) => { const el = w.document.querySelector(sel); if (!el) throw new Error("não achei " + sel); el.click(); await dorme(500); };
+const toca = async (w, sel) => { const el = w.document.querySelector(sel); if (!el) throw new Error("não achei " + sel); el.dispatchEvent(new w.Event("pointerdown", { bubbles: true, cancelable: true })); await dorme(300); }; // teclado da balança reage ao toque (pointerdown), não ao click
 const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" }).textContent;
 
 (async () => {
@@ -35,18 +36,19 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
   const w = await abre("/caixa.html", (win) => win.sessionStorage.setItem("caixaToken", cx));
   t(texto(w, "#lista").includes("C36") && texto(w, "#lista").includes("Beto"), "'Em aberto' mostra a comanda com bebida e o pedido do totem");
   t(texto(w, "#n-aberto") === "2", "contador de abertos bate (2)");
-  for (const [aba, esperado] of [["clientes", "Novo cliente"], ["aberto", "C36"], ["painel", "Vendas por hora"], ["gaveta", "Gaveta de dinheiro"], ["aberto", "C36"], ["fechamento", "Por forma de pagamento"], ["contas", "Mês"], ["conta", ""], ["pagos", ""], ["aberto", "C36"]]) {
+  for (const [aba, esperado] of [["clientes", "Novo cliente"], ["aberto", "C36"], ["painel", "Vendas por hora"], ["gaveta", "Gaveta de hoje"], ["aberto", "C36"], ["fechamento", "Por forma de pagamento"], ["contas", "A receber"], ["conta", ""], ["pagos", ""], ["aberto", "C36"]]) {
     await clica(w, `[data-aba="${aba}"]`);
     t(texto(w, "#lista").includes(esperado) && texto(w, "#lista").trim().length > 0, `aba ${aba}: mostra o conteúdo certo (sem ficar com a aba anterior)`);
   }
   await clica(w, '[data-a="receber"]'); // 1º cartão = pedido do Beto (1 item)
-  t(!w.document.querySelector("#modal").hidden && w.document.querySelectorAll(".ac-item").length === 1 && w.document.querySelector("#ac-ok").disabled, "janela de acerto lista o item e só libera depois de escolher a forma");
+  t(!w.document.querySelector("#modal").hidden && w.document.querySelectorAll(".ac-li").length === 1 && w.document.querySelector("#ac-ok").disabled, "janela de acerto lista o item e só libera depois de escolher a forma");
   await clica(w, '[data-a="acSet"][data-f="pix"]'); t(!w.document.querySelector("#ac-ok").disabled, "escolhida a forma, o botão Receber libera");
   await clica(w, "#ac-ok"); await dorme(400);
   const hojeISO = new Date().toLocaleDateString("en-CA"), lista1 = await api("GET", "/api/pedidos?dia=" + hojeISO, undefined, cx);
   t(lista1.find((p) => p.nome === "Beto").status === "pago" && lista1.find((p) => p.nome === "Beto").pagamentos[0].forma === "pix", "pedido do Beto recebido no pix pela tela");
   await clica(w, '[data-a="receber"]'); // agora é a comanda 36 (3 itens)
-  t(w.document.querySelectorAll(".ac-item").length === 3, "comanda 36 lista os 3 itens");
+  t(w.document.querySelectorAll(".ac-li").length === 3, "comanda 36 lista os 3 itens");
+  await clica(w, '[data-a="acDividir"]'); t(w.document.querySelectorAll(".ac-item").length === 3, "Dividir abre os 3 itens pra escolher um por um");
   await clica(w, '[data-a="acItem"]'); await clica(w, '[data-a="acSet"][data-f="dinheiro"]');
   const rec = w.document.querySelector("#ac-rec"); rec.value = "300"; rec.dispatchEvent(new w.Event("input", { bubbles: true })); await dorme(150);
   await clica(w, "#ac-ok"); await dorme(400);
@@ -58,19 +60,43 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
   console.log("\nBalança");
   const bw = await abre("/balanca.html", (win) => win.localStorage.setItem("tokenBalanca", bl));
   t(texto(bw, "#lista").includes("Comanda 36") && texto(bw, "#lista").includes("Suco Grande"), "lista mostra a comanda 36 com a bebida");
-  for (const k of ["3", "6"]) await clica(bw, `[data-k="${k}"]`);
+  for (const k of ["3", "6"]) await toca(bw, `[data-k="${k}"]`);
   await clica(bw, '[data-t="bebidas"]'); t(bw.document.querySelectorAll(".beb").length >= 20, "aba Bebidas mostra a lista (27)");
   await clica(bw, ".beb"); const apos = (await api("GET", "/api/pedidos?dia=" + new Date().toLocaleDateString("en-CA"), undefined, bl)).find((p) => p.tipo === "balanca");
   t(apos.itens.length === 4, "tocar na bebida lança na comanda digitada (4 itens)");
-  await clica(bw, "#limpar"); await clica(bw, '[data-t="comandas"]');
-  for (const k of ["4", "1"]) await clica(bw, `[data-k="${k}"]`);
-  await clica(bw, "#reg"); for (const k of ["2", "5", "0", "0"]) await clica(bw, `[data-k="${k}"]`);
+  await clica(bw, '[data-cat="Sorvetes"]'); t(bw.document.querySelectorAll(".beb.sorv").length >= 5 && bw.document.querySelectorAll(".beb:not(.sorv)").length === 0, "balança: filtro Sorvetes mostra só sorvetes");
+  await clica(bw, ".beb.sorv"); const aposS = (await api("GET", "/api/pedidos?dia=" + hojeISO, undefined, bl)).find((p) => p.tipo === "balanca" && p.numero === 36);
+  t(aposS.itens.length === 5 && aposS.itens[4].tipo === "doce" && /Sorvete/.test(aposS.itens[4].nome), "tocar no sorvete lança na comanda como sorvete (não como prato nem bebida)");
+  await clica(bw, '[data-cat="Todas"]');
+  await toca(bw, "#limpar"); await clica(bw, '[data-t="comandas"]');
+  for (const k of ["4", "1"]) await toca(bw, `[data-k="${k}"]`);
+  await clica(bw, "#reg"); for (const k of ["2", "5", "0", "0"]) await toca(bw, `[data-k="${k}"]`);
   bw.document.querySelector("#nome-cmd").value = "Joana"; await clica(bw, "#reg"); await dorme(400);
   const c41 = (await api("GET", "/api/pedidos?dia=" + hojeISO, undefined, bl)).find((p) => p.tipo === "balanca" && p.numero === 41);
   t(c41 && c41.nome === "Joana" && c41.valor === 25, "balança registra a comanda 41 (R$ 25,00) com o nome Joana");
   t(texto(bw, "#lista").includes("Joana"), "o nome aparece no cartão da comanda");
   bw.close();
   const bs = await abre("/balanca.html"); t(!bs.document.querySelector("#modal").hidden && texto(bs, "#modal").includes("Entrar na balança"), "sem login a balança pede a senha"); bs.close();
+
+  console.log("\nGarçom");
+  const gw = await abre("/garcom.html", (win) => win.localStorage.setItem("tokenBalanca", bl)); await dorme(300);
+  await clica(gw, '[data-cmd="41"]'); await clica(gw, '[data-cat="Sorvetes"]');
+  const bSorv = [...gw.document.querySelectorAll(".beb")]; t(bSorv.length >= 5 && bSorv.every((b) => /Sorvete/.test(b.textContent)), "garçom: categoria Sorvetes na grade");
+  await clica(gw, ".beb"); await dorme(400);
+  const c41s = (await api("GET", "/api/pedidos?dia=" + hojeISO, undefined, bl)).find((p) => p.tipo === "balanca" && p.numero === 41);
+  t(c41s.itens.some((c) => c.tipo === "doce" && /Sorvete/.test(c.nome)) && /Sorvete/.test(texto(gw, ".na-cmd")), "garçom lança sorvete na comanda e ele aparece em 'Na comanda'");
+  gw.close();
+  console.log("\nCaixa: bebida, sorvete e doce na hora de receber");
+  const w2 = await abre("/caixa.html", (win) => win.sessionStorage.setItem("caixaToken", cx)); const idRec = w2.document.querySelector('[data-a="receber"]').dataset.id;
+  await clica(w2, '[data-a="receber"]'); await clica(w2, '[data-a="dcAbrir"]');
+  t(w2.document.querySelectorAll(".dc-cat").length === 4 && !!w2.document.querySelector(".dc-it.c-b") && !!w2.document.querySelector(".dc-it.c-s") && !!w2.document.querySelector(".dc-it.c-d"), "caixa: tela de extras tem bebidas, sorvetes e doces");
+  await clica(w2, ".dc-it.c-b"); await clica(w2, ".dc-it.c-s"); await clica(w2, ".dc-it.c-s");
+  t(w2.document.querySelectorAll(".dc-it.tem").length === 2 && texto(w2, "#dc-soma").includes("3 itens"), "tocar adiciona (com contador no cartão e soma embaixo)");
+  await clica(w2, ".dc-it.c-s .dc-menos"); t(texto(w2, "#dc-soma").includes("2 itens"), "o − no cartão tira 1");
+  await clica(w2, '[data-a="dcFechar"]'); await clica(w2, '[data-a="acSet"][data-f="pix"]'); await clica(w2, "#ac-ok"); await dorme(500);
+  const c36b = (await api("GET", "/api/pedidos?dia=" + hojeISO, undefined, cx)).find((p) => p.id === idRec);
+  t(!!c36b && c36b.status === "pago" && c36b.itens.some((c) => c.tipo === "bebida" && c.pago && c.nome !== "Suco Grande") && c36b.itens.some((c) => c.tipo === "doce" && /Sorvete/.test(c.nome) && c.pago), "caixa lança bebida e sorvete na comanda e recebe tudo junto");
+  w2.close();
 
   console.log("\nTotem");
   const tw = await abre("/"); t(!!tw.document.querySelector(".descanso"), "abre na tela de descanso");

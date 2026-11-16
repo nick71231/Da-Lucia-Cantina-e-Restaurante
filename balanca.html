@@ -87,7 +87,7 @@ h3 { margin: 4px 0 12px; font: 700 1.3rem Georgia, serif; } h3 small { font: 400
 .gradeb { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
 .beb { position: relative; min-height: 84px; padding: 14px 10px; border: 1px solid rgba(234,215,191,.7); border-radius: 20px; background: #fff; box-shadow: var(--sombra-sm); display: flex; flex-direction: column; gap: 6px; align-items: center; justify-content: center; text-align: center; transition: transform .1s, background .12s; }
 .beb b { font-size: .95rem; line-height: 1.2; } .beb small { color: var(--vermelho); font-weight: 700; font-size: 1.02rem; font-variant-numeric: tabular-nums; }
-.beb:active { background: #FFE3A8; transform: scale(.96); }
+.beb:active { background: #FFE3A8; transform: scale(.96); } .beb.sorv { background: #fff4fa; border-color: #f3c6dd; } .beb.sorv small { color: #b0407a; }
 .beb em { position: absolute; top: -8px; right: -8px; background: var(--vermelho); color: #fff; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-style: normal; font-weight: 700; box-shadow: 0 3px 8px rgba(165,15,20,.4); border: 2px solid #fff; }
 
 /* ===== avisos e janelas ===== */
@@ -287,6 +287,7 @@ h3 { font-size: 1.2rem; }
 .vinc-it > i { font-style: normal; font-weight: 700; color: #fff; background: var(--verde); padding: 8px 12px; border-radius: 12px; white-space: nowrap; } /* escondido de verdade (não fica um pedacinho aparecendo embaixo) */
 @media (max-width: 760px) { header { padding: 8px 12px; } .marca-logo { width: 44px; height: 44px; } .marca-txt b { font-size: 1.2rem; } }
 </style>
+<link rel="stylesheet" href="balanca-tema.css">
 </head>
 <body>
 <header><div class="marca"><span class="marca-logo"><img id="logo-topo" alt="Da Lúcia"><i>DL</i></span><div class="marca-txt"><b>Da Lúcia</b><small>Balança</small></div></div><span id="status" class="pill">...</span><button class="ib" id="som" title="Som">🔔</button><button class="ib" id="admBtn" title="Admin do totem">🛠</button><button class="ib" id="cfgBtn" title="Ajustes da balança">⚙</button></header>
@@ -294,7 +295,7 @@ h3 { font-size: 1.2rem; }
 <div class="layout">
   <section class="painel">
     <div class="campos" id="campos"></div>
-    <div class="nome-linha"><input id="nome-cmd" class="nome-cmd" maxlength="40" readonly inputmode="none" autocomplete="off" placeholder="👤 Nome do cliente (toque para digitar)"><button class="so-nome" id="so-nome" title="Dar nome à comanda sem lançar prato">👤 Só o<br>nome</button></div>
+    <div class="nome-linha"><input id="nome-cmd" class="nome-cmd" maxlength="40" readonly inputmode="none" autocomplete="off" placeholder="Nome do cliente (toque para digitar)"><button class="so-nome" id="so-nome" title="Dar nome à comanda sem lançar prato">👤 Só o<br>nome</button></div>
     <div class="aviso-cmd" id="aviso-cmd"></div>
     <div class="resumo" id="resumo"></div>
     <div class="teclado">
@@ -303,7 +304,7 @@ h3 { font-size: 1.2rem; }
     </div>
     <div class="acoes-b"><button class="limpar" id="limpar">Limpar</button><button class="registrar" id="reg" disabled>Próximo</button></div>
   </section>
-  <section class="direita"><div class="abas-b"><button class="aba-b on" data-t="comandas">Comandas abertas</button><button class="aba-b" data-t="bebidas">🥤 Bebidas</button></div><div id="lista"></div></section>
+  <section class="direita"><div class="abas-b"><button class="aba-b on" data-t="comandas">Comandas abertas</button><button class="aba-b" data-t="bebidas">🥤 Bebidas e 🍦 Sorvetes</button></div><div id="lista"></div></section>
 </div>
 <div id="undo"></div><div id="toast"></div><div id="modal" class="modal" hidden></div><div id="tn" class="tn" hidden></div>
 <script src="dados.js"></script>
@@ -467,16 +468,17 @@ async function enviarFila() { // lançamentos guardados enquanto estava sem cone
   if (resta.length < fila.length) carregar(); status();
 }
 function status() { const p = ler("filaBalanca", []).length, el = $("#status"); el.className = "pill" + (offline ? " off" : ""); el.textContent = (offline ? "SEM CONEXÃO" : "online") + (p ? " - " + p + " pendente" + (p > 1 ? "s" : "") : ""); }
-const pesado = (p) => p.itens.filter((c) => !c.origem && c.tipo !== "bebida");
+const pesado = (p) => p.itens.filter((c) => !c.origem && c.tipo !== "bebida" && c.tipo !== "doce");
+const comSorvetes = (l) => [...l, ...(typeof SORVETES !== "undefined" ? SORVETES : []).map((s) => ({ ...s, sorvete: true }))]; // sorvete entra na mesma grade das bebidas
 const ICO = { "Pratos hoje": "🍽️", "Total das comandas": "💰", "Ticket médio": "📈", "Comandas abertas": "📋", "Bebidas": "🥤", "Peso total": "⚖️" };
 function estat() {
   const ps = pedidosB.filter((p) => p.status !== "cancelado"), pr = ps.flatMap(pesado), total = soma(ps, (p) => p.valor), g = soma(pr, (c) => c.peso || 0), beb = soma(ps, (p) => p.itens.filter((c) => c.tipo === "bebida").length);
   $("#stats").innerHTML = [["Pratos hoje", pr.length], ["Total das comandas", brl(total)], ["Ticket médio", brl(ps.length ? total / ps.length : 0)], ["Comandas abertas", abertas().length], ["Bebidas", beb], ...(g ? [["Peso total", (g / 1000).toFixed(1).replace(".", ",") + " kg"]] : [])]
     .map(([t, v]) => `<div><span class="ic">${ICO[t] || ""}</span><small>${t}</small><b>${v}</b></div>`).join("");
 }
-const catB = (b) => (/água/i.test(b.nome) ? "Águas" : /suco|del valle/i.test(b.nome) ? "Sucos" : /long neck|cerveja/i.test(b.nome) ? "Cervejas" : "Refrigerantes");
-const rotItem = (c) => (c.origem === "totem" || c.tipo === "bebida")
-  ? `${c.origem === "totem" ? "🍱 " : "🥤 "}${c.qtd > 1 ? c.qtd + "x " : ""}${esc(c.nome)} - ${brl(c.preco * (c.qtd || 1))}` : `${brl(c.preco)}${c.peso ? " - " + c.peso + " g" : ""}`;
+const catB = (b) => (b.sorvete ? "Sorvetes" : /água/i.test(b.nome) ? "Águas" : /suco|del valle/i.test(b.nome) ? "Sucos" : /long neck|cerveja/i.test(b.nome) ? "Cervejas" : "Refrigerantes");
+const rotItem = (c) => (c.origem === "totem" || c.tipo === "bebida" || c.tipo === "doce")
+  ? `${c.origem === "totem" ? "🍱 " : c.tipo === "doce" ? "🍦 " : "🥤 "}${c.qtd > 1 ? c.qtd + "x " : ""}${esc(c.nome)} - ${brl(c.preco * (c.qtd || 1))}` : `${brl(c.preco)}${c.peso ? " - " + c.peso + " g" : ""}`;
 function listar() {
   document.querySelectorAll(".aba-b").forEach((x) => x.classList.toggle("on", x.dataset.t === aba));
   const h = aba === "bebidas" ? htmlBebidas() : htmlComandas();
@@ -484,10 +486,10 @@ function listar() {
 }
 function htmlBebidas() {
   const n = parseInt(comanda || "0", 10), ab = abertas().find((p) => p.numero === n), cats = ["Todas", ...new Set(bebidas.map(catB))];
-  const qtdNa = (nome) => (ab ? ab.itens.filter((c) => c.tipo === "bebida" && c.nome === nome).length : 0);
-  return `<h3>Bebidas ${n ? `<small>na ${rotN(n).toLowerCase()}${ab ? " (" + brl(ab.valor) + ")" : ""}</small>` : `<small>digite a comanda e toque na bebida</small>`}</h3>
-    <div class="pillsb">${cats.map((c) => `<button class="pillb ${c === catAtual ? "on" : ""}" data-cat="${c}">${c}</button>`).join("")}</div>
-    <div class="gradeb">${bebidas.map((x, i) => ({ x, i })).filter((o) => catAtual === "Todas" || catB(o.x) === catAtual).map(({ x, i }) => `<button class="beb" data-b="${i}">${qtdNa(x.nome) ? `<em>${qtdNa(x.nome)}</em>` : ""}<b>${esc(x.nome)}</b><small>${brl(x.preco)}</small></button>`).join("")}</div>`;
+  const qtdNa = (nome) => (ab ? ab.itens.filter((c) => (c.tipo === "bebida" || c.tipo === "doce") && c.nome === nome).length : 0);
+  return `<h3>Bebidas e sorvetes ${n ? `<small>na ${rotN(n).toLowerCase()}${ab ? " (" + brl(ab.valor) + ")" : ""}</small>` : `<small>digite a comanda e toque na bebida ou no sorvete</small>`}</h3>
+    <div class="pillsb">${cats.map((c) => `<button class="pillb ${c === catAtual ? "on" : ""}" data-cat="${c}">${c === "Sorvetes" ? "🍦 " : ""}${c}</button>`).join("")}</div>
+    <div class="gradeb">${bebidas.map((x, i) => ({ x, i })).filter((o) => catAtual === "Todas" || catB(o.x) === catAtual).map(({ x, i }) => `<button class="beb ${x.sorvete ? "sorv" : ""}" data-b="${i}">${qtdNa(x.nome) ? `<em>${qtdNa(x.nome)}</em>` : ""}<b>${esc(x.nome)}</b><small>${brl(x.preco)}</small></button>`).join("")}</div>`;
 }
 function htmlComandas() {
   const n = parseInt(comanda || "0", 10), f = comanda ? abertas().filter((p) => String(p.numero).startsWith(comanda)) : abertas(), pend = ler("filaBalanca", []), fech = fechadas();
@@ -549,8 +551,10 @@ function teclaTN(c) { // 1ª letra de cada palavra sai maiúscula (⇧ trava tud
 }
 function abrirNomeCampo() { // toque no campo de nome do painel
   const n = parseInt(comanda || "0", 10), ab = n ? abertas().find((p) => p.numero === n) : null, ini = $("#nome-cmd").value || (ab && ab.nome) || "";
-  const botoes = [{ rot: "✓ Usar no próximo lançamento", fn: (t) => { $("#nome-cmd").value = t; return true; } }];
-  if (n > 0) botoes.push({ rot: "💾 Salvar na comanda " + n + " (sem prato)", cls: "ok", fn: (t) => (t ? reservarNome(n, t) : (toast("Digite o nome."), false)) });
+  const v = valorAtual(), botoes = [{ rot: "✓ Usar no próximo lançamento", fn: (t) => { $("#nome-cmd").value = t; return true; } }];
+  // já tem valor digitado: lança o prato JUNTO com o nome (antes "salvar sem prato" limpava o valor digitado e ele "sumia")
+  if (n > 0 && v > 0) botoes.push({ rot: "✓ Lançar " + brl(v) + " na comanda " + n + " com esse nome", cls: "ok", fn: (t) => { if (!t) { toast("Digite o nome."); return false; } $("#nome-cmd").value = t; setTimeout(registrar, 0); return true; } });
+  else if (n > 0) botoes.push({ rot: "💾 Salvar na comanda " + n + " (sem prato)", cls: "ok", fn: (t) => (t ? reservarNome(n, t) : (toast("Digite o nome."), false)) });
   abrirTN("Nome do cliente" + (n ? " - comanda " + n : ""), ini, botoes);
 }
 document.addEventListener("click", async (e) => {
@@ -579,7 +583,7 @@ async function carregarBebidas() { // respeita o que o admin do totem ligou/desl
   try {
     const d = ((await (await aut("/api/config")).json()).dados) || {}, j = (k, p) => { try { return d[k] ? JSON.parse(d[k]) : p; } catch (e) { return p; } };
     const rem = j("removidos", []), off = j("indisponiveis", []), extras = j("bebidasExtras", []);
-    bebidas = [...BEBIDAS, ...extras].filter((x, i, a) => a.findIndex((y) => y.nome === x.nome) === i && !rem.includes("bebida:" + x.nome) && !off.includes("bebida:" + x.nome));
+    bebidas = comSorvetes([...BEBIDAS, ...extras].filter((x, i, a) => a.findIndex((y) => y.nome === x.nome) === i && !rem.includes("bebida:" + x.nome) && !off.includes("bebida:" + x.nome)));
   } catch (e) {}
 }
 async function carregar() {
@@ -617,7 +621,7 @@ document.addEventListener("click", (e) => {
   if (d.b !== undefined) {
     const x = bebidas[+d.b], n = parseInt(comanda || "0", 10); if (!x) return;
     if (!(n > 0)) { bip(false); toast("Digite o número da comanda primeiro."); campo = "comanda"; aba = "comandas"; return tela(); }
-    enviarItem({ comanda: n, valor: x.preco, nome: x.nome, uid: novoUid() }, "🥤 " + x.nome + " na " + rotN(n).toLowerCase()); return;
+    enviarItem({ comanda: n, valor: x.preco, nome: x.nome, uid: novoUid(), ...(x.sorvete ? { tipo: "doce" } : {}) }, (x.sorvete ? "🍦 " : "🥤 ") + x.nome + " na " + rotN(n).toLowerCase()); return;
   }
   if (d.k !== undefined || t.id === "limpar") return; // números e Limpar já foram tratados no toque (pointerdown), lá embaixo
   if (t.id === "reg") return acao();
@@ -657,5 +661,6 @@ avisoPadrao();
 if (!token()) mostrarLogin();
 tela(); status(); carregar(); carregarBebidas(); setInterval(carregar, 4000); setInterval(carregarBebidas, 60000); setInterval(enviarFila, 5000);
 </script>
+<script src="caixa-tema.js"></script>
 </body>
 </html>

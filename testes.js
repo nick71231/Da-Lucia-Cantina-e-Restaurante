@@ -187,7 +187,7 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   t(recusou, "arquivo que não é backup é recusado");
 
   console.log("\nPedidos do site de delivery (com um site de mentira)");
-  let marcados = [], cancelarNoSite = false;
+  let marcados = [], cancelarNoSite = false, cardSite = null, whatsSite = [];
   const PS = { token: "11111111-2222-3333-4444-555555555555", numero: 57, dia: hoje, criado_em: new Date().toISOString(), nome: "Rita", telefone: "12999998888", tipo_entrega: "entrega",
     endereco: { rua: "Rua A", numero: "10", bairro: "Centro" }, forma_pagamento: "pix", troco_para: null, obs: "portão azul", status: "preparando", subtotal: 54.5, taxa_entrega: 7, total: 61.5,
     itens: [{ nome: "Marmitex", preco: 24, qtd: 2, grupos: [{ rotulo: "Carne", itens: ["Frango"] }] }, { tipo: "bebida", nome: "Suco", preco: 6.5, qtd: 1 }] };
@@ -195,12 +195,18 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   const site = require("http").createServer((rq, rs) => { let b = ""; rq.on("data", (c) => (b += c)); rq.on("end", () => {
     const j = JSON.parse(b || "{}"), out = (o, s = 200) => { rs.writeHead(s, { "Content-Type": "application/json" }); rs.end(JSON.stringify(o)); };
     if (rq.headers["x-caixa-token"] !== "tk-teste") return out({ erro: "token inválido" }, 401);
-    if (j.acao === "novos") return out({ pedidos: [PS, PS2, PS3].filter((x) => !marcados.includes(x.token)) });
+    if (j.acao === "novos") return out({ pedidos: [PS, PS2, PS3].filter((x) => !marcados.includes(x.token)), loja: { cidade_entrega: "Cachoeira Paulista, SP", tempo_entrega_min: 45 } });
     if (j.acao === "importado") { marcados.push(j.token); return out({ ok: true }); }
+    if (j.acao === "cardapio") { cardSite = j.cardapio; return out({ ok: true }); }
+    if (j.acao === "whats") { whatsSite.push(j); return out({ ok: true }); }
     if (j.acao === "situacao") return out({ pedidos: j.tokens.map((x) => ({ token: x, status: cancelarNoSite ? "cancelado" : "preparando" })) });
     out({ erro: "?" }, 400);
   }); }).listen(3994);
-  const dirD = fs.mkdtempSync(path.join(os.tmpdir(), "totem-delivery-")), sd = sobe(3993, dirD, { DELIVERY_URL: "http://localhost:3994/", DELIVERY_TOKEN: "tk-teste", DELIVERY_INTERVALO_MS: "700" });
+  const dirD = fs.mkdtempSync(path.join(os.tmpdir(), "totem-delivery-")), arqWE = path.join(dirD, "enviados-robo.json");
+  fs.writeFileSync(path.join(dirD, "config.json"), JSON.stringify({ t: 1, dados: { indisponiveis: JSON.stringify(["bebida:Sprite Lata", "arroz:Arroz Integral", "produto:m24"]), removidos: JSON.stringify(["bebida:H2OH!"]),
+    bebidasExtras: JSON.stringify([{ nome: "Suco Pequeno", preco: 6 }]), etapasExtras: JSON.stringify([{ id: "e1", nome: "Salada Separada - R$1,00", itens: ["Alface"] }]),
+    marmitexCfg: JSON.stringify({ m22: { preco: 23, regras: { e1: { min: 0, max: 1 } } } }) } }));
+  const sd = sobe(3993, dirD, { DELIVERY_URL: "http://localhost:3994/", DELIVERY_TOKEN: "tk-teste", DELIVERY_INTERVALO_MS: "700", WHATS_ENVIADOS: arqWE });
   await sd.pronto; await dorme(2600);
   const tkD = (await reqEm(sd.base, "POST", "/api/login", { role: "caixa", pin: "2222" }, "")).j.token, delDe = async () => (await reqEm(sd.base, "GET", "/api/pedidos?dia=" + hoje, undefined, tkD)).j.filter((p) => p.tipo === "delivery");
   const lD0 = await delDe(), lD = lD0, d57 = lD.find((x) => x.numero === 57), d58 = lD.find((x) => x.numero === 58), d59 = lD.find((x) => x.numero === 59);
@@ -209,8 +215,21 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   t(!!d59 && d59.status === "pago" && d59.pagamento === "cartao" && d59.itens.every((c) => c.pago), "cartão na entrega chega recebido como cartão");
   t(!!d57 && d57.itens.some((c) => c.nome === "Taxa de entrega" && c.preco === 7) && d57.endereco.bairro === "Centro" && d57.pagPrevisto === "pix", "a taxa de entrega vira item, e o endereço e a forma de pagamento vêm junto");
   t(marcados.length === 3, "o site é avisado de que os pedidos foram pro caixa");
-  const fw = (() => { try { return JSON.parse(fs.readFileSync(path.join(dirD, "whats-fila.json"), "utf8")); } catch (e) { return []; } })(), w58 = fw.find((x) => /#58/.test(x.texto));
-  t(fw.length === 3 && fw.every((x) => x.tel === "12999998888") && !!w58 && /Rita/.test(w58.texto) && /troco pra R\$ 100,00/.test(w58.texto) && /\/\?p=22222222-/.test(w58.texto), "cada pedido do site entra na fila do robô de WhatsApp com a confirmação certa");
+  const fw = (() => { try { return JSON.parse(fs.readFileSync(path.join(dirD, "whats-fila.json"), "utf8")); } catch (e) { return []; } })(), w58 = fw.find((x) => /Pedido nº 58\*/.test(x.texto));
+  t(fw.length === 3 && fw.every((x) => x.tel === "12999998888") && !!w58 && /troco para R\$ 100,00/.test(w58.texto) && /Produto: MARMITEX\nQuantidade: 2\nValor: R\$ 48,00\n  CARNE\n    1 FRANGO\nObservação: /.test(w58.texto) && /Produto: SUCO\nQuantidade: 1\nValor: R\$ 6,50/.test(w58.texto)
+    && /🛵 Delivery \(taxa de: R\$ 7,00\)/.test(w58.texto) && /🏠 Rua A, Nº 10, Centro, Cachoeira Paulista\n/.test(w58.texto) && /Previsão de Entrega: entre \d\d:\d\d e \d\d:\d\d/.test(w58.texto)
+    && /Total: R\$ 61,50/.test(w58.texto) && !/Taxa de entrega/.test(w58.texto), "cada pedido do site entra na fila do robô de WhatsApp com a confirmação certa (formato com itens, endereço com cidade e previsão)");
+  if (w58) console.log("\n   ----- mensagem de exemplo -----\n" + w58.texto.replace(/^/gm, "   ") + "\n   -------------------------------\n");
+  for (let i = 0; i < 30 && !cardSite; i++) await dorme(200); // o cardápio sai uns 3 s depois de ligar
+  const cs = cardSite || { etapas: [], produtos: [], bebidas: [] }, cE1 = cs.etapas.find((e) => e.id === "e1"), cArroz = cs.etapas.find((e) => e.id === "arroz"), c22 = cs.produtos.find((x) => x.id === "m22");
+  t(!!cE1 && cE1.adicional === 1 && !!cArroz && cArroz.itens.find((i) => i.nome === "Arroz Integral").disponivel === false && cArroz.itens.find((i) => i.nome === "Arroz Branco").disponivel === true
+    && !!c22 && c22.preco === 23 && c22.regras.e1.max === 1 && c22.regras.arroz.max === 1 && cs.produtos.find((x) => x.id === "m24").disponivel === false
+    && cs.bebidas.find((b) => b.nome === "Sprite Lata").disponivel === false && !cs.bebidas.some((b) => b.nome === "H2OH!") && cs.bebidas.some((b) => b.nome === "Suco Pequeno"), "o cardápio do totem vai pro site (o que tem hoje, preços, regras, adicional e bebidas)");
+  fs.writeFileSync(arqWE, JSON.stringify({ [d57.id]: { ok: true, quando: Date.now() }, [d58.id]: { ok: false, erro: "número sem WhatsApp", quando: Date.now() }, [d59.id]: { ok: false, erro: "Timeout", quando: Date.now() } }));
+  await dorme(1600);
+  const lW = await delDe();
+  t(lW.find((x) => x.numero === 58).whats === "sem" && lW.find((x) => x.numero === 57).whats === "ok" && !lW.find((x) => x.numero === 59).whats
+    && whatsSite.some((x) => x.token === PS2.token && x.ok === false) && whatsSite.some((x) => x.token === PS.token && x.ok === true) && !whatsSite.some((x) => x.token === PS3.token), "número sem WhatsApp fica marcado no caixa e no site (erro do robô não marca nada)");
   marcados = []; await dorme(1500); // o aviso "se perdeu": o site manda de novo
   t((await delDe()).length === 3, "pedido reenviado pelo site não duplica no caixa (nem paga de novo)");
   t((await reqEm(sd.base, "POST", "/api/pedidos", { uid: "d-tot", itens: [{ nome: "X", preco: 10, qtd: 1 }] }, "")).j.numero === 1, "pedido do totem continua começando no #1 (delivery tem numeração própria)");

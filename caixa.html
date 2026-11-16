@@ -223,17 +223,37 @@ body.tec-on .caixa-modal:has(#lista-cli) { max-height: calc(100vh - var(--tec-h,
 .ent-tab td { padding: 10px 12px; border-bottom: 1px solid #f3ece2; vertical-align: top; } .ent-tab tr:last-child td { border-bottom: 0; }
 .ent-tab td small { display: block; color: #8a7468; font-size: .8rem; } .ent-tab .n { text-align: right; white-space: nowrap; }
 .ent-tab .f-dinheiro { color: #157a3e; font-weight: 600; } .ent-tab tr.ab { background: #fff8e8; } .ent-tab small.ab { color: #9a5b00; font-weight: 600; }
+.ent-busca { flex: 1; min-width: 240px; display: flex; align-items: center; gap: 8px; } .ent-busca input { flex: 1; margin: 0; min-height: 46px; font-size: 1.05rem; border-radius: 12px; } .ent-busca span { color: #8a7468; font-size: .85rem; white-space: nowrap; }
+.ent [hidden] { display: none !important; }
+/* motoboys: card de cada um + botões na linha da entrega */
+.eb-cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 4px; } .eb-cab b { font: 700 1.1rem Georgia, serif; color: #6b4a38; }
+.ent-boys { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.eb { background: #fff; border: 2px solid #ece4d9; border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; } .eb.sem { border-color: #f0b46a; background: #fff8e8; }
+.eb-top { display: flex; align-items: center; gap: 8px; } .eb-top b { font-size: 1.15rem; } .eb-top span { color: #8a7468; font-size: .85rem; } .eb-top .btn { margin-left: auto; min-height: 36px; padding: 2px 10px; }
+.eb-l { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; } .eb-l span { color: #6b5a50; } .eb-l b { font-size: 1.05rem; white-space: nowrap; }
+.eb-l.din b, .eb-l.car b { font-size: 1.45rem; } .eb-l.din b { color: #157a3e; } .eb-l.car b { color: #1d4ed8; }
+.eb > small { color: #8a7468; font-size: .8rem; margin-top: -4px; }
+.eb-pago b { color: var(--verde, #15803d) !important; } .eb-pagar { margin-top: 6px; min-height: 40px; border-radius: 10px; font-weight: 600; }
+.eb-esc { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; } .eb-esc .btn { min-height: 34px; padding: 2px 12px; border-radius: 999px; font-size: .85rem; }
+.eb-esc .btn.on { background: var(--verde, #1f9a45); color: #fff; border-color: transparent; }
 /* ===== tela de pagamento: formas em linha própria, doces, juntar comandas ===== */
 .ac-item .ac-formas { grid-column: 1 / -1; } .ac-item .ac-formas .btn { flex: 1; justify-content: center; }
 .ac-grupo { display: flex; align-items: center; gap: 8px; margin: 12px 0 8px; padding: 6px 12px; background: var(--bege); border-radius: 12px; font-size: .9rem; } .ac-grupo .btn { margin-left: auto; min-height: 34px; padding: 4px 12px; }
 .ac-extras { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; } .ac-extras .btn { min-height: 44px; border-radius: 12px; } .ac-extras input { flex: 1; min-width: 170px; margin: 0; }
 #ac-picker { margin-top: 12px; padding: 12px; background: #fbf7f2; border-radius: 16px; } #ac-picker[hidden] { display: none; }
-.dc-barra { display: flex; gap: 8px; flex-wrap: wrap; } .dc-barra input { flex: 1; min-width: 150px; margin: 0; } .dc-cats { display: flex; gap: 6px; } .dc-cats .btn { min-height: 40px; padding: 6px 14px; border-radius: 999px; }
-#dc-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 10px 0; max-height: 30vh; overflow: auto; }
-.dc-it { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 10px 12px; min-height: 62px; border: 2px solid var(--bege-esc); border-radius: 14px; background: #fff; cursor: pointer; font: inherit; color: inherit; }
-.dc-it span { font-size: .85rem; line-height: 1.2; font-weight: 600; } .dc-it b { font: 700 .95rem Georgia, serif; color: var(--verde); } .dc-it:active { background: #fff3da; }
-.dc-it i { position: absolute; top: 6px; right: 8px; background: var(--vermelho); color: #fff; border-radius: 999px; padding: 1px 9px; font-style: normal; font-weight: 700; font-size: .85rem; }
-.dc-avulso { display: flex; gap: 8px; } .dc-avulso input { margin: 0; min-width: 0; flex: 1; } .dc-avulso #dc-val { flex: 0 0 110px; }
+.dc-barra { display: flex; gap: 8px; } .dc-barra input { flex: 1; min-width: 150px; margin: 0; font-size: 1.05rem; }
+.dc-cats { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; } .dc-cat { min-height: 44px; padding: 6px 16px; border-radius: 999px; gap: 6px; } .dc-cat i { font-style: normal; } .dc-cat small { opacity: .65; font-weight: 600; margin-left: 2px; }
+#dc-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin: 12px 0; max-height: 44vh; overflow: auto; padding: 10px 8px 4px 2px; }
+.dc-tit { grid-column: 1 / -1; margin: 6px 0 0; font: 700 .95rem Georgia, serif; color: #6b4a38; }
+.dc-it { position: relative; display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; padding: 10px 12px; min-height: 66px; border: 2px solid var(--bege-esc); border-radius: 16px; background: #fff; cursor: pointer; user-select: none; transition: transform .08s, border-color .15s, background .15s; }
+.dc-it .dc-ic { grid-row: 1 / 3; font-size: 1.7rem; line-height: 1; } .dc-it .dc-nm { font-size: .88rem; line-height: 1.2; font-weight: 600; padding-right: 8px; } .dc-it b { font: 700 1rem Georgia, serif; color: var(--verde); }
+.dc-it:hover { border-color: var(--laranja); } .dc-it:active { transform: scale(.97); background: #fff3da; }
+.dc-it.c-b { background: #f4f9ff; } .dc-it.c-s { background: #fff4fa; } .dc-it.c-d { background: #fffaf0; }
+.dc-it.tem { border-color: var(--verde); box-shadow: 0 0 0 2px rgba(31,154,69,.18); }
+.dc-it i { position: absolute; top: -9px; right: -7px; min-width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: var(--vermelho); color: #fff; border-radius: 999px; padding: 0 7px; font-style: normal; font-weight: 700; font-size: .9rem; border: 2px solid #fff; }
+.dc-menos { position: absolute; bottom: 6px; right: 6px; width: 30px; height: 30px; min-height: 0; padding: 0; border: 0; border-radius: 9px; background: #fde5e5; color: var(--vermelho); font-weight: 700; font-size: 1.1rem; cursor: pointer; }
+.dc-pe { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; } #dc-soma { margin-left: auto; font-size: 1rem; }
+.dc-avulso { display: flex; gap: 8px; flex: 1; min-width: 260px; } .dc-avulso input { margin: 0; min-width: 0; flex: 1; } .dc-avulso #dc-val { flex: 0 0 110px; }
 .ac-qtd { display: flex; align-items: center; gap: 6px; } .ac-qtd .btn { min-height: 38px; min-width: 38px; padding: 0; border-radius: 10px; font-size: 1.2rem; }
 .ac-din { flex-wrap: wrap; } .ac-rapido { flex-basis: 100%; display: flex; gap: 8px; flex-wrap: wrap; } .ac-rapido .btn { min-height: 44px; border-radius: 12px; }
 .barra-junta { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 14px; padding: 12px 16px; background: #fff3da; border: 2px solid var(--laranja); border-radius: 16px; font-weight: 700; } .barra-junta .btn { min-height: 46px; } .barra-junta small { color: var(--muted); font-weight: 400; }
@@ -563,6 +583,7 @@ main #aviso-gav, #app > #aviso-gav { width: calc(100% - 56px); }
 .ac-tile.on { background: #fff; border-color: var(--verde); color: #16793a; box-shadow: 0 0 0 4px rgba(31,154,69,.14); }
 @media (max-width: 560px) { .ac-tiles { grid-template-columns: repeat(3, 1fr); } }
 .ac-resumo-it { padding: 2px 0 6px; } .ac-li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 2px; border-bottom: 1px solid #f5ede4; } .ac-li b { font-family: var(--num); white-space: nowrap; }
+.d2 { display: flex; flex-direction: column; gap: 12px; padding: 4px 0; } .d2-tit { font-weight: 700; display: flex; justify-content: space-between; } .d2-passo > span { display: block; font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 6px; } .d2-passo > span b { color: var(--tinta); } .d2-val { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-weight: 600; } .d2-val .cel-rs input { width: 110px; font-size: 1.2rem !important; } .ac-d2 { margin-top: 6px; }
 .ac-dividir { width: 100%; margin-top: 10px; min-height: 46px; background: transparent; border: 1px dashed #d9c3ab; box-shadow: none; color: #7a5a48; font-weight: 600; }
 /* barra de abas: NUNCA rola pro lado. Se não couber, a busca/data descem pra linha de baixo; se ainda não couber, as abas quebram linha */
 nav { flex-wrap: wrap; }
@@ -574,17 +595,35 @@ nav { flex-wrap: wrap; }
 @media (max-width: 560px) { .filtros { flex: 1 1 100%; } #busca { flex: 1 1 auto; width: auto; } #dia { flex: 0 1 auto; width: 150px; } }
 @media (max-width: 760px) { .topo-fixo header { padding: 8px 12px; } .marca-logo { width: 44px; height: 44px; } .marca-txt b { font-size: 1.2rem; } #status { display: none; } }
 </style>
+<link rel="stylesheet" href="caixa-tema.css">
 </head>
 <body>
-<div id="gate"><div class="gate-marca">Da Lúcia<small>CAIXA</small></div><input id="pin" type="password" inputmode="numeric" placeholder="Senha do caixa"><button class="btn ok" id="entrar">Entrar</button></div>
+<div id="gate"><div class="gate-marca">Da Lúcia<small>Caixa</small></div><p class="gate-dica">Digite a senha para abrir o caixa</p><input id="pin" type="password" inputmode="numeric" placeholder="Senha"><button class="btn ok" id="entrar">Entrar</button></div>
 <div id="app" hidden>
-  <div class="topo-fixo"><header><div class="marca"><span class="marca-logo"><img id="logo-topo" alt="Da Lúcia"><i>DL</i></span><div class="marca-txt"><b>Da Lúcia</b><small>Caixa</small></div></div><div class="hd-dir"><span id="status">...</span><button class="btn mini" data-a="parado" id="btn-parado" title="Aviso de pedido parado">⏱</button><button class="btn mini" data-a="somCx" id="som-cx" title="Som de pedido novo">🔔</button><button class="btn mini" data-a="impCx" title="Impressora do caixa">🖨</button></div></header>
-  <nav>
-    <div class="abas"><button class="btn" data-aba="aberto">Em aberto (<span id="n-aberto">0</span>)</button><button class="btn" data-aba="pagos">Pagos</button>
-    <button class="btn" data-aba="conta">Na conta</button><button class="btn" data-aba="cancelados">Cancelados</button><button class="btn" data-aba="fechamento">Fechamento</button><button class="btn" data-aba="entregas">🛵 Entregas</button><button class="btn" data-aba="painel">📈 Painel</button><button class="btn" data-aba="gaveta">💵 Gaveta</button><button class="btn" data-aba="contas">📒 Contas</button><button class="btn" data-aba="clientes">👥 Clientes</button></div>
-    <div class="filtros"><input id="busca" placeholder="🔍 Buscar nº ou nome"><input id="dia" type="date"></div>
-  </nav></div>
+  <aside class="lateral">
+    <div class="marca"><span class="marca-logo"><img id="logo-topo" alt="Da Lúcia"><i>DL</i></span><div class="marca-txt"><b>Da Lúcia</b><small>Caixa</small></div></div>
+    <nav class="abas">
+      <small class="lat-sec">Pedidos</small>
+      <button class="btn" data-aba="aberto" data-rot="Em aberto">🧾 <span class="rot">Em aberto</span><span class="qt" id="n-aberto">0</span></button>
+      <button class="btn" data-aba="pagos" data-rot="Pagos">✅ <span class="rot">Pagos</span></button>
+      <button class="btn" data-aba="conta" data-rot="Na conta">📕 <span class="rot">Na conta</span></button>
+      <button class="btn" data-aba="cancelados" data-rot="Cancelados">🚫 <span class="rot">Cancelados</span></button>
+      <button class="btn" data-aba="entregas" data-rot="Entregas">🛵 <span class="rot">Entregas</span></button>
+      <small class="lat-sec">Gestão</small>
+      <button class="btn" data-aba="fechamento" data-rot="Fechamento">🗒 <span class="rot">Fechamento</span></button>
+      <button class="btn" data-aba="painel" data-rot="Painel">📈 <span class="rot">Painel</span></button>
+      <button class="btn" data-aba="gaveta" data-rot="Gaveta">💵 <span class="rot">Gaveta</span></button>
+      <button class="btn" data-aba="contas" data-rot="Contas">📒 <span class="rot">Contas</span></button>
+      <button class="btn" data-aba="clientes" data-rot="Clientes">👥 <span class="rot">Clientes</span></button>
+    </nav>
+  </aside>
+  <div class="area">
+  <div class="topo-fixo"><header><h1 id="titulo-aba">Em aberto</h1>
+    <div class="filtros"><input id="busca" placeholder="Buscar nº ou nome"><input id="dia" type="date"></div>
+    <div class="hd-dir"><span id="status">...</span><button class="btn mini" data-a="parado" id="btn-parado" title="Aviso de pedido parado">⏱</button><button class="btn mini" data-a="somCx" id="som-cx" title="Som de pedido novo">🔔</button><button class="btn mini" data-a="impCx" title="Impressora do caixa">🖨</button></div>
+  </header></div>
   <main id="lista"></main>
+  </div>
 </div>
 <div id="modal" class="modal" hidden></div>
 <script src="dados.js"></script>
@@ -599,20 +638,21 @@ nav { flex-wrap: wrap; }
 })();
 const ehMarm = (p) => !!p && p.tipo === "balanca" && p.numero > 10000; // marmitex do totem que virou comanda (M33)
 const ehDel = (p) => !!p && p.tipo === "delivery"; // pedido do site de delivery (D123), trazido pelo servidor
-const curto = (p) => (ehDel(p) ? "D" + p.numero : p.tipo !== "balanca" ? "#" + p.numero : ehMarm(p) ? "M" + (p.numero - 10000) : "C" + p.numero);
-const rotPed = (p) => (ehDel(p) ? "Delivery D" + p.numero : p.tipo !== "balanca" ? "Pedido #" + p.numero : ehMarm(p) ? "Marmitex M" + (p.numero - 10000) : "Comanda " + p.numero);
-const PAG_SITE = { pix: "Pix", dinheiro: "Dinheiro", cartao_entrega: "Cartão na entrega" };
+const nDel = (p) => (p.entrega === "retirada" ? "R" : "E") + p.numero; // delivery: E = entrega, R = retirada (cada um conta do 1 todo dia)
+const curto = (p) => (ehDel(p) ? nDel(p) : p.tipo !== "balanca" ? "#" + p.numero : ehMarm(p) ? "M" + (p.numero - 10000) : "C" + p.numero);
+const rotPed = (p) => (ehDel(p) ? (p.entrega === "retirada" ? "Retirada " : "Entrega ") + nDel(p) : p.tipo !== "balanca" ? "Pedido #" + p.numero : ehMarm(p) ? "Marmitex M" + (p.numero - 10000) : "Comanda " + p.numero);
+const PAG_SITE = { conta: "Marcar na conta", pix: "Pix", dinheiro: "Dinheiro", cartao_entrega: "Cartão na entrega" };
 const infoDel = (p) => { // endereço, telefone e como o cliente disse que vai pagar
   const e = p.endereco || {}, onde = p.entrega === "entrega" ? `🛵 ${esc([e.rua && e.rua + ", " + (e.numero || "s/n"), e.bairro, e.complemento].filter(Boolean).join(" - "))}` : "🏃 Retira na loja";
-  const tel = p.telefone ? ` · 📞 ${esc(String(p.telefone).replace(/^(\d{2})(\d{4,5})(\d{4})$/, "($1) $2-$3"))}` : "";
-  const pg = p.pagPrevisto ? ` · ${p.status === "pago" ? "pagamento" : "vai pagar"}: <b>${esc(PAG_SITE[p.pagPrevisto] || p.pagPrevisto)}</b>${p.trocoPara ? " (troco p/ " + brl(p.trocoPara) + ")" : ""}` : "";
+  const tel = p.telefone ? ` · 📞 ${esc(String(p.telefone).replace(/^(\d{2})(\d{4,5})(\d{4})$/, "($1) $2-$3"))}${p.whats === "sem" ? ` <b style="color:#c62828">⚠ número SEM WhatsApp: ligue pra confirmar</b>` : p.whats === "ok" ? " ✓ WhatsApp" : ""}` : "";
+  const pg = p.pagPrevisto ? ` · ${p.status === "pago" ? "pagamento" : "vai pagar"}: <b>${esc(PAG_SITE[p.pagPrevisto] || p.pagPrevisto)}${p.cartaoTipo ? ({ debito: " (débito)", credito: " (crédito)", refeicao: " - refeição" })[p.cartaoTipo] : ""}</b>${p.trocoPara ? " (troco p/ " + brl(p.trocoPara) + ")" : ""}` : "";
   return `<p class="dl-info">${onde}${tel}${pg}${p.obsPedido ? `<br><i>Obs: ${esc(p.obsPedido)}</i>` : ""}</p>`;
 };
 const $ = (s) => document.querySelector(s);
 const brl = (n) => "R$ " + Number(n || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); // R$ 8.036,16
 const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const hora = (t) => new Date(t).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-const FORMAS = { dinheiro: "Dinheiro", pix: "Pix", credito: "Crédito", debito: "Débito", refeicao: "Refeição", cartao: "Cartão" }; // "cartao" fica só pra ler vendas antigas
+const FORMAS = { dinheiro: "Dinheiro", pix: "Pix", credito: "Crédito", debito: "Débito", refeicao: "Refeição", cartao: "Cartão", marmita: "Marmita (na conta)" }; // "cartao" fica só pra ler vendas antigas
 const FORMAS_PAG = ["dinheiro", "pix", "credito", "debito", "refeicao"]; // o que aparece nos botões
 let pedidos = [], aba = "aberto", dia = new Date().toLocaleDateString("en-CA"), sel = null;
 
@@ -704,6 +744,7 @@ function fechamento() {
         ${linhaR("📒", "Contas recebidas", brl(totC), (refsC ? String(refsC).replace(".", ",") + " refeições · " : "") + (porC.map(([f, v]) => PAGFORMAS[f] + " " + brl(v)).join(" · ") || CP.length + " pagamento(s)"), "ok")}
         ${cDin > 0 ? linhaR("💵", "Contas pagas em dinheiro", brl(cDin), "também entra na gaveta") : ""}
         ${linhaR("📝", "Marcado na conta " + qd, brl(soma(conta, valConta)), conta.length + " pedido(s) que vão ser cobrados depois")}
+        ${(() => { const pb = pagBoys[a + "|" + b] || [], v = round2(soma(pb, (x) => x.valor)); if (!pb.length) return ""; const por = {}; pb.forEach((x) => (por[x.entregador] = round2((por[x.entregador] || 0) + x.valor))); return linhaR("🛵", "Pago aos motoboys", "− " + brl(v), Object.entries(por).map(([n, x]) => n + " " + brl(x)).join(" · ") + (unico ? " · saiu da gaveta" : ""), "dev"); })()}
         ${est.length ? linhaR("↩️", "Estornos", brl(soma(est, (x) => x.valor)), est.length + " devolução(ões)", "dev") : ""}</div></div>
     ${CP.length ? `<div class="gv-box"><h4>Contas recebidas ${qd}</h4><div class="tl">${CP.slice().sort((x, y) => String(x.data).localeCompare(String(y.data))).map((p) => `<div class="tl-it pag" style="cursor:default"><span class="tl-dia"><b>${dataBR(p.data).slice(0, 5)}</b></span><div class="tl-txt"><b>${esc(nomeChave(p.chave))}</b><span>${PAGFORMAS[p.forma] || esc(p.forma || "")}${p.refeicoes ? " · " + String(p.refeicoes).replace(".", ",") + " ref." : ""}</span></div><b class="tl-v">${brl(p.valor)}</b><span></span></div>`).join("")}</div></div>` : ""}`;
 }
@@ -1093,13 +1134,60 @@ function resumoEntregas() {
   const por = (f) => round2(soma(sel.filter((p) => formaEnt(p) === f), (p) => p.valor));
   return { ds, canc, sel, din: por("dinheiro"), car: por("cartao"), pix: por("pix"), troco: round2(soma(sel, trocoEnt)), taxas: round2(soma(sel, taxaEnt)), total: round2(soma(sel, (p) => p.valor)) };
 }
+// ----- motoboys: cada entrega marca quem levou; o card de cada um diz quanto ele traz em dinheiro e quanto passou na maquininha -----
+let boys = null, boysCarregando = false;
+async function carregarBoys() { if (boysCarregando) return; boysCarregando = true; try { boys = await (await aut("/api/entregadores")).json(); if (!Array.isArray(boys)) boys = []; } catch (e) { boys = boys || []; } boysCarregando = false; ultimoHtml = ""; if (aba === "entregas") desenharEntregas(); }
+async function editarBoys() {
+  const s = prompt("Nomes dos motoboys, separados por vírgula (ex.: João, Pedro):", (boys || []).join(", "));
+  if (s === null) return;
+  try { boys = await api("PUT", "/api/entregadores", { nomes: s.split(",") }); } catch (e) { return; }
+  ultimoHtml = ""; desenharEntregas();
+}
+// pagamentos aos motoboys (saem da gaveta como retirada "Pagamento motoboy"): por período, pra Entregas e Fechamento
+let pagBoys = {}, pagBoysCarregando = {};
+async function carregaPagBoys(de, ate) {
+  const k = de + "|" + ate; if (pagBoysCarregando[k]) return; pagBoysCarregando[k] = true;
+  try { pagBoys[k] = await (await aut("/api/gaveta/motoboys?de=" + de + "&ate=" + ate)).json(); } catch (e) { pagBoys[k] = pagBoys[k] || []; }
+  pagBoysCarregando[k] = false; if (aba === "entregas" || aba === "fechamento") { ultimoHtml = ""; desenhar(); }
+}
+function contaBoy(lista) { // dinheiro: o que o cliente paga + o troco que ele levou do caixa; cartão: o que tem que aparecer na maquininha dele
+  const so = (f) => lista.filter((p) => formaEnt(p) === f), sv = (a) => round2(soma(a, (p) => p.valor));
+  const din = sv(so("dinheiro")), troco = round2(soma(lista, trocoEnt));
+  return { n: lista.length, din, troco, traz: round2(din + troco), car: sv(so("cartao")), nCar: so("cartao").length, pix: sv(so("pix")), taxas: round2(soma(lista, taxaEnt)), total: sv(lista) };
+}
+function cardsBoys(r) {
+  const ents = r.ds.filter((p) => p.status !== "cancelado" && (p.entrega || "entrega") === "entrega");
+  if (!ents.length) return "";
+  const nomes = [...new Set([...(boys || []), ...ents.map((p) => p.entregador).filter(Boolean)])];
+  const card = (nome, lista, sem) => { const c = contaBoy(lista); return `<div class="eb ${sem ? "sem" : ""}">
+      <div class="eb-top"><b>${sem ? "⚠ Sem motoboy marcado" : "🛵 " + esc(nome)}</b><span>${c.n} ${c.n === 1 ? "entrega" : "entregas"}</span>${sem || !c.n ? "" : `<button class="btn" data-a="boyImp" data-k="${esc(nome)}">🖨</button>`}</div>
+      <div class="eb-l din"><span>💵 Tem que trazer em dinheiro</span><b>${brl(c.traz)}</b></div>
+      ${c.troco ? `<small>${brl(c.din)} dos pedidos + ${brl(c.troco)} de troco que levou</small>` : ""}
+      <div class="eb-l car"><span>💳 Tem que ter na maquininha</span><b>${brl(c.car)}</b></div>
+      ${c.nCar ? `<small>${c.nCar} ${c.nCar === 1 ? "pagamento" : "pagamentos"} no cartão</small>` : ""}
+      <div class="eb-l"><span>Pix (já pago)</span><b>${brl(c.pix)}</b></div>
+      <div class="eb-l"><span>Taxas de entrega</span><b>${brl(c.taxas)}</b></div>
+      ${sem ? "" : (() => { const pg = (pagBoys[dia + "|" + dia] || []).filter((x) => x.entregador === nome), v = round2(soma(pg, (x) => x.valor)), hj = dia === hojeISO();
+        return (pg.length ? `<div class="eb-l eb-pago"><span>✅ Pago ao motoboy</span><b>${brl(v)}</b></div><small>${pg.map((x) => "às " + hora(x.quando) + " " + brl(x.valor)).join(" · ")} · saiu da gaveta</small>` : "")
+          + (hj ? `<button class="btn eb-pagar" data-a="boyPagar" data-k="${esc(nome)}" data-v="${c.taxas}">💵 ${pg.length ? "Pagar mais" : "Pagar motoboy"}</button>` : ""); })()}
+    </div>`; };
+  const sem = ents.filter((p) => !p.entregador);
+  return `<div class="eb-cab"><b>Por motoboy</b><button class="btn" data-a="boyEdit">✎ ${nomes.length ? "Motoboys" : "Cadastrar motoboys"}</button></div>
+    ${nomes.length ? "" : `<div class="vazio-box">Cadastre os motoboys do dia (ex.: João, Pedro) e marque em cada entrega quem levou.</div>`}
+    <div class="ent-boys">${nomes.map((n) => card(n, ents.filter((p) => p.entregador === n))).join("")}${sem.length && nomes.length ? card("", sem, true) : ""}</div>`;
+}
+const escolheBoy = (p) => (p.entrega || "entrega") !== "entrega" || p.status === "cancelado" ? "" :
+  `<div class="eb-esc">${(boys || []).map((n) => `<button class="btn ${p.entregador === n ? "on" : ""}" data-a="boySet" data-id="${esc(p.id)}" data-k="${esc(n)}">${esc(n)}</button>`).join("")}${p.entregador && !(boys || []).includes(p.entregador) ? `<button class="btn on" data-a="boySet" data-id="${esc(p.id)}" data-k="${esc(p.entregador)}">${esc(p.entregador)}</button>` : ""}</div>`;
 function desenharEntregas() {
+  if (boys === null) carregarBoys();
+  if (!pagBoys[dia + "|" + dia]) carregaPagBoys(dia, dia);
   const r = resumoEntregas(), nE = r.ds.filter((p) => p.status !== "cancelado" && (p.entrega || "entrega") === "entrega").length, nR = r.ds.filter((p) => p.status !== "cancelado" && p.entrega === "retirada").length;
   const seg = [["entrega", "Entregas", nE], ["retirada", "Retiradas", nR], ["todos", "Todos", nE + nR]].map(([k, n, q]) => `<button class="btn ${entFil === k ? "on" : ""}" data-a="entFil" data-k="${k}">${n} <small>${q}</small></button>`).join("");
-  const fp = (p) => { const f = formaEnt(p); return f === "dinheiro" ? `Dinheiro${p.trocoPara ? ` <small>troco p/ ${brl(p.trocoPara)} → levar ${brl(trocoEnt(p))}</small>` : " <small>sem troco</small>"}` : f === "cartao" ? "Cartão (maquininha)" : f === "pix" ? "Pix" : esc(f || "-"); };
-  const linhas = r.sel.map((p) => { const e = p.endereco || {}; return `<tr class="${p.status === "aguardando" ? "ab" : ""}"><td><b>D${p.numero}</b></td><td>${hora(p.quando)}</td><td>${esc(p.nome || "-")}<small>${p.entrega === "retirada" ? "retirada na loja" : esc([e.rua && e.rua + ", " + (e.numero || ""), e.bairro].filter(Boolean).join(" · "))}</small></td><td class="f-${formaEnt(p)}">${fp(p)}</td><td class="n">${taxaEnt(p) ? brl(taxaEnt(p)) : "-"}</td><td class="n"><b>${brl(p.valor)}</b>${p.status === "aguardando" ? '<small class="ab">em aberto no caixa</small>' : ""}</td></tr>`; }).join("");
+  const fp = (p) => { const f = formaEnt(p); return f === "dinheiro" ? `Dinheiro${p.trocoPara ? ` <small>troco p/ ${brl(p.trocoPara)} → levar ${brl(trocoEnt(p))}</small>` : " <small>sem troco</small>"}` : f === "cartao" ? (p.cartaoTipo === "refeicao" ? "Cartão refeição" : "Cartão " + (p.cartaoTipo === "debito" ? "débito" : p.cartaoTipo === "credito" ? "crédito" : "")) + " (maquininha)" : f === "pix" ? "Pix" : esc(f || "-"); };
+  const chave = (p) => { const e = p.endereco || {}; return semAcento([nDel(p), `d${p.numero}`, p.numero, p.nome, p.telefone, e.rua, e.numero, e.bairro, e.complemento, p.entregador, formaEnt(p)].filter(Boolean).join(" ")); };
+  const linhas = r.sel.map((p) => { const e = p.endereco || {}; return `<tr data-busca="${esc(chave(p))}" class="${p.status === "aguardando" ? "ab" : ""}"><td><b>${nDel(p)}</b></td><td>${hora(p.quando)}</td><td>${esc(p.nome || "-")}<small>${p.entrega === "retirada" ? "retirada na loja" : esc([e.rua && e.rua + ", " + (e.numero || ""), e.bairro].filter(Boolean).join(" · "))}</small>${escolheBoy(p)}</td><td class="f-${formaEnt(p)}">${fp(p)}</td><td class="n">${taxaEnt(p) ? brl(taxaEnt(p)) : "-"}</td><td class="n"><b>${brl(p.valor)}</b>${p.status === "aguardando" ? '<small class="ab">em aberto no caixa</small>' : ""}</td></tr>`; }).join("");
   pintar(`<div class="ent">
-  <div class="ent-topo"><div class="ent-seg">${seg}</div><button class="btn" data-a="entImp" ${r.sel.length ? "" : "disabled"}>🖨 Imprimir fechamento</button></div>
+  <div class="ent-topo"><div class="ent-seg">${seg}</div><div class="ent-busca"><input id="ent-q" type="search" placeholder="🔎 Buscar: nº, nome, telefone, rua, bairro, motoboy" autocomplete="off"><span id="ent-qn"></span></div><button class="btn" data-a="entImp" ${r.sel.length ? "" : "disabled"}>🖨 Imprimir fechamento</button></div>
   <div class="ent-cards">
     <div class="ec din"><small>Receber em dinheiro</small><b>${brl(r.din)}</b><span>${r.troco ? "troco levado: " + brl(r.troco) : "nenhum troco"}</span></div>
     <div class="ec car"><small>Cartão (maquininha)</small><b>${brl(r.car)}</b><span>conferir no extrato da máquina</span></div>
@@ -1107,23 +1195,63 @@ function desenharEntregas() {
     <div class="ec tx"><small>Taxas de entrega</small><b>${brl(r.taxas)}</b><span>${r.sel.length} ${r.sel.length === 1 ? "pedido" : "pedidos"}</span></div>
     <div class="ec tot"><small>Total</small><b>${brl(r.total)}</b><span>${r.canc.length ? r.canc.length + " cancelado(s) fora da conta" : "sem cancelados"}</span></div>
   </div>
-  ${r.sel.length ? `<div class="ent-tab"><table><thead><tr><th>Pedido</th><th>Hora</th><th>Cliente</th><th>Pagamento</th><th class="n">Taxa</th><th class="n">Total</th></tr></thead><tbody>${linhas}</tbody></table></div>` : `<div class="vazio-box"><span>🛵</span>Nenhum pedido do site neste dia.</div>`}
+  ${entFil !== "retirada" ? cardsBoys(r) : ""}
+  ${r.sel.length ? `<div class="ent-tab"><div id="ent-nada" class="vazio-box" hidden>Nenhuma entrega com esse nome, número ou endereço.</div><table><thead><tr><th>Pedido</th><th>Hora</th><th>Cliente</th><th>Pagamento</th><th class="n">Taxa</th><th class="n">Total</th></tr></thead><tbody>${linhas}</tbody></table></div>` : `<div class="vazio-box"><span>🛵</span>Nenhum pedido do site neste dia.</div>`}
   </div>`);
+  buscaEnt(); // a tela se redesenha sozinha a cada poucos segundos: reaplica a busca sem perder o que foi digitado
 }
+// ----- busca nas entregas: filtra as linhas enquanto digita (nº, nome, telefone, rua, bairro, motoboy) -----
+let entQ = "", entQfoco = false;
+function buscaEnt() {
+  const q = $("#ent-q"); if (!q) return;
+  if (q.value !== entQ) q.value = entQ;
+  if (entQfoco && document.activeElement !== q) { q.focus(); q.setSelectionRange(entQ.length, entQ.length); }
+  const termos = semAcento(entQ).trim().split(/\s+/).filter(Boolean), linhas = [...document.querySelectorAll(".ent-tab tbody tr")];
+  let n = 0; linhas.forEach((tr) => { const ok = termos.every((t) => tr.dataset.busca.includes(t.replace(/^#/, ""))); tr.hidden = !ok; if (ok) n++; });
+  $("#ent-qn").textContent = termos.length ? `${n} de ${linhas.length}` : "";
+  const nada = $("#ent-nada"); if (nada) nada.hidden = !termos.length || n > 0;
+  document.querySelectorAll(".ent-cards, .eb-cab, .ent-boys").forEach((el) => (el.hidden = !!termos.length)); // buscando: resultados sobem pro topo
+}
+document.addEventListener("input", (e) => { if (e.target.id === "ent-q") { entQ = e.target.value; buscaEnt(); } });
+document.addEventListener("focusin", (e) => { if (e.target.id === "ent-q") entQfoco = true; });
+document.addEventListener("focusout", (e) => { if (e.target.id === "ent-q") setTimeout(() => { entQfoco = document.activeElement && document.activeElement.id === "ent-q"; }, 0); });
+document.addEventListener("keydown", (e) => { if (e.target.id === "ent-q" && e.key === "Escape") { entQ = ""; buscaEnt(); } });
 async function imprimirEntregas() {
   const r = resumoEntregas(); if (!r.sel.length) return;
   const nome = { entrega: "ENTREGAS", retirada: "RETIRADAS", todos: "PEDIDOS DO SITE" }[entFil];
   const L = [{ t: "FECHAMENTO - " + nome, a: "c", b: 1 }, { t: dataBR(dia), a: "c" }, { hr: 1 }];
-  r.sel.forEach((p) => { const f = formaEnt(p); L.push({ e: `D${p.numero} ${hora(p.quando)} ${p.nome || ""}`.slice(0, 40), d: brl(p.valor), b: 1 }, { det: (f === "dinheiro" ? "Dinheiro" + (p.trocoPara ? " (troco p/ " + brl(p.trocoPara) + ")" : "") : f === "cartao" ? "Cartao" : f === "pix" ? "Pix" : f) + (taxaEnt(p) ? " - taxa " + brl(taxaEnt(p)) : "") }); });
+  r.sel.forEach((p) => { const f = formaEnt(p); L.push({ e: `${nDel(p)} ${hora(p.quando)} ${p.nome || ""}`.slice(0, 40), d: brl(p.valor), b: 1 }, { det: (f === "dinheiro" ? "Dinheiro" + (p.trocoPara ? " (troco p/ " + brl(p.trocoPara) + ")" : "") : f === "cartao" ? "Cartao" : f === "pix" ? "Pix" : f) + (taxaEnt(p) ? " - taxa " + brl(taxaEnt(p)) : "") }); });
   L.push({ hr: 1 }, { e: "Receber em dinheiro", d: brl(r.din), b: 1 }, { e: "Troco levado", d: brl(r.troco) }, { e: "Cartao (maquininha)", d: brl(r.car), b: 1 }, { e: "Pix", d: brl(r.pix) }, { e: "Taxas de entrega", d: brl(r.taxas) }, { hr: 1 }, { e: "TOTAL", d: brl(r.total), b: 1, s: "alta" });
   if (r.canc.length) L.push({ det: r.canc.length + " cancelado(s) nao entram na conta" });
   try { const k = await cfgImp(), img = await logoImp(k.logo); avisoImp("🖨 Imprimindo...", ""); const x = await mandarImp(escposDoc(L, k, img)); avisoImp(x.ok ? "✓ Impresso" : "✕ Não imprimiu: " + x.erro, x.ok ? "" : "erro"); } catch (e) { avisoImp("✕ Não imprimiu", "erro"); }
 }
 document.addEventListener("click", (e) => { const b = e.target.closest("[data-a]"); if (!b) return;
-  if (b.dataset.a === "entFil") { entFil = b.dataset.k; ultimoHtml = ""; desenharEntregas(); } else if (b.dataset.a === "entImp") imprimirEntregas(); });
+  if (b.dataset.a === "entFil") { entFil = b.dataset.k; ultimoHtml = ""; desenharEntregas(); } else if (b.dataset.a === "entImp") imprimirEntregas();
+  else if (b.dataset.a === "boyEdit") editarBoys();
+  else if (b.dataset.a === "boyImp") imprimirBoy(b.dataset.k);
+  else if (b.dataset.a === "boyPagar") {
+    const nome = b.dataset.k, sug = Number(b.dataset.v) || 0, t = prompt(`Quanto pagar ao motoboy ${nome}?
+(sai da gaveta e entra no fechamento)`, sug ? String(sug.toFixed(2)).replace(".", ",") : "");
+    if (t === null) return; const v = round2(parseFloat(String(t).replace(/[^0-9,.]/g, "").replace(",", ".")) || 0); if (!(v > 0)) return alert("Digite o valor pago.");
+    aut("/api/gaveta", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ acao: "movimento", tipo: "sangria", valor: v, motivo: "Pagamento motoboy " + nome, entregador: nome }) })
+      .then(async (r) => { if (!r.ok) return alert(((await r.json().catch(() => ({}))).erro) || "Não deu certo."); delete pagBoys[dia + "|" + dia]; gaveta = null; carregaPagBoys(dia, dia); })
+      .catch(() => alert("Sem conexão com o servidor."));
+  }
+  else if (b.dataset.a === "boySet") { const p = pedidos.find((x) => x.id === b.dataset.id); if (p) { if (entQ) { entQ = ""; entQfoco = false; buscaEnt(); } patch(p.id, { entregador: p.entregador === b.dataset.k ? "" : b.dataset.k }); } } }); // marcou o motoboy: limpa a busca (volta a lista toda) // clicar de novo no mesmo tira
+async function imprimirBoy(nome) { // papelzinho do acerto com o motoboy
+  const lista = resumoEntregas().ds.filter((p) => p.status !== "cancelado" && (p.entrega || "entrega") === "entrega" && p.entregador === nome).sort((a, b) => a.quando - b.quando), c = contaBoy(lista);
+  if (!lista.length) return;
+  const L = [{ t: "ACERTO MOTOBOY", a: "c", b: 1 }, { t: nome.toUpperCase(), a: "c", b: 1, s: "alta" }, { t: dataBR(dia), a: "c" }, { hr: 1 }];
+  lista.forEach((p) => { const f = formaEnt(p); L.push({ e: `${nDel(p)} ${hora(p.quando)} ${p.nome || ""}`.slice(0, 40), d: brl(p.valor), b: 1 }, { det: (f === "dinheiro" ? "Dinheiro" + (p.trocoPara ? " (troco p/ " + brl(p.trocoPara) + ")" : "") : f === "cartao" ? "Cartao" : f === "pix" ? "Pix" : f) }); });
+  L.push({ hr: 1 }, { e: "TRAZER EM DINHEIRO", d: brl(c.traz), b: 1 });
+  if (c.troco) L.push({ det: brl(c.din) + " dos pedidos + " + brl(c.troco) + " de troco levado" });
+  L.push({ e: "NA MAQUININHA", d: brl(c.car), b: 1 }, { e: "Pix (ja pago)", d: brl(c.pix) }, { e: "Taxas de entrega", d: brl(c.taxas) }, { e: "Entregas", d: String(c.n) });
+  try { const k = await cfgImp(), img = await logoImp(k.logo); avisoImp("🖨 Imprimindo...", ""); const x = await mandarImp(escposDoc(L, k, img)); avisoImp(x.ok ? "✓ Impresso" : "✕ Não imprimiu: " + x.erro, x.ok ? "" : "erro"); } catch (e) { avisoImp("✕ Não imprimiu", "erro"); }
+}
 async function desenharFechamento() {
   pintarPeriodo(periodoPronto() ? fechamento() : '<p class="vazio">Carregando…</p>');
   await garantirPeriodo(); if (aba !== "fechamento") return;
+  { const [a, b] = intervalo(); if (!pagBoys[a + "|" + b]) carregaPagBoys(a, b); }
   pintarPeriodo(fechamento());
 }
 document.addEventListener("click", (e) => {
@@ -1418,27 +1546,37 @@ const FIC = { dinheiro: "💵", pix: "⚡", credito: "💳", debito: "💳", ref
 const novoUid = () => (window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
 const kIt = (p, c) => p.id + "|" + c.iid; // chave do item (o iid sozinho pode repetir entre comandas)
 const semAcento = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-const casaBusca = (p, q) => String(p.numero) === q || (ehDel(p) && q === "d" + p.numero) || (ehMarm(p) && (q === "m" + (p.numero - 10000) || q === String(p.numero - 10000))) || String(p.numeroLocal) === q || semAcento(p.nome).includes(semAcento(q));
+const casaBusca = (p, q) => String(p.numero) === q || (ehDel(p) && (q === "d" + p.numero || q === semAcento(nDel(p)))) || (ehMarm(p) && (q === "m" + (p.numero - 10000) || q === String(p.numero - 10000))) || String(p.numeroLocal) === q || semAcento(p.nome).includes(semAcento(q));
 let juntar = new Set(); // comandas marcadas na lista pra unificar
 
-// ---- DOCES E SORVETES (edite aqui os preços/produtos) [nome, preço, categoria: s = sorvete, d = doce] ----
+// ---- DOCES (edite aqui os preços/produtos) [nome, preço]. Sorvetes ficam no dados.js (SORVETES) e as bebidas vêm do admin do totem ----
 const DOCES = [
-  ["Sorvete Mega Clássico", 17.9, "s"], ["Sorvete Lacta", 18.9, "s"], ["Sorvete Mega", 18.9, "s"], ["Sorvete Prestígio/Crocante", 15.9, "s"],
-  ["Sorvete Super Preço", 9.99, "s"], ["Sorvete La Frutta", 7.5, "s"], ["Sorvete Fini Dentadura", 8.5, "s"], ["Sorvete Fini Tube", 5.9, "s"],
-  ["Sorvete Chambinho", 8.5, "s"], ["Sorvete Batom", 5.9, "s"], ["Sorvete Oreo/KitKat Gold", 8.5, "s"],
-  ["Mentos", 4.5, "d"], ["Paçoca", 1.5, "d"], ["Pão de Mel", 8, "d"], ["Snickers", 5, "d"], ["Sonho de Valsa", 2.5, "d"], ["Trident", 3.5, "d"], ["Twix", 5, "d"], ["Toffee", 0.5, "d"],
-  ["Banana Doce", 3.5, "d"], ["Banana sem Açúcar", 4, "d"], ["Brownie Recheado", 10, "d"], ["Chiclete", 0.5, "d"], ["Frutella", 4, "d"], ["Halls", 3.5, "d"], ["LaFrutta", 7.5, "d"], ["M&M's", 5, "d"],
+  ["Mentos", 4.5], ["Paçoca", 1.5], ["Pão de Mel", 8], ["Snickers", 5], ["Sonho de Valsa", 2.5], ["Trident", 3.5], ["Twix", 5], ["Toffee", 0.5],
+  ["Banana Doce", 3.5], ["Banana sem Açúcar", 4], ["Brownie Recheado", 10], ["Chiclete", 0.5], ["Frutella", 4], ["Halls", 3.5], ["LaFrutta", 7.5], ["M&M's", 5],
 ];
+let bebidasCx = BEBIDAS.slice();
+async function carregarBebidasCx() { // respeita o que o admin do totem ligou/desligou e as bebidas que ele criou
+  try {
+    const d = ((await (await fetch("/api/config", { cache: "no-store" })).json()) || {}).dados || {}, j = (k, p) => { try { return d[k] ? JSON.parse(d[k]) : p; } catch (e) { return p; } };
+    const rem = j("removidos", []), off = j("indisponiveis", []), extras = j("bebidasExtras", []);
+    bebidasCx = [...BEBIDAS, ...extras].filter((x, i, a) => x && x.nome && a.findIndex((y) => y.nome === x.nome) === i && !rem.includes("bebida:" + x.nome) && !off.includes("bebida:" + x.nome));
+  } catch (e) {}
+}
+carregarBebidasCx(); setInterval(carregarBebidasCx, 5 * 60000);
+const CATS_DC = [["b", "Bebidas", "🥤"], ["s", "Sorvetes", "🍦"], ["d", "Doces", "🍬"]];
+const catalogo = () => [...bebidasCx.map((b) => ({ nome: b.nome, preco: Number(b.preco) || 0, c: "b" })), ...(typeof SORVETES !== "undefined" ? SORVETES : []).map((x) => ({ nome: x.nome, preco: x.preco, c: "s" })), ...DOCES.map(([nome, preco]) => ({ nome, preco, c: "d" }))];
+const filtraDc = (cat, q) => { q = semAcento(q || "").toLowerCase(); return catalogo().filter((x) => (cat === "t" || cat === x.c) && (!q || semAcento(x.nome).toLowerCase().includes(q))); };
+const addDc = (x) => { const A = acerto, e = A.doces[x.nome] || (A.doces[x.nome] = { nome: x.nome, preco: x.preco, qtd: 0, forma: A.padrao, tipo: x.c === "b" ? "bebida" : "doce" }); e.qtd++; };
 
 const tituloAcerto = () => { const um = (p) => rotPed(p) + (p.nome ? " - " + p.nome : ""); return acerto.ps.length === 1 ? um(acerto.ps[0]) : "Unificar: " + acerto.ps.map((p) => curto(p)).join(" + "); };
 function acAddItens(p) { p.itens.filter((c) => !c.pago).forEach((c) => { acerto.itens[kIt(p, c)] = { on: true, forma: acerto.padrao || "" }; }); }
 function abrirAcerto(ids) { // escolhe quais itens acertar e a forma de pagamento de cada um (aceita várias comandas juntas)
   const ps = [].concat(ids).map((id) => pedidos.find((x) => x.id === id)).filter((p) => p && p.itens.some((c) => !c.pago)); if (!ps.length) return ($("#modal").hidden = true);
-  acerto = { ps, itens: {}, doces: {}, picker: false, cat: "t", q: "", padrao: "" }; ps.forEach(acAddItens);
+  acerto = { ps, itens: {}, doces: {}, picker: false, cat: (() => { try { return localStorage.getItem("cxDcCat") || "t"; } catch (e) { return "t"; } })(), q: "", padrao: "" }; ps.forEach(acAddItens);
   abrirModal(`<h2 id="ac-titulo"></h2>
     <div class="ac-head">
     <div class="ac-pag1"><span>Como vai pagar?</span><div class="ac-tiles">${FORMAS_PAG.map((k) => `<button class="btn ac-tile" data-a="acSet" data-f="${k}"><i>${FIC[k]}</i>${FORMAS[k]}</button>`).join("")}</div></div>
-    <div class="ac-extras"><button class="btn mini" id="dc-abre" data-a="dcAbrir">🍬 Adicionar doce / sorvete</button><input id="ac-junta" placeholder="Juntar outra comanda (nº ou nome)"><button class="btn mini" data-a="acJunta">Juntar</button></div>
+    <div class="ac-extras"><button class="btn mini" id="dc-abre" data-a="dcAbrir">➕ Bebida, sorvete ou doce</button><input id="ac-junta" placeholder="Juntar outra comanda (nº ou nome)"><button class="btn mini" data-a="acJunta">Juntar</button></div>
     <div id="ac-picker" hidden></div></div>
     <div id="ac-itens"></div>
     <div class="ac-rodape"><div id="ac-resumo"></div>
@@ -1448,6 +1586,8 @@ function abrirAcerto(ids) { // escolhe quais itens acertar e a forma de pagament
 }
 function atualizarAcerto() {
   const A = acerto; if (!A || !$("#ac-itens")) return;
+  { const p1 = document.querySelector(".ac-pag1"), ex = document.querySelector(".ac-extras"); if (p1) p1.style.display = A.duas ? "none" : ""; if (ex) ex.style.display = A.duas ? "none" : ""; }
+  if (A.duas) return desenharDuas();
   $("#ac-titulo").textContent = tituloAcerto();
   const bts = (chave, forma, dis) => `<span class="ac-formas">${FORMAS_PAG.map((k) => `<button class="btn mini ${forma === k ? "on" : ""}" data-a="acForma" data-i="${esc(chave)}" data-f="${k}" ${dis ? "disabled" : ""}>${FIC[k]} ${FORMAS[k]}</button>`).join("")}</span>`;
   let h = "", total = 0, aberto = 0, sem = 0, nsel = 0; const tot = {}, conta = (v, f) => { total += v; nsel++; if (f) tot[f] = (tot[f] || 0) + v; else sem++; };
@@ -1460,7 +1600,7 @@ function atualizarAcerto() {
       + (pg.length ? `<p class="dica">Já pagos: ${pg.map((c) => esc(c.nome) + " (" + (FORMAS[c.pago.forma] || c.pago.forma) + ")").join("; ")}</p>` : "");
   });
   const dl = Object.values(A.doces);
-  if (dl.length) h += `<div class="ac-grupo doce"><b>🍬 Doces e sorvetes adicionados agora</b></div>` + dl.map((d) => { conta(d.preco * d.qtd, d.forma);
+  if (dl.length) h += `<div class="ac-grupo doce"><b>➕ Bebidas, sorvetes e doces adicionados agora</b></div>` + dl.map((d) => { conta(d.preco * d.qtd, d.forma);
     return `<div class="ac-item on"><span class="ac-qtd"><button class="btn mini" data-a="dcMenos" data-n="${esc(d.nome)}">−</button><b>${d.qtd}</b><button class="btn mini" data-a="dcMais" data-n="${esc(d.nome)}">+</button></span>
       <span class="ac-nome"><b>${esc(d.nome)}</b><small>${brl(d.preco)} cada</small></span><b class="ac-val">${brl(d.preco * d.qtd)}</b>${bts("d|" + d.nome, d.forma, false)}</div>`; }).join("");
   // jeito simples: tudo marcado com a mesma forma -> a lista vira um resumo; "Dividir" abre item por item
@@ -1468,7 +1608,7 @@ function atualizarAcerto() {
   const simples = !A.dividir && todosOn && !dl.length && formas.size <= 1;
   document.querySelectorAll(".ac-tile").forEach((b) => b.classList.toggle("on", simples && formas.size === 1 && formas.has(b.dataset.f)));
   if (simples) h = `<div class="ac-resumo-it">${A.ps.map((p) => (A.ps.length > 1 ? `<div class="ac-grupo"><b>${rotPed(p)}</b>${p.nome ? " - " + esc(p.nome) : ""}<button class="btn mini" data-a="acTira" data-id="${esc(p.id)}">Tirar</button></div>` : "") + p.itens.filter((c) => !c.pago).map((c) => `<div class="ac-li"><span>${c.qtd}x ${esc(c.nome)}</span><b>${brl(valorIt(c))}</b></div>`).join("")).join("")}
-    <button class="btn ac-dividir" data-a="acDividir">✂ Dividir: escolher itens ou formas diferentes</button></div>`;
+    <button class="btn ac-dividir" data-a="acDividir">✂ Dividir: escolher itens ou formas diferentes</button>${A.ps.length === 1 ? `<button class="btn ac-dividir ac-d2" data-a="d2Abrir">💵 + 💠 Pagar com 2 formas (ex.: parte no dinheiro, resto no Pix)</button>` : ""}</div>`;
   else if (A.dividir) h += `<button class="btn ac-dividir" data-a="acJuntarTudo">↩ Voltar pro jeito simples</button>`;
   $("#ac-itens").innerHTML = h; total = round2(total); aberto = round2(aberto);
   const din = round2(tot.dinheiro || 0), rec = parseFloat(String($("#ac-rec") ? $("#ac-rec").value : "").replace(",", "."));
@@ -1480,12 +1620,18 @@ function atualizarAcerto() {
   desenharPicker();
 }
 function desenharPicker() {
-  const A = acerto, box = $("#ac-picker"); if (!A || !box) return; box.hidden = !A.picker; if ($("#dc-abre")) $("#dc-abre").textContent = A.picker ? "✕ Fechar doces" : "🍬 Adicionar doce / sorvete"; if (!A.picker) return;
-  if (!$("#dc-grade")) box.innerHTML = `<div class="dc-barra"><input id="dc-busca" placeholder="Buscar doce ou sorvete"><span class="dc-cats" id="dc-cats"></span><button class="btn ok dc-pronto" data-a="dcFechar">✓ Pronto</button></div><div id="dc-grade"></div>
-    <div class="dc-avulso"><input id="dc-nome" placeholder="Outro item (nome)"><input id="dc-val" inputmode="decimal" placeholder="R$ 0,00"><button class="btn mini" data-a="dcAvulso">Adicionar</button></div>`;
-  $("#dc-cats").innerHTML = [["t", "Todos"], ["s", "Sorvetes"], ["d", "Doces"]].map(([k, n]) => `<button class="btn mini ${A.cat === k ? "on" : ""}" data-a="dcCat" data-k="${k}">${n}</button>`).join("");
-  const q = semAcento(A.q);
-  $("#dc-grade").innerHTML = DOCES.filter(([n, , c]) => (A.cat === "t" || A.cat === c) && (!q || semAcento(n).includes(q))).map(([n, p]) => `<button class="dc-it" data-a="dcAdd" data-n="${esc(n)}"><span>${esc(n)}</span><b>${brl(p)}</b>${A.doces[n] ? `<i>${A.doces[n].qtd}</i>` : ""}</button>`).join("") || `<p class="dica">Nada encontrado.</p>`;
+  const A = acerto, box = $("#ac-picker"); if (!A || !box) return; box.hidden = !A.picker; if ($("#dc-abre")) $("#dc-abre").textContent = A.picker ? "✕ Fechar" : "➕ Bebida, sorvete ou doce"; if (!A.picker) return;
+  if (!$("#dc-grade")) box.innerHTML = `<div class="dc-barra"><input id="dc-busca" type="search" placeholder="🔍 Buscar (Enter adiciona se só achar 1)" autocomplete="off"><button class="btn ok dc-pronto" data-a="dcFechar">✓ Pronto</button></div><div class="dc-cats" id="dc-cats"></div><div id="dc-grade"></div>
+    <div class="dc-pe"><div class="dc-avulso"><input id="dc-nome" placeholder="Outro item (nome)"><input id="dc-val" inputmode="decimal" placeholder="R$ 0,00"><button class="btn mini" data-a="dcAvulso">Adicionar</button></div><div id="dc-soma"></div></div>`;
+  const tudo = catalogo(), n = (c) => tudo.filter((x) => c === "t" || x.c === c).length;
+  $("#dc-cats").innerHTML = [["t", "Todos", "✨"], ...CATS_DC].map(([k, nome, ic]) => `<button class="btn dc-cat ${A.cat === k ? "on" : ""}" data-a="dcCat" data-k="${k}"><i>${ic}</i>${nome}<small>${n(k)}</small></button>`).join("");
+  const lista = filtraDc(A.cat, A.q), IC = Object.fromEntries(CATS_DC.map(([k, , ic]) => [k, ic]));
+  const card = (x) => { const q = A.doces[x.nome] ? A.doces[x.nome].qtd : 0;
+    return `<div class="dc-it c-${x.c} ${q ? "tem" : ""}" role="button" tabindex="0" data-a="dcAdd" data-n="${esc(x.nome)}"><span class="dc-ic">${IC[x.c]}</span><span class="dc-nm">${esc(x.nome)}</span><b>${brl(x.preco)}</b>${q ? `<i>${q}</i><button class="dc-menos" data-a="dcMenos" data-n="${esc(x.nome)}" title="Tirar 1">−</button>` : ""}</div>`; };
+  const grupos = A.cat === "t" && !A.q ? CATS_DC.map(([k, nome, ic]) => { const l = lista.filter((x) => x.c === k); return l.length ? `<h5 class="dc-tit">${ic} ${nome}</h5>` + l.map(card).join("") : ""; }).join("") : lista.map(card).join("");
+  $("#dc-grade").innerHTML = grupos || `<p class="dica">Nada encontrado. Use "Outro item" aqui embaixo.</p>`;
+  const dl = Object.values(A.doces), qt = soma(dl, (d) => d.qtd);
+  $("#dc-soma").innerHTML = qt ? `<b>${qt} ${qt === 1 ? "item" : "itens"}</b> · ${brl(soma(dl, (d) => d.preco * d.qtd))}` : `<span class="dica">Toque pra adicionar</span>`;
 }
 function acJuntar() { // põe outra comanda aberta na mesma tela de pagamento
   const inp = $("#ac-junta"), q = inp.value.trim().toLowerCase().replace("#", ""); if (!q) return;
@@ -1496,8 +1642,8 @@ function acJuntar() { // põe outra comanda aberta na mesma tela de pagamento
 }
 const esperaCarregar = async () => { while (carregando) await new Promise((r) => setTimeout(r, 60)); await carregar(); };
 async function criarPedidoDoces(dl, base) { // os doces viram um pedido novo (separado) que é pago junto com a comanda
-  const uid = novoUid(), ped = { uid, origem: "caixa", dia: base.dia || dia, nome: "Doces - " + (base.nome || rotPed(base)), quando: Date.now(),
-    itens: dl.map((d) => ({ key: "doce|" + d.nome, nome: d.nome, preco: d.preco, grupos: [], obs: "", qtd: d.qtd, tipo: "doce", origem: "caixa" })), unidades: soma(dl, (d) => d.qtd), valor: round2(soma(dl, (d) => d.preco * d.qtd)) };
+  const uid = novoUid(), ped = { uid, origem: "caixa", dia: base.dia || dia, nome: (dl.some((d) => d.tipo === "bebida") ? "Balcão - " : "Doces - ") + (base.nome || rotPed(base)), quando: Date.now(),
+    itens: dl.map((d) => ({ key: (d.tipo === "bebida" ? "bebida|" : "doce|") + d.nome, nome: d.nome, preco: d.preco, grupos: [], obs: "", qtd: d.qtd, tipo: d.tipo === "bebida" ? "bebida" : "doce", origem: "caixa" })), unidades: soma(dl, (d) => d.qtd), valor: round2(soma(dl, (d) => d.preco * d.qtd)) };
   let j; try { const r = await aut("/api/pedidos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(ped) }); j = await r.json().catch(() => ({})); if (!r.ok) { alert(j.erro || "O servidor recusou os doces."); return null; } }
   catch (e) { alert("Sem conexão com o servidor. Nada foi alterado."); return null; }
   ultimoAguard = 9999; await esperaCarregar(); // (evita o apito de "pedido novo")
@@ -1507,7 +1653,7 @@ async function criarPedidoDoces(dl, base) { // os doces viram um pedido novo (se
 }
 async function lancarDocesNaComanda(dl, com) { // doces entram DENTRO da comanda aberta (o servidor já faz isso) e saem juntos no pagamento
   const antes = new Set(((pedidos.find((x) => x.id === com.id) || com).itens || []).map((x) => x.iid));
-  const ped = { uid: novoUid(), origem: "caixa", dia: com.dia || dia, comanda: com.numero, quando: Date.now(), itens: dl.map((d) => ({ key: "doce|" + d.nome, nome: d.nome, preco: d.preco, grupos: [], obs: "", qtd: d.qtd })), unidades: soma(dl, (d) => d.qtd), valor: round2(soma(dl, (d) => d.preco * d.qtd)) };
+  const ped = { uid: novoUid(), origem: "caixa", dia: com.dia || dia, comanda: com.numero, quando: Date.now(), itens: dl.map((d) => ({ key: (d.tipo === "bebida" ? "bebida|" : "doce|") + d.nome, nome: d.nome, preco: d.preco, grupos: [], obs: "", qtd: d.qtd, tipo: d.tipo === "bebida" ? "bebida" : "doce" })), unidades: soma(dl, (d) => d.qtd), valor: round2(soma(dl, (d) => d.preco * d.qtd)) };
   try { const r = await aut("/api/pedidos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(ped) }); if (!r.ok) { alert(((await r.json().catch(() => ({}))).erro) || "O servidor recusou os doces."); return null; } }
   catch (e) { alert("Sem conexão com o servidor. Nada foi alterado."); return null; }
   await esperaCarregar(); const fresco = pedidos.find((x) => x.id === com.id), novos = fresco ? fresco.itens.filter((x) => !antes.has(x.iid)) : [];
@@ -1517,8 +1663,36 @@ async function lancarDocesNaComanda(dl, com) { // doces entram DENTRO da comanda
 function aposVenda() { // volta pro campo de busca já pronto pra digitar a próxima comanda
   juntar.clear(); acerto = null; $("#modal").hidden = true; aba = "aberto"; const b = $("#busca"); b.value = ""; ultimoHtml = ""; desenhar(); setTimeout(() => b.focus(), 60);
 }
+// ----- pagar com 2 formas (por valor): ex. marmita R$24 = R$18 no dinheiro + R$6 no Pix -----
+const d2Conta = () => { const A = acerto, D = A.duas, p = A.ps[0], aberto = round2(soma(p.itens.filter((c) => !c.pago), valorIt)), v1 = Math.min(aberto, Math.max(0, parseFloat(String(D.v1).replace(",", ".")) || 0)); return { p, aberto, v1: round2(v1), v2: round2(aberto - v1) }; };
+function desenharDuas() {
+  const A = acerto, D = A.duas, { aberto, v2 } = d2Conta();
+  const tiles = (q, sel) => `<div class="ac-tiles d2-t">${FORMAS_PAG.map((k) => `<button class="btn ac-tile ${sel === k ? "on" : ""}" data-a="d2Forma" data-q="${q}" data-f="${k}"><i>${FIC[k]}</i>${FORMAS[k]}</button>`).join("")}</div>`;
+  $("#ac-itens").innerHTML = `<div class="d2"><div class="d2-tit">Pagar com 2 formas <b>total ${brl(aberto)}</b></div>
+    <div class="d2-passo"><span>1ª forma</span>${tiles(1, D.f1)}<label class="d2-val">Quanto em ${FORMAS[D.f1]}?<span class="cel-rs">R$<input id="d2-v1" inputmode="decimal" autocomplete="off" placeholder="0,00" value="${esc(D.v1)}"></span></label></div>
+    <div class="d2-passo"><span>O resto, <b id="d2-resto">${brl(v2)}</b>, vai em:</span>${tiles(2, D.f2)}</div>
+    <button class="btn ac-dividir" data-a="d2Sair">↩ Voltar pro jeito simples</button></div>`;
+  d2Rodape();
+}
+function d2Rodape() {
+  const D = acerto.duas, { v1, v2 } = d2Conta(), din = D.f1 === "dinheiro" ? v1 : D.f2 === "dinheiro" ? v2 : 0, rec = parseFloat(String($("#ac-rec") ? $("#ac-rec").value : "").replace(",", "."));
+  if ($("#d2-resto")) $("#d2-resto").textContent = brl(v2);
+  $("#ac-din").hidden = !(din > 0); $("#ac-tr").textContent = din > 0 && !isNaN(rec) ? (rec >= din ? "Troco: " + brl(rec - din) : "Falta: " + brl(din - rec)) : "";
+  $("#ac-rapido").innerHTML = din > 0 ? [din, ...[20, 30, 40, 50, 100].filter((v) => v > din)].map((v, i) => `<button class="btn mini" data-a="acRap" data-v="${v}">${i ? brl(v) : "Valor exato"}</button>`).join("") : "";
+  $("#ac-resumo").innerHTML = `<div class="ac-linha"><div class="ac-tot"><small>Receber agora</small><b>${brl(v1 + v2)}</b></div><div class="ac-chips">${v1 > 0 ? `<span class="ac-chip">${FIC[D.f1]} ${FORMAS[D.f1]} ${brl(v1)}</span>` : ""}${v2 > 0 ? `<span class="ac-chip">${FIC[D.f2]} ${FORMAS[D.f2]} ${brl(v2)}</span>` : ""}${!(v1 > 0 && v2 > 0) ? '<span class="ac-chip falta">digite quanto vai na 1ª forma</span>' : ""}</div></div>`;
+  const ok = v1 > 0 && v2 > 0 && D.f1 !== D.f2 && (din <= 0 || isNaN(rec) || rec >= din);
+  $("#ac-ok").disabled = !ok; $("#ac-ok").textContent = "Receber " + brl(v1 + v2);
+}
+document.addEventListener("input", (e) => { if (e.target.id === "d2-v1" && acerto && acerto.duas) { acerto.duas.v1 = e.target.value; d2Rodape(); } else if (e.target.id === "ac-rec" && acerto && acerto.duas) d2Rodape(); });
+async function receberDuas() {
+  const D = acerto.duas, { p, v1, v2 } = d2Conta(), rec = parseFloat(String($("#ac-rec") ? $("#ac-rec").value : "").replace(",", ".")); $("#ac-ok").disabled = true;
+  const ok = await patch(p.id, { acertarValores: { partes: [{ forma: D.f1, valor: v1 }, { forma: D.f2, valor: v2 }], recebido: isNaN(rec) ? undefined : rec } });
+  if (ok) return aposVenda();
+  d2Rodape();
+}
 async function receberAcerto() {
-  const A = acerto; if (!A) return; $("#ac-ok").disabled = true;
+  const A = acerto; if (!A) return;
+  if (A.duas) return receberDuas(); $("#ac-ok").disabled = true;
   const rec = parseFloat(($("#ac-rec").value || "").replace(",", ".")), dl = Object.values(A.doces).filter((d) => d.qtd > 0), grupos = [];
   A.ps.forEach((p) => { const lista = p.itens.filter((x) => !x.pago && A.itens[kIt(p, x)].on).map((x) => ({ iid: x.iid, forma: A.itens[kIt(p, x)].forma, v: valorIt(x) })); if (lista.length) grupos.push({ p, lista }); });
   let novo = null;
@@ -1636,6 +1810,9 @@ document.addEventListener("click", async (e) => {
   else if (a === "acSet") { acerto.padrao = d.f; acerto.focoDin = d.f === "dinheiro"; Object.values(acerto.itens).forEach((x) => { if (x.on) x.forma = d.f; }); Object.values(acerto.doces).forEach((x) => (x.forma = d.f)); atualizarAcerto(); }
   else if (a === "acTodos") { Object.values(acerto.itens).forEach((x) => (x.on = d.v === "1")); atualizarAcerto(); }
   else if (a === "acOk") receberAcerto();
+  else if (a === "d2Abrir" && acerto) { acerto.duas = { f1: "dinheiro", v1: "", f2: "pix" }; atualizarAcerto(); setTimeout(() => { const i = $("#d2-v1"); if (i) i.focus(); }, 30); }
+  else if (a === "d2Sair" && acerto) { acerto.duas = null; atualizarAcerto(); }
+  else if (a === "d2Forma" && acerto && acerto.duas) { const D = acerto.duas; if (d.q === "1") { D.f1 = d.f; if (D.f2 === d.f) D.f2 = FORMAS_PAG.find((k) => k !== d.f); } else { D.f2 = d.f; if (D.f1 === d.f) D.f1 = FORMAS_PAG.find((k) => k !== d.f); } atualizarAcerto(); }
   else if (a === "estornarPag") pedirMotivo(d.id, d.pag);
   else if (a === "gAbrir") { const v = num("#g-val"); if (!(v >= 0)) return alert("Digite o troco inicial."); gavetaAcao({ acao: "abrir", valor: v }); }
   else if (a === "gMov") gavetaAcao({ acao: "movimento", tipo: $("#g-tipo").value, valor: num("#g-mv"), motivo: $("#g-mot").value });
@@ -1666,6 +1843,7 @@ function textoFechamento(g) {
     CP.forEach((p) => L.push("  • " + nomeChave(p.chave) + ": " + brl(p.valor) + (p.refeicoes ? " (" + String(p.refeicoes).replace(".", ",") + " ref.)" : "")));
     L.push("*Total geral recebido: " + brl(totV + totC) + "*");
   }
+  { const pb = pagBoys[a + "|" + b] || []; if (pb.length) { const por = {}; pb.forEach((x) => (por[x.entregador] = round2((por[x.entregador] || 0) + x.valor))); L.push("", "*Pago aos motoboys: " + brl(soma(pb, (x) => x.valor)) + "*", ...Object.entries(por).map(([n, v]) => "  - " + n + ": " + brl(v))); } }
   if (g && g.abertura) {
     L.push("", "*Gaveta*", "Troco inicial: " + brl(g.abertura.valor), "Deve ter: " + brl(g.esperado));
     if (g.fechamento) L.push("Contado: " + brl(g.fechamento.contado), Math.abs(g.fechamento.diferenca) < 0.005 ? "Bateu certinho ✓" : g.fechamento.diferenca > 0 ? "Sobrou " + brl(g.fechamento.diferenca) : "Faltou " + brl(-g.fechamento.diferenca));
@@ -1835,13 +2013,13 @@ document.addEventListener("click", (e) => {
   else if (a === "acTira") { if (A.ps.length < 2) return; const p = A.ps.find((x) => x.id === d.id); A.ps = A.ps.filter((x) => x.id !== d.id); if (p) p.itens.forEach((c) => delete A.itens[kIt(p, c)]); atualizarAcerto(); }
   else if (a === "acRap") { $("#ac-rec").value = Number(d.v).toFixed(2).replace(".", ","); atualizarAcerto(); }
   else if (a === "dcAbrir" || a === "dcFechar") { A.picker = a === "dcAbrir" ? !A.picker : false; atualizarAcerto(); if (A.picker) { const b = $("#dc-busca"); if (b) { b.focus(); b.select(); } } }
-  else if (a === "dcCat") { A.cat = d.k; desenharPicker(); }
-  else if (a === "dcAdd") { const prod = DOCES.find((x) => x[0] === d.n); if (!prod) return; const x = A.doces[d.n] || (A.doces[d.n] = { nome: prod[0], preco: prod[1], qtd: 0, forma: A.padrao }); x.qtd++; atualizarAcerto(); }
+  else if (a === "dcCat") { A.cat = d.k; try { localStorage.setItem("cxDcCat", d.k); } catch (e) {} desenharPicker(); }
+  else if (a === "dcAdd") { const prod = catalogo().find((x) => x.nome === d.n); if (!prod) return; addDc(prod); atualizarAcerto(); }
   else if (a === "dcMais" || a === "dcMenos") { const x = A.doces[d.n]; if (!x) return; x.qtd += a === "dcMais" ? 1 : -1; if (x.qtd <= 0) delete A.doces[d.n]; atualizarAcerto(); }
   else if (a === "dcAvulso") {
     const v = parseFloat(($("#dc-val").value || "").replace(",", ".")); if (!(v > 0)) return alert("Digite o valor do item.");
     let nome = $("#dc-nome").value.trim() || "Doce avulso"; if (A.doces[nome] && A.doces[nome].preco !== v) nome += " " + brl(v);
-    const x = A.doces[nome] || (A.doces[nome] = { nome, preco: v, qtd: 0, forma: A.padrao }); x.qtd++; $("#dc-nome").value = $("#dc-val").value = ""; atualizarAcerto();
+    const x = A.doces[nome] || (A.doces[nome] = { nome, preco: v, qtd: 0, forma: A.padrao, tipo: "doce" }); x.qtd++; $("#dc-nome").value = $("#dc-val").value = ""; atualizarAcerto();
   }
 });
 document.addEventListener("input", (e) => {
@@ -1855,9 +2033,10 @@ document.addEventListener("keydown", (e) => {
     const ach = pedidos.filter((p) => p.status === "aguardando" && p.itens.some((c) => !c.pago) && casaBusca(p, q)), ex = ach.filter((p) => String(p.numero) === q || String(p.numeroLocal) === q), alvo = ach.length === 1 ? ach[0] : ex.length === 1 ? ex[0] : null;
     if (alvo) { e.target.blur(); abrirAcerto([alvo.id]); } else { e.target.style.outline = "3px solid #a50f14"; setTimeout(() => (e.target.style.outline = ""), 700); }
   } else if (e.target.id === "ac-junta") acJuntar();
-  else if (e.target.id === "dc-busca" && acerto) { const q = semAcento(e.target.value), r = DOCES.filter(([n, , c]) => (acerto.cat === "t" || acerto.cat === c) && (!q || semAcento(n).includes(q))); if (r.length === 1) { const [n, pr] = r[0], x = acerto.doces[n] || (acerto.doces[n] = { nome: n, preco: pr, qtd: 0, forma: acerto.padrao }); x.qtd++; e.target.value = ""; acerto.q = ""; atualizarAcerto(); } }
+  else if (e.target.id === "dc-busca" && acerto) { const r = filtraDc(acerto.cat, e.target.value); if (r.length === 1) { addDc(r[0]); e.target.value = ""; acerto.q = ""; atualizarAcerto(); } }
 });
 </script>
 <script src="teclado.js"></script>
+<script src="caixa-tema.js"></script>
 </body>
 </html>
