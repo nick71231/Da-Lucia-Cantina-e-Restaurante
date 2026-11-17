@@ -401,7 +401,9 @@ function resumoGestao(dia) {
       x.q += c.qtd || 1; x.v = r2(x.v + valorItem(c));
     }
   }
-  R.naConta = r2(R.naConta + db.lancamentos.filter((l) => l.dia === dia).reduce((s, l) => s + (Number(l.valor) || 0), 0)); // marmitas e lançamentos na conta dos clientes
+  // marmitas e lançamentos feitos direto na conta. O lançamento de um pedido que está "na conta" NÃO entra de novo (já foi somado acima: antes contava 2x)
+  const naContaJa = new Set(db.pedidos.filter((p) => p.dia === dia && p.status === "conta").map((p) => p.id));
+  R.naConta = r2(R.naConta + db.lancamentos.filter((l) => l.dia === dia && !(l.pedidoId && naContaJa.has(l.pedidoId))).reduce((s, l) => s + (Number(l.valor) || 0), 0));
   for (const x of db.pagamentos.filter((x) => x.data === dia)) add(R.contasRecebidas, x.forma || "outro", Number(x.valor) || 0);
   const g = gavetaDia(dia), mov = g.movimentos || [];
   R.gaveta = { abertura: g.abertura ? g.abertura.valor : null, fechamento: g.fechamento ? { contado: g.fechamento.contado ?? g.fechamento.valor ?? null, diferenca: g.fechamento.diferenca ?? null } : null,
@@ -410,11 +412,12 @@ function resumoGestao(dia) {
     sangriasLista: mov.filter((m) => m.tipo === "sangria" && m.categoria !== "motoboy").map((m) => ({ motivo: String(m.motivo || "Sangria").slice(0, 60), valor: r2(m.valor) })) }; // cada sangria com o nome que foi digitado (a Gestão mostra assim)
   return R;
 }
-const gestaoEnv = {}; let gestaoPrimeira = true, enviandoGestao = false;
+const gestaoEnv = {}; let gestaoPrimeira = true, enviandoGestao = false, gestaoUltCompleto = 0;
 async function enviarGestao() {
   if (!delEstado.ativo || enviandoGestao) return;
   enviandoGestao = true;
   try {
+    if (Date.now() - gestaoUltCompleto > 3600e3) { gestaoPrimeira = true; gestaoUltCompleto = Date.now(); } // de hora em hora confere os 90 dias (conta marcada ou corrigida em dia antigo também chega na Gestão; só manda o que mudou)
     const dias = gestaoPrimeira ? [...new Set([...db.pedidos.map((p) => p.dia), ...Object.keys(db.caixa)])].filter((d) => d && d >= addDiasG(hoje(), -90)).sort() : [addDiasG(hoje(), -1), hoje()];
     const mudou = dias.map(resumoGestao).filter((r) => { const s = JSON.stringify(r); if (gestaoEnv[r.dia] === s) return false; r._s = s; return true; });
     for (let i = 0; i < mudou.length; i += 30) {
@@ -673,6 +676,8 @@ async function tratar(req, res) {
       ped.nome = String(u.nome).trim().slice(0, 40); await gravar(); return json(res, 200, ped);
     }
     if (u.removerItem !== undefined) {                           // balança desfaz um lançamento errado
+      // removerIid (código do item) vale mais que a posição: se a comanda mudou nesse meio-tempo, a posição pode apontar pro item errado
+      if (u.removerIid) { const k = ped.itens.findIndex((c) => c.iid === String(u.removerIid)); if (k < 0) return json(res, 409, { erro: "esse lançamento já não está mais na comanda" }); u.removerItem = k; }
       const i = u.removerItem;
       if (ped.tipo !== "balanca" || ped.status !== "aguardando") return json(res, 409, { erro: "só dá pra desfazer lançamento de comanda aberta da balança" });
       if (!Number.isInteger(i) || i < 0 || i >= ped.itens.length) return json(res, 400, { erro: "lançamento inexistente" });

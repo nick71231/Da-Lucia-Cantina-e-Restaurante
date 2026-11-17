@@ -657,7 +657,9 @@ const FORMAS_PAG = ["dinheiro", "pix", "credito", "debito", "refeicao"]; // o qu
 let pedidos = [], aba = "aberto", dia = new Date().toLocaleDateString("en-CA"), sel = null;
 
 const aut = async (url, opt = {}) => { // toda chamada leva a senha (token) do caixa; se o servidor disser que expirou, volta pro login
-  const r = await fetch(url, { ...opt, headers: { ...(opt.headers || {}), Authorization: "Bearer " + (sessionStorage.getItem("caixaToken") || "") } });
+  // desiste em 20 s: antes, se a rede travasse, o caixa parava de atualizar pra sempre mostrando "online"
+  const ab = typeof AbortController !== "undefined" ? new AbortController() : null, tm = ab && setTimeout(() => ab.abort(), opt.limite || 20000);
+  let r; try { r = await fetch(url, { ...opt, signal: opt.signal || (ab ? ab.signal : undefined), headers: { ...(opt.headers || {}), Authorization: "Bearer " + (sessionStorage.getItem("caixaToken") || "") } }); } finally { clearTimeout(tm); }
   if (r.status === 401) { sessionStorage.removeItem("caixaToken"); location.reload(); }
   return r;
 };
@@ -1595,12 +1597,13 @@ let fiadoUltBip = 0;
 async function checarFiado() {
   let C; try { const r = await aut("/api/contas?mes=" + hojeISO().slice(0, 7)); if (!r.ok) return; C = await r.json(); } catch (e) { return; }
   const L = fiadosAtrasados(C); let el = $("#aviso-fiado");
-  if (!L.length) { if (el) el.remove(); return; }
+  if (!L.length || Date.now() < fiadoOculto) { if (el) el.remove(); return; } // ✕ esconde por 1 h
   if (!el) { el = document.createElement("button"); el.id = "aviso-fiado"; el.type = "button"; el.dataset.a = "verFiado"; el.style.cssText = "position:fixed;right:16px;bottom:16px;z-index:900;max-width:min(420px,calc(100vw - 32px));text-align:left;border:0;border-radius:16px;padding:12px 16px;background:#fde0e0;color:#a50f14;font:700 .95rem system-ui;box-shadow:0 10px 28px rgba(0,0,0,.25);cursor:pointer"; document.body.appendChild(el); }
-  el.innerHTML = `⏰ Fiado sem pagar há 2 dias ou mais: ${L.map((x) => esc(x.c.nome) + " " + brl(x.saldo)).join(" · ")}<br><small style="font-weight:500">Toque para ver</small>`;
+  el.innerHTML = `<span data-x="1" title="Esconder por 1 hora" style="float:right;margin:-4px -6px 0 12px;padding:2px 8px;border-radius:8px;background:#fff8">✕</span>⏰ ${L.length === 1 ? "1 fiado" : L.length + " fiados"} sem pagar há 2 dias ou mais · ${brl(L.reduce((t, x) => t + x.saldo, 0))}<br><small style="font-weight:500">${L.slice(0, 3).map((x) => esc(x.c.nome)).join(", ")}${L.length > 3 ? " e mais " + (L.length - 3) : ""} · toque para ver</small>`;
   if (Date.now() - fiadoUltBip > 60 * 60e3) { fiadoUltBip = Date.now(); bip(); setTimeout(bip, 300); setTimeout(bip, 600); } // apita (3 bipes) no máximo 1x por hora
 }
-document.addEventListener("click", (e) => { if (e.target.closest && e.target.closest("#aviso-fiado")) { cliFiltro = "deve"; aba = "clientes"; desenhar(); window.scrollTo(0, 0); } });
+let fiadoOculto = 0;
+document.addEventListener("click", (e) => { if (e.target.closest && e.target.closest("#aviso-fiado [data-x]")) { fiadoOculto = Date.now() + 3600e3; $("#aviso-fiado").remove(); return; } if (e.target.closest && e.target.closest("#aviso-fiado")) { cliFiltro = "deve"; aba = "clientes"; desenhar(); window.scrollTo(0, 0); } });
 function avisarNovos() { const n = pedidos.filter((p) => p.status === "aguardando").length; if (ultimoAguard !== null && n > ultimoAguard) bip(); ultimoAguard = n; } // apita quando chega pedido novo
 
 const norm = (n) => String(n).replace(/\s*\(R\$[^)]*\)/g, "").replace(/\s\d+ g\b/, "").replace(/\s*\([^)]*\)$/, "").trim();

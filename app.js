@@ -274,7 +274,9 @@ async function finalizar(comandaNum) {
     unidades: carrinho.reduce((s, c) => s + c.qtd, 0), valor: carrinho.reduce((s, c) => s + c.qtd * c.preco, 0) };
   let numero = local, pendente = false;
   try { // manda pro servidor (o caixa enxerga na hora); ele devolve o número do pedido
-    const r = await fetch("/api/pedidos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(ped) });
+    // Wi-Fi ruim: espera no máximo 8 s (antes o cliente ficava olhando a tela parada); não chegou, vai pra fila e o servidor não duplica (uid)
+    const ab = typeof AbortController !== "undefined" ? new AbortController() : null, tm = ab && setTimeout(() => ab.abort(), 8000);
+    let r; try { r = await fetch("/api/pedidos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(ped), signal: ab ? ab.signal : undefined }); } finally { clearTimeout(tm); }
     if (!r.ok) throw 0; numero = (await r.json()).numero;
   } catch (e) { pendente = true; salvar("fila", [...ler("fila", []), { ...ped, numero: local }]); } // servidor fora: guarda e reenvia depois
   salvar("contador", { dia, n: Math.max(local, numero) });
@@ -714,7 +716,8 @@ async function enviarFila() { // pedidos que não chegaram no servidor
     try { const r = await fetch("/api/pedidos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) }); if (!r.ok && r.status >= 500) resta.push(p); }
     catch (e) { resta.push(p); }
   }
-  salvar("fila", resta);
+  // pedido que entrou na fila ENQUANTO esta reenviava não pode sumir (antes era apagado aqui)
+  const novos = ler("fila", []).filter((x) => !fila.some((f) => f.uid === x.uid)); salvar("fila", resta.concat(novos));
 }
 setInterval(enviarFila, 15000);
 

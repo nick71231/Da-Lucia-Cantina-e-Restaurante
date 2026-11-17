@@ -199,8 +199,9 @@ let pedidos = [], bebidas = comSorvetes(BEBIDAS), atual = null, filtro = "", cat
 
 /* ---- login (mesma senha/token da balança) ---- */
 const token = () => localStorage.getItem("tokenBalanca") || "";
-const aut = async (url, opt = {}) => {
-  const r = await fetch(url, { ...opt, headers: { ...(opt.headers || {}), Authorization: "Bearer " + token() } });
+const aut = async (url, opt = {}) => { // Wi-Fi ruim: desiste em 10 s (antes ficava esperando pra sempre); o lançamento vai pra fila e o servidor não soma 2x (uid)
+  const ab = typeof AbortController !== "undefined" ? new AbortController() : null, tm = ab && setTimeout(() => ab.abort(), opt.limite || 10000);
+  let r; try { r = await fetch(url, { ...opt, signal: ab ? ab.signal : undefined, headers: { ...(opt.headers || {}), Authorization: "Bearer " + token() } }); } finally { clearTimeout(tm); }
   if (r.status === 401) mostrarLogin();
   return r;
 };
@@ -226,8 +227,13 @@ const ultimaAtiv = (p) => Math.max(p.quando, ...p.itens.map((c) => c.hora || 0))
 const minutos = (p) => Math.max(0, Math.round((Date.now() - ultimaAtiv(p)) / 60000));
 const tempo = (m) => (m < 60 ? m + " min" : Math.floor(m / 60) + "h" + String(m % 60).padStart(2, "0"));
 
+let carregandoG = false;
 async function carregar() {
-  try { const r = await aut("/api/pedidos?dia=" + hoje()); if (!r.ok) throw 0; const novos = (await r.json()).filter((p) => p.tipo === "balanca"); if (enviando > 0) return; pedidos = novos; offline = false; otim = {}; }
+  if (carregandoG) return; carregandoG = true; // não empilha consultas quando o Wi-Fi está lento
+  try { await carregar0(); } finally { carregandoG = false; }
+}
+async function carregar0() {
+  try { const r = await aut("/api/pedidos?dia=" + hoje(), { limite: 8000 }); if (!r.ok) throw 0; const novos = (await r.json()).filter((p) => p.tipo === "balanca"); if (enviando > 0) return; pedidos = novos; offline = false; otim = {}; }
   catch (e) { offline = true; }
   status(); desenhar(false);
 }
@@ -302,7 +308,8 @@ async function lancar(i) {
     if (r.status === 401) throw 0;
     if (r.status >= 400 && r.status < 500) { otim[x.nome]--; sessao--; desenhar(false); alert(j.erro || "O servidor recusou o lançamento."); return; }
     if (!r.ok) throw 0;
-    ultimo = { id: j.id, idx: j.itens.length - 1, nome: x.nome, n: p.numero }; mostrarUndo((x.sorvete ? "🍦 " : "🥤 ") + x.nome + " → comanda " + numTxt(p.numero));
+    const meu = (j.itens || []).find((c) => c.uid === it.uid) || j.itens[j.itens.length - 1];
+    ultimo = { id: j.id, idx: j.itens.indexOf(meu), iid: meu && meu.iid, nome: x.nome, n: p.numero }; mostrarUndo((x.sorvete ? "🍦 " : "🥤 ") + x.nome + " → comanda " + numTxt(p.numero));
   } catch (e) { salvar("filaGarcom", [...ler("filaGarcom", []), it]); ultimo = null; toast("Sem conexão: guardado, será enviado sozinho."); }
   finally { enviando = Math.max(0, enviando - 1); }
   status(); carregarLogo();
@@ -313,7 +320,7 @@ function mostrarUndo(txt) {
 }
 async function desfazer() {
   $("#undo").classList.remove("show"); if (!ultimo || !ultimo.id) return; const u = ultimo; ultimo = null;
-  try { const r = await aut("/api/pedidos/" + u.id, { method: "PATCH", headers: JSONH, body: JSON.stringify({ removerItem: u.idx }) }); if (!r.ok) throw new Error(((await r.json().catch(() => ({}))).erro) || "erro"); sessao = Math.max(0, sessao - 1); toast("Desfeito: " + u.nome); }
+  try { const r = await aut("/api/pedidos/" + u.id, { method: "PATCH", headers: JSONH, body: JSON.stringify({ removerItem: u.idx, removerIid: u.iid || undefined }) }); if (!r.ok) throw new Error(((await r.json().catch(() => ({}))).erro) || "erro"); sessao = Math.max(0, sessao - 1); toast("Desfeito: " + u.nome); }
   catch (e) { toast("Não deu pra desfazer: " + e.message); }
   carregar();
 }
@@ -327,7 +334,7 @@ async function tirar(nome) { // tira a última bebida lançada com esse nome
   if (!confirm("Tirar " + (q > 1 ? q + "× " : "") + nome + " da comanda " + p.numero + "?" + (unico ? "\n\nÉ o único item: a comanda será cancelada." : ""))) return;
   tirando = true;
   try {
-    const r = await aut("/api/pedidos/" + p.id, { method: "PATCH", headers: JSONH, body: JSON.stringify({ removerItem: i }) });
+    const r = await aut("/api/pedidos/" + p.id, { method: "PATCH", headers: JSONH, body: JSON.stringify({ removerItem: i, removerIid: p.itens[i].iid || undefined }) });
     if (!r.ok) throw new Error(((await r.json().catch(() => ({}))).erro) || "erro");
     ultimo = null; $("#undo").classList.remove("show"); sessao = Math.max(0, sessao - 1); toast("Tirado: " + nome);
   } catch (e) { toast("Não deu pra tirar: " + e.message); }

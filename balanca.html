@@ -433,7 +433,8 @@ async function enviarItem(it, rotulo) { // prato pesado ou bebida: manda pro ser
     const r = await aut("/api/balanca", { method: "POST", headers: JSONH, body: JSON.stringify(it) }), j = await r.json().catch(() => ({}));
     if (r.status === 401) throw 0; if (r.status >= 400 && r.status < 500) { bip(false); alert(j.erro || "O servidor recusou o lançamento."); return false; }
     if (!r.ok) throw 0;
-    ultimoReg = { n: it.comanda, v: it.valor, t: Date.now(), id: j.id, idx: j.itens.length - 1 }; mostrarUndo(rotulo);
+    const meu = (j.itens || []).find((c) => c.uid === it.uid) || j.itens[j.itens.length - 1];
+    ultimoReg = { n: it.comanda, v: it.valor, t: Date.now(), id: j.id, idx: j.itens.indexOf(meu), iid: meu && meu.iid }; mostrarUndo(rotulo);
   } catch (e) { salvar("filaBalanca", [...ler("filaBalanca", []), it]); ultimoReg = { n: it.comanda, v: it.valor, t: Date.now() }; toast("Sem conexão: guardado, será enviado sozinho."); }
   bip(true); status(); carregar(true); return true;
 }
@@ -460,8 +461,8 @@ async function vincular(id) { // pedido do totem (pagar no caixa) entra na coman
     bip(true); toast(`✓ Pedido #${p.numero} foi pra comanda ${n}`); ultimoReg = { n, v: 0, t: Date.now() }; await carregar(true);
   } catch (e) { bip(false); toast("Sem conexão: o pedido NÃO foi pra comanda."); }
 }
-async function patchItem(id, i) {
-  try { const r = await aut("/api/pedidos/" + id, { method: "PATCH", headers: JSONH, body: JSON.stringify({ removerItem: i }) }); if (!r.ok) throw new Error(((await r.json().catch(() => ({}))).erro) || "erro"); toast("Lançamento desfeito."); }
+async function patchItem(id, i, iid) { // iid = código do item: garante que sai o item certo mesmo se a comanda mudou nesse meio-tempo
+  try { const r = await aut("/api/pedidos/" + id, { method: "PATCH", headers: JSONH, body: JSON.stringify({ removerItem: i, removerIid: iid || undefined }) }); if (!r.ok) throw new Error(((await r.json().catch(() => ({}))).erro) || "erro"); toast("Lançamento desfeito."); }
   catch (e) { bip(false); toast("Não deu pra desfazer: " + e.message); }
   carregar(true);
 }
@@ -646,9 +647,9 @@ document.addEventListener("click", (e) => {
   if (d.rm) {
     const [id, i] = d.rm.split("|"), it = (pedidosB.find((x) => x.id === id) || { itens: [] }).itens[+i], orig = it && it.pedidoId ? todosP.find((x) => x.id === it.pedidoId) : null;
     const msg = orig && orig.movido ? `Tirar o pedido #${orig.numero} desta comanda?\nEle volta pro caixa como pedido separado.` : "Apagar este lançamento?";
-    if (confirm(msg)) patchItem(id, +i); return;
+    if (confirm(msg)) patchItem(id, +i, it && it.iid); return;
   }
-  if (d.a === "desfazer") { $("#undo").classList.remove("show"); if (ultimoReg && ultimoReg.id) patchItem(ultimoReg.id, ultimoReg.idx); return; }
+  if (d.a === "desfazer") { $("#undo").classList.remove("show"); if (ultimoReg && ultimoReg.id) patchItem(ultimoReg.id, ultimoReg.idx, ultimoReg.iid); return; }
   if (d.a === "login") return entrar();
   if (d.a === "sair") { localStorage.removeItem("tokenBalanca"); return mostrarLogin("Você saiu. Digite a senha para entrar de novo."); }
   if (d.a === "fechar") $("#modal").hidden = true;

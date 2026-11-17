@@ -187,7 +187,7 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   t(recusou, "arquivo que não é backup é recusado");
 
   console.log("\nPedidos do site de delivery (com um site de mentira)");
-  let marcados = [], extraSite = [], cancelarNoSite = false, cardSite = null, whatsSite = [];
+  let marcados = [], extraSite = [], cancelarNoSite = false, cardSite = null, whatsSite = [], gestaoSite = {};
   const PS = { token: "11111111-2222-3333-4444-555555555555", numero: 57, dia: hoje, criado_em: new Date().toISOString(), nome: "Rita", telefone: "12999998888", tipo_entrega: "entrega",
     endereco: { rua: "Rua A", numero: "10", bairro: "Centro" }, forma_pagamento: "pix", troco_para: null, obs: "portão azul", status: "preparando", subtotal: 54.5, taxa_entrega: 7, total: 61.5,
     itens: [{ nome: "Marmitex", preco: 24, qtd: 2, grupos: [{ rotulo: "Carne", itens: ["Frango"] }] }, { tipo: "bebida", nome: "Suco", preco: 6.5, qtd: 1 }] };
@@ -199,6 +199,7 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
     if (j.acao === "importado") { marcados.push(j.token); return out({ ok: true }); }
     if (j.acao === "cardapio") { cardSite = j.cardapio; return out({ ok: true }); }
     if (j.acao === "whats") { whatsSite.push(j); return out({ ok: true }); }
+    if (j.acao === "gestao") { (j.resumos || []).forEach((r) => (gestaoSite[r.dia] = r)); return out({ ok: true }); }
     if (j.acao === "situacao") return out({ pedidos: j.tokens.map((x) => ({ token: x, status: cancelarNoSite ? "cancelado" : "preparando" })) });
     out({ erro: "?" }, 400);
   }); }).listen(3994);
@@ -206,7 +207,7 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   fs.writeFileSync(path.join(dirD, "config.json"), JSON.stringify({ t: 1, dados: { indisponiveis: JSON.stringify(["bebida:Sprite Lata", "arroz:Arroz Integral", "produto:m24"]), removidos: JSON.stringify(["bebida:H2OH!"]),
     bebidasExtras: JSON.stringify([{ nome: "Suco Pequeno", preco: 6 }]), etapasExtras: JSON.stringify([{ id: "e1", nome: "Salada Separada - R$1,00", itens: ["Alface"] }]),
     marmitexCfg: JSON.stringify({ m22: { preco: 23, regras: { e1: { min: 0, max: 1 } } } }) } }));
-  const sd = sobe(3993, dirD, { DELIVERY_URL: "http://localhost:3994/", DELIVERY_TOKEN: "tk-teste", DELIVERY_INTERVALO_MS: "700", WHATS_ENVIADOS: arqWE });
+  const sd = sobe(3993, dirD, { DELIVERY_URL: "http://localhost:3994/", DELIVERY_TOKEN: "tk-teste", DELIVERY_INTERVALO_MS: "700", GESTAO_INTERVALO_MS: "800", WHATS_ENVIADOS: arqWE });
   await sd.pronto; await dorme(2600);
   const tkD = (await reqEm(sd.base, "POST", "/api/login", { role: "caixa", pin: "2222" }, "")).j.token, delDe = async () => (await reqEm(sd.base, "GET", "/api/pedidos?dia=" + hoje, undefined, tkD)).j.filter((p) => p.tipo === "delivery");
   const lD0 = await delDe(), lD = lD0, d57 = lD.find((x) => x.numero === 57), d58 = lD.find((x) => x.numero === 58), d59 = lD.find((x) => x.numero === 59);
@@ -260,6 +261,20 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
     t(d62 && d62.status === "conta" && ct.lancamentos.some((l) => l.clienteId === der.id && l.pedidoId === d62.id && l.valor === 22), "na conta pelo nome: 'DER - Ronaldo' vai sozinho pra conta da DER");
     t(d63 && d63.status === "conta" && d63.clienteId === gi.id, "na conta pelo telefone cadastrado (outro nome no pedido)");
     t(d64 && d64.status === "aguardando", "na conta sem achar o cliente: fica em aberto pro caixa");
+  }
+  { // apagar lançamento pelo código (iid): se a comanda mudou, não apaga o item errado
+    const c1 = (await reqEm(sd.base, "POST", "/api/balanca", { comanda: 777, valor: 10, uid: "rm1" }, tkD)).j;
+    await reqEm(sd.base, "POST", "/api/balanca", { comanda: 777, valor: 20, uid: "rm2" }, tkD);
+    const alvo = c1.itens[0].iid; await reqEm(sd.base, "PATCH", "/api/pedidos/" + c1.id, { removerItem: 0 }, tkD); // alguém tirou o 1º antes
+    const r = await reqEm(sd.base, "PATCH", "/api/pedidos/" + c1.id, { removerItem: 0, removerIid: alvo }, tkD); // posição 0 agora é o de R$20
+    t(r.s === 409, "tirar pelo código: item que já saiu não leva outro no lugar (antes apagava o de R$ 20)");
+  }
+  { // Gestão: pedido marcado na conta não conta 2x (pedido + lançamento dele)
+    const c2 = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "CONTA DUPLA" }, tkD)).j, cm = (await reqEm(sd.base, "POST", "/api/balanca", { comanda: 778, valor: 33, uid: "nc1" }, tkD)).j;
+    await dorme(1200); const antes = (gestaoSite[hoje] || {}).naConta || 0;
+    await reqEm(sd.base, "PATCH", "/api/pedidos/" + cm.id, { status: "conta", clienteId: c2.id }, tkD); await dorme(1500);
+    const depois = (gestaoSite[hoje] || {}).naConta || 0;
+    t(Math.abs(depois - antes - 33) < 0.01, "Gestão: comanda de R$ 33 marcada na conta soma R$ 33 no 'vendido na conta' (antes somava 66): " + antes + " -> " + depois);
   }
   { // juntar cadastro repetido: lançamentos passam pro outro e o repetido some
     const a1 = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "LUIS ALMOCO", empresa: "OBRA X" }, tkD)).j, a2 = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "ALMOCO", empresa: "OBRA X" }, tkD)).j;
