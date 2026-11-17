@@ -665,11 +665,12 @@ async function entrar() {
   const pin = $("#pin").value.trim(); if (!pin) return;
   try {
     const r = await fetch("/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role: "caixa", pin }) }), j = await r.json().catch(() => ({}));
-    if (r.ok) { sessionStorage.setItem("caixaToken", j.token); iniciar(); return; }
+    if (r.ok) { sessionStorage.setItem("caixaToken", j.token); sessionStorage.setItem("caixaRole", j.role || "caixa"); iniciar(); return; }
     $("#pin").value = ""; $("#pin").placeholder = r.status === 429 ? "Muitas tentativas. Aguarde." : "Senha incorreta";
   } catch (e) { $("#pin").value = ""; $("#pin").placeholder = "Sem conexão com o servidor"; }
 }
-function iniciar() { $("#gate").hidden = true; $("#app").hidden = false; $("#dia").value = dia; focaBusca(); carregarClientes().then(() => carregar()).then(focaBusca); setInterval(carregar, 3000); avisoPadrao(); }
+// Painel (faturamento, mais vendidos) é só do dono: com a senha do caixa ele some (os números ficam na Gestão do site)
+function iniciar() { if (sessionStorage.getItem("caixaRole") !== "admin") document.querySelectorAll('[data-aba="painel"]').forEach((b) => b.remove()); $("#gate").hidden = true; $("#app").hidden = false; $("#dia").value = dia; focaBusca(); carregarClientes().then(() => carregar()).then(focaBusca); setInterval(carregar, 3000); avisoPadrao(); }
 // "Em aberto": o cursor já fica na busca, pronto pra digitar o nº da comanda (não rouba de janela aberta nem de outro campo)
 function focaBusca() {
   setTimeout(() => {

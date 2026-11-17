@@ -362,6 +362,53 @@ if (delEstado.ativo) {
   setInterval(sincronizarDelivery, Number(process.env.DELIVERY_INTERVALO_MS) || 20000); setTimeout(sincronizarDelivery, 2000);
   setInterval(enviarCardapio, Number(process.env.CARDAPIO_INTERVALO_MS) || 60000); setTimeout(enviarCardapio, 3000);
 }
+// ----- GESTÃO (área do dono no site): o caixa manda o RESUMO de cada dia (vendas, formas, mais vendidos, gaveta) -----
+// Só números do dia, sem nome/telefone de cliente. Manda hoje e ontem a cada 10 min; na 1ª vez manda os últimos 90 dias.
+function resumoGestao(dia) {
+  const r2 = (n) => cents(n), canal = (p) => (p.tipo === "delivery" ? "delivery" : "salao");
+  const R = { dia, recebido: { salao: {}, delivery: {} }, pedidos: { salao: 0, delivery: 0 }, cancelados: 0, naConta: 0, contasRecebidas: {}, taxasEntrega: 0, itens: {}, porHora: Array(24).fill(0) };
+  const add = (o, k, v) => { o[k] = r2((o[k] || 0) + v); };
+  for (const p of db.pedidos) {
+    for (const g of pagsDe(p)) if ((g.dia || p.dia) === dia && g.valor > 0) { add(R.recebido[canal(p)], g.forma || "outro", g.valor); R.porHora[new Date(g.quando || p.quando).getHours()] = r2(R.porHora[new Date(g.quando || p.quando).getHours()] + g.valor); }
+    if (p.dia !== dia) continue;
+    if (p.status === "cancelado") { R.cancelados++; continue; }
+    const vale = p.status === "pago" || p.status === "conta" || pagsDe(p).length;
+    if (!vale) continue;
+    R.pedidos[canal(p)]++;
+    if (p.status === "conta") R.naConta = r2(R.naConta + p.valor - pagsDe(p).reduce((s, g) => s + g.valor, 0));
+    for (const c of p.itens || []) {
+      if (c.tipo === "taxa") { R.taxasEntrega = r2(R.taxasEntrega + valorItem(c)); continue; }
+      if (!(p.status === "pago" || p.status === "conta" || c.pago)) continue;
+      const n = String(c.nome || "?").slice(0, 60), x = R.itens[n] || (R.itens[n] = { q: 0, v: 0, beb: c.tipo === "bebida" ? 1 : 0 });
+      x.q += c.qtd || 1; x.v = r2(x.v + valorItem(c));
+    }
+  }
+  R.naConta = r2(R.naConta + db.lancamentos.filter((l) => l.dia === dia).reduce((s, l) => s + (Number(l.valor) || 0), 0)); // marmitas e lançamentos na conta dos clientes
+  for (const x of db.pagamentos.filter((x) => x.data === dia)) add(R.contasRecebidas, x.forma || "outro", Number(x.valor) || 0);
+  const g = gavetaDia(dia), mov = g.movimentos || [];
+  R.gaveta = { abertura: g.abertura ? g.abertura.valor : null, fechamento: g.fechamento ? { contado: g.fechamento.contado ?? g.fechamento.valor ?? null, diferenca: g.fechamento.diferenca ?? null } : null,
+    esperado: g.esperado, sangrias: r2(mov.filter((m) => m.tipo === "sangria" && m.categoria !== "motoboy").reduce((s, m) => s + m.valor, 0)),
+    motoboys: r2(mov.filter((m) => m.categoria === "motoboy").reduce((s, m) => s + m.valor, 0)), suprimentos: g.suprimentos };
+  return R;
+}
+const gestaoEnv = {}; let gestaoPrimeira = true, enviandoGestao = false;
+async function enviarGestao() {
+  if (!delEstado.ativo || enviandoGestao) return;
+  enviandoGestao = true;
+  try {
+    const dias = gestaoPrimeira ? [...new Set([...db.pedidos.map((p) => p.dia), ...Object.keys(db.caixa)])].filter((d) => d && d >= addDiasG(hoje(), -90)).sort() : [addDiasG(hoje(), -1), hoje()];
+    const mudou = dias.map(resumoGestao).filter((r) => { const s = JSON.stringify(r); if (gestaoEnv[r.dia] === s) return false; r._s = s; return true; });
+    for (let i = 0; i < mudou.length; i += 30) {
+      const lote = mudou.slice(i, i + 30);
+      await delApi("gestao", { resumos: lote.map(({ _s, ...r }) => r) });
+      lote.forEach((r) => (gestaoEnv[r.dia] = r._s));
+    }
+    gestaoPrimeira = false; delEstado.gestao = { quando: Date.now(), erro: null };
+  } catch (e) { const m = e.name === "TimeoutError" ? "o site não respondeu" : e.message; if (!delEstado.gestao || delEstado.gestao.erro !== m) console.error("gestão pro site: " + m); delEstado.gestao = { quando: Date.now(), erro: m }; }
+  finally { enviandoGestao = false; }
+}
+function addDiasG(d, n) { const x = new Date(d + "T12:00:00"); x.setDate(x.getDate() + n); return x.toLocaleDateString("en-CA"); }
+if (delEstado.ativo) { setInterval(enviarGestao, Number(process.env.GESTAO_INTERVALO_MS) || 10 * 60e3); setTimeout(enviarGestao, 15000); }
 
 async function tratar(req, res) {
   const url = new URL(req.url, "http://x"), p = decodeURIComponent(url.pathname);

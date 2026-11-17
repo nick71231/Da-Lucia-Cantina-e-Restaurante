@@ -33,7 +33,8 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
   await api("POST", "/api/clientes", { nome: "Elza" }, cx);
 
   console.log("\nCaixa");
-  const w = await abre("/caixa.html", (win) => win.sessionStorage.setItem("caixaToken", cx));
+  const w = await abre("/caixa.html", (win) => { win.sessionStorage.setItem("caixaToken", admin); win.sessionStorage.setItem("caixaRole", "admin"); });
+  { const wc = await abre("/caixa.html", (win) => win.sessionStorage.setItem("caixaToken", cx)); t(!wc.document.querySelector('[data-aba="painel"]'), "funcionário (senha do caixa) não vê o Painel de faturamento"); t(!!w.document.querySelector('[data-aba="painel"]'), "dono (senha admin) vê o Painel"); }
   t(texto(w, "#lista").includes("C36") && texto(w, "#lista").includes("Beto"), "'Em aberto' mostra a comanda com bebida e o pedido do totem");
   t(texto(w, "#n-aberto") === "2", "contador de abertos bate (2)");
   for (const [aba, esperado] of [["clientes", "Novo cliente"], ["aberto", "C36"], ["painel", "Vendas por hora"], ["gaveta", "Gaveta de hoje"], ["aberto", "C36"], ["fechamento", "Por forma de pagamento"], ["contas", "A receber"], ["conta", ""], ["pagos", ""], ["aberto", "C36"]]) {
