@@ -335,7 +335,9 @@ let campo = "comanda", comanda = "", cents = "", peso = "", pedidosB = [], uidLa
 
 const token = () => localStorage.getItem("tokenBalanca") || "";
 const aut = async (url, opt = {}) => { // toda chamada leva a senha (token) da balança; se não tiver ou expirou, pede o login
-  const r = await fetch(url, { ...opt, headers: { ...(opt.headers || {}), Authorization: "Bearer " + token() } });
+  // Wi-Fi ruim: desiste em 10 s (antes ficava esperando pra sempre e o "Registrar" não fazia nada). O lançamento vai pra fila e o servidor não soma 2x (uid).
+  const ab = typeof AbortController !== "undefined" ? new AbortController() : null, tm = ab && setTimeout(() => ab.abort(), opt.limite || 10000);
+  let r; try { r = await fetch(url, { ...opt, signal: ab ? ab.signal : undefined, headers: { ...(opt.headers || {}), Authorization: "Bearer " + token() } }); } finally { clearTimeout(tm); }
   if (r.status === 401) mostrarLogin();
   return r;
 };
@@ -348,7 +350,7 @@ async function entrar() {
   const pin = ($("#lg-pin").value || "").trim(); if (!pin) return;
   try {
     const r = await fetch("/api/login", { method: "POST", headers: JSONH, body: JSON.stringify({ role: "balanca", pin }) }), j = await r.json().catch(() => ({}));
-    if (r.ok) { localStorage.setItem("tokenBalanca", j.token); $("#modal").hidden = true; carregar(); carregarBebidas(); enviarFila(); return; }
+    if (r.ok) { localStorage.setItem("tokenBalanca", j.token); $("#modal").hidden = true; carregar(true); carregarBebidas(); enviarFila(); return; }
     mostrarLogin(r.status === 429 ? "Muitas tentativas. Aguarde alguns minutos." : "Senha incorreta, tente de novo.");
   } catch (e) { mostrarLogin("Sem conexão com o servidor."); }
 }
@@ -409,7 +411,9 @@ function tela() {
   reg.disabled = campo === "comanda" ? !(n > 0) : !(n > 0 && v > 0);
   $("#som").textContent = c.som ? "🔔" : "🔕"; listarJa();
 }
+let ultTecla = 0; // última vez que tocaram no teclado (enquanto digita, a lista e a balança esperam)
 function digitar(k) {
+  ultTecla = Date.now();
   const tira = (s, n) => (k === "<" ? s.slice(0, -1) : s + k).slice(0, n).replace(/^0+/, "");
   if (campo === "comanda") { if (parseInt(comanda || "0", 10) > 9999) comanda = ""; comanda = tira(comanda, 4); } else if (campo === "valor") cents = tira(cents, 7); else peso = tira(peso, 5);
   tela();
@@ -431,7 +435,7 @@ async function enviarItem(it, rotulo) { // prato pesado ou bebida: manda pro ser
     if (!r.ok) throw 0;
     ultimoReg = { n: it.comanda, v: it.valor, t: Date.now(), id: j.id, idx: j.itens.length - 1 }; mostrarUndo(rotulo);
   } catch (e) { salvar("filaBalanca", [...ler("filaBalanca", []), it]); ultimoReg = { n: it.comanda, v: it.valor, t: Date.now() }; toast("Sem conexão: guardado, será enviado sozinho."); }
-  bip(true); status(); carregar(); return true;
+  bip(true); status(); carregar(true); return true;
 }
 function mostrarUndo(txt) {
   const u = $("#undo"); u.innerHTML = `<span>✓ ${txt}</span><button data-a="desfazer">Desfazer</button>`; u.classList.add("show");
@@ -442,7 +446,7 @@ async function virarComanda(id) { // marmitex do totem vira comanda M (ex.: M33 
   try {
     const r = await aut("/api/pedidos/" + id, { method: "PATCH", headers: JSONH, body: JSON.stringify({ virarComanda: true }) }), j = await r.json().catch(() => ({}));
     if (!r.ok) { bip(false); return toast(j.erro || "Não deu pra abrir a comanda."); }
-    bip(true); await carregar(); comanda = String(j.numero); cents = ""; peso = ""; campo = "valor"; marmAberto = false; uidLanc = null; tela(); $("#lista").scrollTop = 0;
+    bip(true); await carregar(true); comanda = String(j.numero); cents = ""; peso = ""; campo = "valor"; marmAberto = false; uidLanc = null; tela(); $("#lista").scrollTop = 0;
     toast("✓ " + rotN(j.numero) + (p.nome ? " · " + p.nome : "") + " aberta. Agora é só lançar o peso!");
   } catch (e) { bip(false); toast("Sem conexão: tente de novo."); }
 }
@@ -453,19 +457,19 @@ async function vincular(id) { // pedido do totem (pagar no caixa) entra na coman
   try {
     const r = await aut("/api/pedidos/" + id, { method: "PATCH", headers: JSONH, body: JSON.stringify({ paraComanda: n, criar: !existe }) }), j = await r.json().catch(() => ({}));
     if (!r.ok) { bip(false); return toast(j.erro || "Não deu pra pôr na comanda."); }
-    bip(true); toast(`✓ Pedido #${p.numero} foi pra comanda ${n}`); ultimoReg = { n, v: 0, t: Date.now() }; await carregar();
+    bip(true); toast(`✓ Pedido #${p.numero} foi pra comanda ${n}`); ultimoReg = { n, v: 0, t: Date.now() }; await carregar(true);
   } catch (e) { bip(false); toast("Sem conexão: o pedido NÃO foi pra comanda."); }
 }
 async function patchItem(id, i) {
   try { const r = await aut("/api/pedidos/" + id, { method: "PATCH", headers: JSONH, body: JSON.stringify({ removerItem: i }) }); if (!r.ok) throw new Error(((await r.json().catch(() => ({}))).erro) || "erro"); toast("Lançamento desfeito."); }
   catch (e) { bip(false); toast("Não deu pra desfazer: " + e.message); }
-  carregar();
+  carregar(true);
 }
 async function enviarFila() { // lançamentos guardados enquanto estava sem conexão
   const fila = ler("filaBalanca", []); if (!fila.length) return; const resta = [];
   for (const it of fila) { try { const r = await aut("/api/balanca", { method: "POST", headers: JSONH, body: JSON.stringify(it) }); if (!r.ok && (r.status >= 500 || r.status === 401)) resta.push(it); } catch (e) { resta.push(it); } }
   const novos = ler("filaBalanca", []).filter((x) => !fila.some((f) => f.uid === x.uid)); salvar("filaBalanca", resta.concat(novos));
-  if (resta.length < fila.length) carregar(); status();
+  if (resta.length < fila.length) carregar(true); status();
 }
 function status() { const p = ler("filaBalanca", []).length, el = $("#status"); el.className = "pill" + (offline ? " off" : ""); el.textContent = (offline ? "SEM CONEXÃO" : "online") + (p ? " - " + p + " pendente" + (p > 1 ? "s" : "") : ""); }
 const pesado = (p) => p.itens.filter((c) => !c.origem && c.tipo !== "bebida" && c.tipo !== "doce");
@@ -510,21 +514,21 @@ function htmlComandas() {
   return vinc + `<h3>Comandas abertas ${comanda ? `<small>filtrando por "${numTxt(parseInt(comanda, 10))}"</small>` : ""}</h3>
     ${pend.map((it) => `<article class="card pend"><div class="topo"><span class="num">Comanda ${it.comanda}</span><span>${brl(it.valor)}</span></div><div class="sub">⏳ ${it.nome ? esc(it.nome) + " - " : ""}guardado, aguardando conexão</div></article>`).join("")}
     ${f.map(card).join("") || `<p class="vazio">${comanda ? "Nenhuma comanda aberta com esse número." : "Nenhuma comanda aberta."}</p>`}
-    <details class="fech" ${fechadasAberto ? "open" : ""}><summary><span>✓ Já fechadas hoje</span><span class="fech-n">${fech.length}</span>${fech.length ? `<span class="fech-tot">${brl(soma(fech, (p) => p.valor))}</span>` : ""}</summary>${fech.map((p) => `<div class="fc ${p.status === "conta" ? "conta" : "paga"}"><span class="fc-ic">${p.status === "conta" ? "📒" : "✓"}</span><div class="fc-info"><b>${rotN(p.numero)}</b>${p.nome ? `<span>${esc(p.nome)}</span>` : ""}</div><div class="fc-dir"><strong>${brl(p.valor)}</strong><em>${p.status === "conta" ? "Na conta" : "Paga"} · ${hora(p.quando)}</em></div></div>`).join("") || `<p class="vazio">Nenhuma ainda.</p>`}</details>`;
+    <details class="fech" ${fechadasAberto ? "open" : ""}><summary><span>✓ Já fechadas hoje</span><span class="fech-n">${fech.length}</span></summary>${fech.map((p) => `<div class="fc ${p.status === "conta" ? "conta" : "paga"}"><span class="fc-ic">${p.status === "conta" ? "📒" : "✓"}</span><div class="fc-info"><b>${rotN(p.numero)}</b>${p.nome ? `<span>${esc(p.nome)}</span>` : ""}</div><div class="fc-dir"><strong>${brl(p.valor)}</strong><em>${p.status === "conta" ? "Na conta" : "Paga"} · ${hora(p.quando)}</em></div></div>`).join("") || `<p class="vazio">Nenhuma ainda.</p>`}</details>`;
 }
 function abrirNome(id) { // dar (ou corrigir) o nome da pessoa na comanda
   const p = pedidosB.find((x) => x.id === id); if (!p) return;
   abrirTN("Nome na comanda " + p.numero, p.nome || "", [{ rot: "💾 Salvar nome", cls: "ok", fn: (t) => salvarNome(id, t) }]);
 }
 async function salvarNome(id, nome) {
-  try { const r = await aut("/api/pedidos/" + id, { method: "PATCH", headers: JSONH, body: JSON.stringify({ nome }) }); if (!r.ok) throw new Error(((await r.json().catch(() => ({}))).erro) || "erro"); toast("Nome salvo!"); carregar(); return true; }
+  try { const r = await aut("/api/pedidos/" + id, { method: "PATCH", headers: JSONH, body: JSON.stringify({ nome }) }); if (!r.ok) throw new Error(((await r.json().catch(() => ({}))).erro) || "erro"); toast("Nome salvo!"); carregar(true); return true; }
   catch (e) { toast("Não salvou: " + e.message); return false; }
 }
 async function reservarNome(n, nome) { // nome numa comanda, sem nenhum prato (o servidor abre a comanda se ela ainda não existir)
   try {
     const r = await aut("/api/balanca", { method: "POST", headers: JSONH, body: JSON.stringify({ comanda: n, cliente: nome, soNome: true }) }), j = await r.json().catch(() => ({}));
     if (!r.ok) { bip(false); toast(j.erro || "Não salvou o nome."); return false; }
-    $("#nome-cmd").value = ""; comanda = cents = peso = ""; campo = "comanda"; uidLanc = null; bip(true); toast("Comanda " + n + " reservada para " + nome + "."); await carregar(); tela(); return true;
+    $("#nome-cmd").value = ""; comanda = cents = peso = ""; campo = "comanda"; uidLanc = null; bip(true); toast("Comanda " + n + " reservada para " + nome + "."); await carregar(true); tela(); return true;
   } catch (e) { bip(false); toast("Sem conexão: o nome NÃO foi salvo. Tente de novo."); return false; }
 }
 
@@ -586,9 +590,15 @@ async function carregarBebidas() { // respeita o que o admin do totem ligou/desl
     bebidas = comSorvetes([...BEBIDAS, ...extras].filter((x, i, a) => a.findIndex((y) => y.nome === x.nome) === i && !rem.includes("bebida:" + x.nome) && !off.includes("bebida:" + x.nome)));
   } catch (e) {}
 }
-async function carregar() {
-  try { const r = await aut("/api/pedidos?dia=" + hoje()); if (!r.ok) throw 0; todosP = await r.json(); pedidosB = todosP.filter((p) => p.tipo === "balanca");
+let carregando = false, deNovo = false, ultResp = "";
+async function carregar(forcar) {
+  // o tablet baixa os pedidos do dia a cada 4 s: não empilha pedidos, não atrapalha quem está digitando e só refaz a tela se algo mudou
+  if (carregando) { if (forcar === true) deNovo = true; return; } // terminou de lançar enquanto baixava: baixa de novo logo em seguida
+  if (forcar !== true && Date.now() - ultTecla < 2000) return;
+  carregando = true;
+  try { const r = await aut("/api/pedidos?dia=" + hoje(), { limite: 8000 }); if (!r.ok) throw 0; const txt = await r.text(); if (txt === ultResp && !offline) { carregando = false; if (deNovo) { deNovo = false; setTimeout(() => carregar(true), 0); } return; } ultResp = txt; todosP = JSON.parse(txt); pedidosB = todosP.filter((p) => p.tipo === "balanca");
     pedidosT = todosP.filter((p) => p.tipo !== "balanca" && p.status === "aguardando" && p.itens.length && !p.itens.some((c) => c.pago) && !(p.pagamentos || []).some((g) => !g.estornado)).sort((a, b) => b.quando - a.quando); offline = false; } catch (e) { offline = true; }
+  carregando = false; if (deNovo) { deNovo = false; setTimeout(() => carregar(true), 0); }
   status(); estat(); listar(); const res = $("#resumo"); if (res) res.innerHTML = resumo(); atualizarAviso();
 }
 function abrirCfg() {
@@ -659,9 +669,9 @@ async function avisoPadrao() {
 }
 avisoPadrao();
 if (!token()) mostrarLogin();
-tela(); status(); carregar(); carregarBebidas(); setInterval(carregar, 4000); setInterval(carregarBebidas, 60000); setInterval(enviarFila, 5000);
+tela(); status(); carregar(true); carregarBebidas(); setInterval(carregar, 4000); setInterval(carregarBebidas, 60000); setInterval(enviarFila, 5000);
 </script>
 <script src="caixa-tema.js"></script>
-<script src="balanca-serial.js"></script>
+<script src="balanca-serial.js?v=2"></script>
 </body>
 </html>

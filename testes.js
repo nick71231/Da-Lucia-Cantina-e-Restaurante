@@ -187,7 +187,7 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   t(recusou, "arquivo que não é backup é recusado");
 
   console.log("\nPedidos do site de delivery (com um site de mentira)");
-  let marcados = [], cancelarNoSite = false, cardSite = null, whatsSite = [];
+  let marcados = [], extraSite = [], cancelarNoSite = false, cardSite = null, whatsSite = [];
   const PS = { token: "11111111-2222-3333-4444-555555555555", numero: 57, dia: hoje, criado_em: new Date().toISOString(), nome: "Rita", telefone: "12999998888", tipo_entrega: "entrega",
     endereco: { rua: "Rua A", numero: "10", bairro: "Centro" }, forma_pagamento: "pix", troco_para: null, obs: "portão azul", status: "preparando", subtotal: 54.5, taxa_entrega: 7, total: 61.5,
     itens: [{ nome: "Marmitex", preco: 24, qtd: 2, grupos: [{ rotulo: "Carne", itens: ["Frango"] }] }, { tipo: "bebida", nome: "Suco", preco: 6.5, qtd: 1 }] };
@@ -195,7 +195,7 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   const site = require("http").createServer((rq, rs) => { let b = ""; rq.on("data", (c) => (b += c)); rq.on("end", () => {
     const j = JSON.parse(b || "{}"), out = (o, s = 200) => { rs.writeHead(s, { "Content-Type": "application/json" }); rs.end(JSON.stringify(o)); };
     if (rq.headers["x-caixa-token"] !== "tk-teste") return out({ erro: "token inválido" }, 401);
-    if (j.acao === "novos") return out({ pedidos: [PS, PS2, PS3].filter((x) => !marcados.includes(x.token)), loja: { cidade_entrega: "Cachoeira Paulista, SP", tempo_entrega_min: 45 } });
+    if (j.acao === "novos") return out({ pedidos: [PS, PS2, PS3, ...extraSite].filter((x) => !marcados.includes(x.token)), loja: { cidade_entrega: "Cachoeira Paulista, SP", tempo_entrega_min: 45 } });
     if (j.acao === "importado") { marcados.push(j.token); return out({ ok: true }); }
     if (j.acao === "cardapio") { cardSite = j.cardapio; return out({ ok: true }); }
     if (j.acao === "whats") { whatsSite.push(j); return out({ ok: true }); }
@@ -233,8 +233,42 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   marcados = []; await dorme(1500); // o aviso "se perdeu": o site manda de novo
   t((await delDe()).length === 3, "pedido reenviado pelo site não duplica no caixa (nem paga de novo)");
   t((await reqEm(sd.base, "POST", "/api/pedidos", { uid: "d-tot", itens: [{ nome: "X", preco: 10, qtd: 1 }] }, "")).j.numero === 1, "pedido do totem continua começando no #1 (delivery tem numeração própria)");
+  // marmita do robô que chega em R$0 porque o cliente ainda não tinha conta: marcar na conta depois vale o valor da refeição dele
+  extraSite.push({ ...PS, token: "44444444-2222-3333-4444-555555555555", numero: 60, nome: "Dani - MARMITA", telefone: "12988887777", tipo_entrega: "retirada", endereco: null,
+    forma_pagamento: "conta", subtotal: 0, taxa_entrega: 0, total: 0, itens: [{ nome: "Marmita", preco: 0, qtd: 1, grupos: [{ rotulo: "Carne", itens: ["Bife"] }] }] });
+  await dorme(1600);
+  const d60 = (await delDe()).find((x) => x.numero === 60);
+  t(!!d60 && d60.status === "aguardando" && d60.valor === 0, "marmita do robô sem conta do cliente fica em aberto com R$ 0");
+  const cDani = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "DANI MARMITA", modo: "refeicao", valorRefeicao: 50 }, tkD)).j;
+  const m60 = d60 ? await reqEm(sd.base, "PATCH", "/api/pedidos/" + d60.id, { status: "conta", clienteId: cDani.id }, tkD) : { s: 0, j: {} };
+  t(m60.s === 200 && m60.j.status === "conta" && m60.j.valor === 50, "marcar essa marmita na conta vale o valor da refeição do cliente (R$ 50), em vez de travar no R$ 0");
+  extraSite.push({ ...PS, token: "55555555-2222-3333-4444-555555555555", numero: 61, nome: "Lu - MARMITA", telefone: "12977776666", tipo_entrega: "retirada", endereco: null,
+    forma_pagamento: "conta", subtotal: 0, taxa_entrega: 0, total: 0, itens: [{ nome: "Marmita", preco: 0, qtd: 1, grupos: [] }] });
+  await dorme(1600);
+  const d61 = (await delDe()).find((x) => x.numero === 61), cLu = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "LU MARMITA" }, tkD)).j;
+  const m61a = d61 ? await reqEm(sd.base, "PATCH", "/api/pedidos/" + d61.id, { status: "conta", clienteId: cLu.id }, tkD) : { s: 0 };
+  const m61 = d61 ? await reqEm(sd.base, "PATCH", "/api/pedidos/" + d61.id, { status: "conta", clienteId: cLu.id, precoMarmita: 45 }, tkD) : { s: 0, j: {} };
+  t(m61a.s === 409 && m61.s === 200 && m61.j.valor === 45, "cliente sem valor de refeição: a marmita vai pra conta com o valor que o caixa digitou");
+  { // pedido "na conta" do robô: marca sozinho pelo telefone cadastrado ou pelo nome (empresa) que deu no pedido
+    const der = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "DER", empresa: "DER" }, tkD)).j, gi = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "GILDA", telefone: "(12) 98111-2233" }, tkD)).j;
+    const it = [{ nome: "Marmitex - R$22,00", preco: 22, qtd: 1, grupos: [] }];
+    extraSite.push({ ...PS, token: "66666666-2222-3333-4444-555555555555", numero: 62, nome: "DER - Ronaldo", telefone: "12900001111", tipo_entrega: "retirada", endereco: null, forma_pagamento: "conta", subtotal: 22, taxa_entrega: 0, total: 22, itens: it },
+      { ...PS, token: "77777777-2222-3333-4444-555555555555", numero: 63, nome: "Gil", telefone: "5512981112233", tipo_entrega: "retirada", endereco: null, forma_pagamento: "conta", subtotal: 22, taxa_entrega: 0, total: 22, itens: it },
+      { ...PS, token: "88888888-2222-3333-4444-555555555555", numero: 64, nome: "Fulano Novo", telefone: "12900002222", tipo_entrega: "retirada", endereco: null, forma_pagamento: "conta", subtotal: 22, taxa_entrega: 0, total: 22, itens: it });
+    await dorme(1600);
+    const ds = await delDe(), ct = (await reqEm(sd.base, "GET", "/api/contas", undefined, tkD)).j, d62 = ds.find((x) => x.numero === 62), d63 = ds.find((x) => x.numero === 63), d64 = ds.find((x) => x.numero === 64);
+    t(d62 && d62.status === "conta" && ct.lancamentos.some((l) => l.clienteId === der.id && l.pedidoId === d62.id && l.valor === 22), "na conta pelo nome: 'DER - Ronaldo' vai sozinho pra conta da DER");
+    t(d63 && d63.status === "conta" && d63.clienteId === gi.id, "na conta pelo telefone cadastrado (outro nome no pedido)");
+    t(d64 && d64.status === "aguardando", "na conta sem achar o cliente: fica em aberto pro caixa");
+  }
+  { // juntar cadastro repetido: lançamentos passam pro outro e o repetido some
+    const a1 = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "LUIS ALMOCO", empresa: "OBRA X" }, tkD)).j, a2 = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "ALMOCO", empresa: "OBRA X" }, tkD)).j;
+    await reqEm(sd.base, "POST", "/api/lancamentos", { clienteId: a1.id, dia: "2026-01-05", valor: 30 }, tkD);
+    const jn = await reqEm(sd.base, "POST", "/api/clientes/" + a1.id + "/juntar", { para: a2.id }, tkD), cl = (await reqEm(sd.base, "GET", "/api/clientes", undefined, tkD)).j, ct = (await reqEm(sd.base, "GET", "/api/contas?mes=2026-01", undefined, tkD)).j;
+    t(jn.s === 200 && jn.j.lancamentos === 1 && !cl.some((c) => c.id === a1.id) && ct.lancamentos.some((l) => l.clienteId === a2.id && l.valor === 30), "juntar cliente repetido: o lançamento passa pro outro e o repetido some");
+  }
   cancelarNoSite = true; await dorme(1600);
-  t((await delDe()).every((x) => x.status === "cancelado"), "cancelado no site depois de chegar pago: cancela no caixa e sai das vendas");
+  t((await delDe()).filter((x) => x.numero < 60).every((x) => x.status === "cancelado"), "cancelado no site depois de chegar pago: cancela no caixa e sai das vendas");
   const sa = (await reqEm(sd.base, "GET", "/api/saude", undefined, "")).j;
   t(!!sa.delivery && sa.delivery.ligado && !sa.delivery.erro && !JSON.stringify(sa).includes("tk-teste"), "a saúde do servidor mostra a busca do delivery (sem mostrar a senha)");
   sd.srv.kill(); site.close();

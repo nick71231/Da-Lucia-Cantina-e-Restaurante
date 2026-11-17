@@ -214,6 +214,14 @@ function clienteDoPedido(p) {
   const pri = nb.split(" ")[0]; l = ativos.filter((c) => /marmit|mta/.test(semAcS(c.nome)) && nomeBase(c.nome).split(" ")[0] === pri); // só o 1º nome, entre os clientes de marmita
   return l.length === 1 ? l[0] : null;
 }
+function contaDoPedido(p) { // cliente com conta pra um pedido "na conta": telefone; senão o nome do cliente (ou da empresa) dentro do nome do pedido. Tem que dar 1 só.
+  const ativos = db.clientes.filter((c) => c.ativo !== false), fim = (t) => String(t || "").replace(/\D/g, "").slice(-8), tel = fim(p.telefone);
+  if (tel.length === 8) { const l = ativos.filter((x) => fim(x.telefone) === tel); if (l.length === 1) return l[0]; }
+  const np = " " + nomeBase(p.nome) + " ", tem = (s) => { const b = nomeBase(s); return b.length >= 3 && np.includes(" " + b + " "); };
+  let l = ativos.filter((c) => tem(c.nome)); if (l.length === 1) return l[0];
+  if (!l.length) { l = ativos.filter((c) => c.empresa && tem(c.empresa)); if (l.length && l.every((c) => c.empresa === l[0].empresa)) return l.find((c) => nomeBase(c.nome) === nomeBase(c.empresa)) || l[0]; }
+  return null;
+}
 // pedido do site chega no caixa JÁ RECEBIDO, na forma que o cliente escolheu (Pix, dinheiro com troco, cartão na entrega)
 const FORMA_DO_SITE = { pix: "pix", dinheiro: "dinheiro", cartao_entrega: "cartao" };
 function pagarDoSite(p) {
@@ -221,6 +229,16 @@ function pagarDoSite(p) {
   if (p.pagPrevisto === "conta") {
     // marmita: lança sozinho na conta do cliente (valor da marmita dele) e fecha. Não achou a conta, ou é "valor livre": fica em aberto pro caixa lançar.
     const marm = p.itens.filter((c) => /^marmita$/i.test(c.nome)), cli = marm.length ? clienteDoPedido(p) : null;
+    // pedido normal "na conta" ("marca na conta", "fiado", "pra marcar"): acha a conta e já marca (o caixa não precisa fazer nada).
+    // Pelo telefone cadastrado; se pediu de outro celular, pelo nome que deu no pedido ("DER - Ronaldo" -> DER). Na dúvida (0 ou 2+), fica em aberto pro caixa.
+    if (!marm.length && p.valor > 0) {
+      const c2 = contaDoPedido(p), abertos = p.itens.filter((c) => !c.pago);
+      if (c2 && p.valor > 0 && abertos.length) {
+        p.status = "conta"; p.clienteId = c2.id; p.clienteIds = [c2.id]; p.pagamento = "conta"; p.contaAuto = true;
+        db.lancamentos.push({ id: uid("l"), clienteId: c2.id, dia: p.dia, qtd: 0, valor: cents(abertos.reduce((t, c) => t + valorItem(c), 0)), obs: "Delivery D" + p.numero + " (WhatsApp)", pedidoId: p.id, itensIds: abertos.map((c) => c.iid) });
+      }
+      return;
+    }
     if (cli) {
       const n = marm.reduce((s, c) => s + c.qtd, 0), valor = cents((Number(cli.valorRefeicao) || 0) * n);
       if (!cli.telefone && p.telefone) cli.telefone = p.telefone; // da próxima vez acha direto pelo telefone
@@ -454,6 +472,17 @@ async function tratar(req, res) {
     if (b.pagamento) c.pagamento = b.pagamento === "depois" ? "depois" : "antecipado";
     if (b.ativo !== undefined) c.ativo = !!b.ativo;
     await gravar(); return json(res, 200, c);
+  }
+  const mj = p.match(/^\/api\/clientes\/([^/]+)\/juntar$/);
+  if (mj && req.method === "POST") {                            // cadastro repetido: passa tudo do cliente pro outro e apaga o repetido
+    const b = await corpo(req), de = db.clientes.find((x) => x.id === mj[1]), para = db.clientes.find((x) => x.id === String(b.para || ""));
+    if (!de || !para || de.id === para.id) return json(res, 400, { erro: "escolha dois clientes diferentes" });
+    const kDe = chaveDe(de.id), kPara = chaveDe(para.id); let nl = 0, np = 0;
+    db.lancamentos.forEach((l) => { if (l.clienteId === de.id) { l.clienteId = para.id; nl++; } });
+    db.pedidos.forEach((x) => { if (x.clienteId === de.id) { x.clienteId = para.id; np++; } (x.divisao || []).forEach((d) => { if (d.clienteId === de.id) d.clienteId = para.id; }); });
+    if (kDe === "c:" + de.id) { db.pagamentos.forEach((x) => { if (x.chave === kDe) x.chave = kPara; }); Object.keys(db.enviados).forEach((k) => { if (k.endsWith("|" + kDe)) { db.enviados[k.slice(0, -kDe.length) + kPara] = db.enviados[k]; delete db.enviados[k]; } }); }
+    db.clientes = db.clientes.filter((x) => x.id !== de.id);
+    await gravar(); return json(res, 200, { ok: true, lancamentos: nl, pedidos: np });
   }
   if (p === "/api/contas" && req.method === "GET") {              // extrato do mês + saldo que veio dos meses anteriores
     const mes = url.searchParams.get("mes") || hoje().slice(0, 7), enviados = {}, anterior = {};
@@ -697,6 +726,12 @@ async function tratar(req, res) {
       }
       const cli = grupos ? db.clientes.find((x) => x.id === Object.keys(grupos)[0]) : db.clientes.find((x) => x.id === u.clienteId && x.ativo !== false);
       if (!cli) return json(res, 400, { erro: "cliente inexistente ou arquivado" });
+      // marmita do robô que chegou em R$0 (o cliente ainda não tinha conta quando pediu): vale o valor da refeição de quem leva
+      const donoDe = (c) => (grupos ? db.clientes.find((y) => (grupos[y.id] || []).includes(c)) : cli) || {};
+      let mudouPreco = false;
+      const digitado = Number(u.precoMarmita) > 0 && Number(u.precoMarmita) <= 1000 ? cents(Number(u.precoMarmita)) : 0; // cliente sem valor de refeição: o caixa digita
+      abertos.forEach((c) => { const v = cents(Number(donoDe(c).valorRefeicao) || 0) || digitado; if (/^marmita$/i.test(c.nome) && !(c.preco > 0) && v > 0) { c.preco = v; mudouPreco = true; } });
+      if (mudouPreco) ped.valor = cents(ped.itens.reduce((t, c) => t + valorItem(c), 0));
       const resto = cents(ped.itens.filter((c) => !c.pago).reduce((t, c) => t + valorItem(c), 0)), jaPago = cents(pagas.reduce((t, g) => t + g.valor, 0)); // recebimento parcial: só o que falta vai pra conta
       if (!(resto > 0)) return json(res, 409, { erro: "não sobrou nada em aberto pra marcar na conta" });
       ped.status = "conta"; ped.clienteId = cli.id; ped.clienteIds = grupos ? Object.keys(grupos) : [cli.id]; ped.pagamento = "conta"; tiraDaConta();

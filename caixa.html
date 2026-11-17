@@ -670,7 +670,7 @@ async function entrar() {
   } catch (e) { $("#pin").value = ""; $("#pin").placeholder = "Sem conexão com o servidor"; }
 }
 // Painel (faturamento, mais vendidos) é só do dono: com a senha do caixa ele some (os números ficam na Gestão do site)
-function iniciar() { if (sessionStorage.getItem("caixaRole") !== "admin") document.querySelectorAll('[data-aba="painel"]').forEach((b) => b.remove()); $("#gate").hidden = true; $("#app").hidden = false; $("#dia").value = dia; focaBusca(); carregarClientes().then(() => carregar()).then(focaBusca); setInterval(carregar, 3000); avisoPadrao(); }
+function iniciar() { if (sessionStorage.getItem("caixaRole") !== "admin") document.querySelectorAll('[data-aba="painel"]').forEach((b) => b.remove()); $("#gate").hidden = true; $("#app").hidden = false; $("#dia").value = dia; focaBusca(); carregarClientes().then(() => carregar()).then(focaBusca); setInterval(carregar, 3000); avisoPadrao(); setTimeout(checarFiado, 4000); setInterval(checarFiado, 10 * 60e3); }
 // "Em aberto": o cursor já fica na busca, pronto pra digitar o nº da comanda (não rouba de janela aberta nem de outro campo)
 function focaBusca() {
   setTimeout(() => {
@@ -807,12 +807,34 @@ function abrirModal(h) {
   if (jaAberto) m.firstChild.style.animation = "none"; // não pisca ao atualizar
 }
 function diasDoMes(m) { const [a, b] = m.split("-").map(Number); return Array.from({ length: new Date(a, b, 0).getDate() }, (_, i) => m + "-" + String(i + 1).padStart(2, "0")); }
-function resumoCli(c) { const ls = contas.lancamentos.filter((l) => l.clienteId === c.id); return { ls, qtd: soma(ls, (l) => l.qtd), total: soma(ls, (l) => l.valor) }; }
+// quinzena: "" = mês todo, "1" = dia 1 a 15, "2" = dia 16 ao fim. Vale só dentro da conta aberta (volta pro mês todo ao sair)
+let quinz = "";
+const naQuinz = (d) => !quinz || (quinz === "1" ? +String(d).slice(8, 10) <= 15 : +String(d).slice(8, 10) >= 16);
+const rotQuinz = () => { if (!quinz) return ""; const fim = diasDoMes(mes).length, mm = mes.slice(5, 7); return quinz === "1" ? "01 a 15/" + mm : "16 a " + fim + "/" + mm; };
+// contas que fecham pela QUANTIDADE (almoço, café da manhã, marmitex): a planilha mostra quantos foram no dia, não o valor. Caramuru e Tião Pontes.
+const porQtd = (k) => /^e:(caramuru|ti[aã]o pontes)$/i.test(String(k || "").trim());
+const qtdObs = (obs) => { const m = [...String(obs || "").matchAll(/(\d+)\s*x\s*marmit/gi)]; return m.length ? soma(m, (x) => +x[1]) : 0; }; // "39x marmitex R$ 22,00"
+const ehPrato = (c) => !["bebida", "doce", "taxa"].includes(c.tipo) && /prato|marmit|refei|almo|executiv/i.test(c.nome || "");
+const pratosDe = (l, p) => { const its = l.itensIds ? p.itens.filter((c) => l.itensIds.includes(c.iid)) : p.itens.filter((c) => !c.pago); return soma(its.filter(ehPrato), (c) => c.qtd || 1); };
+let almL = {}, almCarregando = false; // id do lançamento -> nº de almoços (vem dos itens da comanda)
+function almocos(l) { // número, null (lançado à mão sem quantidade) ou undefined (ainda carregando)
+  if (l.qtd > 0) return l.qtd; if (qtdObs(l.obs)) return qtdObs(l.obs); if (!l.pedidoId) return null; return almL[l.id];
+}
+async function carregarAlmocos(ls) {
+  const faltam = ls.filter((l) => l.pedidoId && !(l.qtd > 0) && !qtdObs(l.obs) && almL[l.id] === undefined); if (!faltam.length || almCarregando) return;
+  almCarregando = true;
+  try { for (const d of [...new Set(faltam.map((l) => l.dia))]) { const ps = await pedidosDoDia(d); faltam.filter((l) => l.dia === d).forEach((l) => { const p = ps.find((x) => x.id === l.pedidoId); almL[l.id] = p ? pratosDe(l, p) : null; }); } }
+  finally { almCarregando = false; }
+  if (contaAberta && porQtd(contaAberta)) desenharContas();
+}
+const somaAlm = (ls) => soma(ls, (l) => almocos(l) || 0);
+function resumoCli(c) { const ls = contas.lancamentos.filter((l) => l.clienteId === c.id && naQuinz(l.dia)); return { ls, qtd: soma(ls, (l) => l.qtd), total: soma(ls, (l) => l.valor) }; }
 function resumoEnt(k) {
   const cs = clientes.filter((c) => chaveCli(c) === k), ids = new Set(cs.map((c) => c.id));
-  const ls = contas.lancamentos.filter((l) => ids.has(l.clienteId)), ps = contas.pagamentos.filter((p) => p.chave === k);
-  const ant = contas.anterior[k] || 0, total = soma(ls, (l) => l.valor), pago = soma(ps, (p) => p.valor);
-  return { cs, ls, ps, ant, qtd: soma(ls, (l) => l.qtd), total, pago, saldo: round2(ant + total - pago) };
+  const lsMes = contas.lancamentos.filter((l) => ids.has(l.clienteId)), ls = lsMes.filter((l) => naQuinz(l.dia)), ps = contas.pagamentos.filter((p) => p.chave === k);
+  const ant = contas.anterior[k] || 0, total = soma(ls, (l) => l.valor), totalMes = soma(lsMes, (l) => l.valor), pago = soma(ps, (p) => p.valor);
+  // total/qtd = do período escolhido (quinzena); pago e saldo são sempre do mês todo (pagamento da 1ª quinzena costuma cair na 2ª)
+  return { cs, ls, ps, ant, qtd: soma(ls, (l) => l.qtd), total, totalMes, pago, saldo: round2(ant + totalMes - pago) };
 }
 function statusTxt(r) {
   if (!r.ls.length && !r.ps.length && !r.ant) return "";
@@ -877,21 +899,25 @@ function desenharContaAberta() { // 2) uma conta: resumo + lista do que foi marc
     <span class="ct-esp"></span>${mesNav()}</div>
     <div class="ct-acoes"><span class="st-pill ${sc} grande">${esc(st)}</span>${contas.enviados[k] ? `<span class="st-pill env">📤 enviado</span>` : ""}<span class="ct-esp"></span>
       <button class="btn" data-a="extrato" data-k="${esc(k)}">🖨 Extrato</button><button class="btn ${r.saldo > 0.009 ? "ok" : ""}" data-a="conta" data-k="${esc(k)}">💵 Pagamento</button><button class="btn ok" data-a="novoLancConta" data-k="${esc(k)}">＋ Marcar / lançar</button></div>
-    <div class="ct-stats q4"><div><small>Saldo anterior</small><b>${brl(r.ant)}</b></div><div><small>Consumo do mês</small><b>${brl(r.total)}</b>${r.qtd ? `<span>${r.qtd} refeições</span>` : ""}</div><div class="ok"><small>Pago</small><b>${brl(r.pago)}</b>${refsPagas ? `<span>${String(refsPagas).replace(".", ",")} refeições</span>` : ""}</div><div class="${cls}"><small>${r.saldo < -0.009 ? "Crédito" : "A pagar"}</small><b>${brl(Math.abs(r.saldo))}</b></div></div>
+    ${quinz ? `<div class="ct-stats q4"><div class="dev"><small>Consumo ${quinz === "1" ? "1ª" : "2ª"} quinzena</small><b>${brl(r.total)}</b><span>${rotQuinz()}${porQtd(k) ? " · " + somaAlm(r.ls) + " no total" : r.qtd ? " · " + r.qtd + " refeições" : ""}</span></div><div><small>Consumo do mês todo</small><b>${brl(r.totalMes)}</b></div><div class="ok"><small>Pago no mês</small><b>${brl(r.pago)}</b></div><div class="${cls}"><small>${r.saldo < -0.009 ? "Crédito (mês)" : "A pagar (mês)"}</small><b>${brl(Math.abs(r.saldo))}</b></div></div>` : `<div class="ct-stats q4"><div><small>Saldo anterior</small><b>${brl(r.ant)}</b></div><div><small>Consumo do mês</small><b>${brl(r.total)}</b>${porQtd(k) ? `<span>${somaAlm(r.ls)} no total</span>` : r.qtd ? `<span>${r.qtd} refeições</span>` : ""}</div><div class="ok"><small>Pago</small><b>${brl(r.pago)}</b>${refsPagas ? `<span>${String(refsPagas).replace(".", ",")} refeições</span>` : ""}</div><div class="${cls}"><small>${r.saldo < -0.009 ? "Crédito" : "A pagar"}</small><b>${brl(Math.abs(r.saldo))}</b></div></div>`}
     <div class="ct-visao"><div class="ct-seg"><button class="btn ${visao === "lista" ? "on" : ""}" data-a="ctVisao" data-v="lista">☰ Lista</button><button class="btn ${visao === "planilha" ? "on" : ""}" data-a="ctVisao" data-v="planilha">▦ Planilha do mês</button></div>
+      <div class="ct-seg">${[["", "Mês todo"], ["1", "1ª quinzena"], ["2", "2ª quinzena"]].map(([v, n]) => `<button class="btn ${quinz === v ? "on" : ""}" data-a="ctQuinz" data-q="${v}">${n}</button>`).join("")}</div>
       ${emp && membros.length > 1 ? `<label class="ct-chk"><input type="checkbox" id="todos" ${mostrarTodos ? "checked" : ""}> Mostrar todos os funcionários</label>` : ""}</div>`;
   if (visao === "lista") { // linha do tempo: o que foi marcado e os pagamentos, por dia
-    const ev = [...r.ls.map((l) => ({ t: "l", d: l.dia, o: l })), ...r.ps.map((p) => ({ t: "p", d: p.data, o: p }))].sort((a, b) => a.d.localeCompare(b.d) || (a.t === "p") - (b.t === "p"));
+    const ev = [...r.ls.map((l) => ({ t: "l", d: l.dia, o: l })), ...r.ps.filter((p) => naQuinz(p.data)).map((p) => ({ t: "p", d: p.data, o: p }))].sort((a, b) => a.d.localeCompare(b.d) || (a.t === "p") - (b.t === "p"));
     const dd = (d) => `<span class="tl-dia"><b>${d.slice(8)}/${d.slice(5, 7)}</b><small>${dow[new Date(d + "T12:00:00").getDay()]}</small></span>`;
     const desc = (l) => { const ps = String(l.obs || "").replace(/\s*\(WhatsApp\)\s*$/, "").split(" + ").map((x) => x.trim()).filter(Boolean); return (l.qtd ? `<b>${String(l.qtd).replace(".", ",")} refeição(ões)</b>` : "") + (ps.length ? ps.map((x) => `<span>${esc(x)}</span>`).join("") : l.qtd ? "" : "<span>Consumo</span>") + (/\(WhatsApp\)\s*$/.test(l.obs || "") ? `<em class="obs-zap">WhatsApp</em>` : ""); };
     const linhaL = (l) => `<div class="tl-it" data-a="celula" data-c="${l.clienteId}" data-d="${l.dia}">${dd(l.dia)}<div class="tl-txt">${emp ? `<small class="tl-quem">${esc(nomeCli(l.clienteId))}</small>` : ""}${desc(l)}</div><b class="tl-v">${brl(l.valor)}</b><span class="tl-bts"><button class="btn mini" data-a="impLanc" data-id="${l.id}" title="Imprimir 2 vias">🖨</button><button class="btn ruim mini" data-a="delLanc" data-id="${l.id}" title="Apagar">✕</button></span></div>`;
     const linhaP = (p) => `<div class="tl-it pag">${dd(p.data)}<div class="tl-txt"><b>💵 Pagamento · ${PAGFORMAS[p.forma] || esc(p.forma || "")}</b>${p.refeicoes ? `<span>${String(p.refeicoes).replace(".", ",")} refeições</span>` : ""}${p.obs ? `<span>${esc(p.obs)}</span>` : ""}</div><b class="tl-v">− ${brl(p.valor)}</b><span class="tl-bts"><button class="btn ruim mini" data-a="delPag" data-id="${p.id}" title="Apagar pagamento">✕</button></span></div>`;
-    $("#lista").innerHTML = topo + `<div class="tl">${r.ant ? `<div class="tl-it ant"><span class="tl-dia"><b>—</b></span><div class="tl-txt"><b>Saldo do mês anterior</b></div><b class="tl-v">${brl(r.ant)}</b><span class="tl-bts"></span></div>` : ""}
-      ${ev.map((x) => (x.t === "l" ? linhaL(x.o) : linhaP(x.o))).join("") || `<div class="vazio-box"><span>🍽️</span>Nada marcado em ${nomeMes(mes).toLowerCase()}.</div>`}</div>`;
+    $("#lista").innerHTML = topo + `<div class="tl">${r.ant && quinz !== "2" ? `<div class="tl-it ant"><span class="tl-dia"><b>—</b></span><div class="tl-txt"><b>Saldo do mês anterior</b></div><b class="tl-v">${brl(r.ant)}</b><span class="tl-bts"></span></div>` : ""}
+      ${ev.map((x) => (x.t === "l" ? linhaL(x.o) : linhaP(x.o))).join("") || `<div class="vazio-box"><span>🍽️</span>Nada marcado ${quinz ? "de " + rotQuinz() : "em " + nomeMes(mes).toLowerCase()}.</div>`}</div>`;
     return;
   }
-  const dias = diasDoMes(mes), meio = Math.ceil(dias.length / 2), dividir = cols.length <= 3, dom = (d) => new Date(d + "T12:00:00").getDay() === 0;
-  const cel = (c, d) => { const ls = RC.get(c.id).ls.filter((l) => l.dia === d); if (!ls.length) return ""; const q = soma(ls, (l) => l.qtd), v = soma(ls, (l) => l.valor);
+  const dias = diasDoMes(mes).filter(naQuinz), meio = Math.ceil(dias.length / 2), dividir = cols.length <= 3, dom = (d) => new Date(d + "T12:00:00").getDay() === 0;
+  const qtdA = porQtd(k); if (qtdA) carregarAlmocos(r.ls);
+  const cel = (c, d) => { const ls = RC.get(c.id).ls.filter((l) => l.dia === d); if (!ls.length) return "";
+    if (qtdA) { if (ls.some((l) => almocos(l) === undefined)) return "…"; if (ls.every((l) => almocos(l) === null)) return soma(ls, (l) => l.valor).toFixed(2).replace(".", ","); return String(somaAlm(ls)); }
+    const q = soma(ls, (l) => l.qtd), v = soma(ls, (l) => l.valor);
     return c.modo === "refeicao" && q > 0 ? String(q).replace(".", ",") : v.toFixed(2).replace(".", ","); };
   const tdCels = (d) => cols.map((c) => `<td class="cel${dom(d) ? " domc" : ""}" data-a="celula" data-c="${c.id}" data-d="${d}" title="${esc(RC.get(c.id).ls.filter((l) => l.dia === d).map((l) => l.obs || brl(l.valor)).join(" | "))}">${cel(c, d)}</td>`).join("");
   const tdDia = (d, cl) => `<td class="${cl}${dom(d) ? " domc" : ""}">${d.slice(8)}/${d.slice(5, 7)} <small>${dow[new Date(d + "T12:00:00").getDay()]}</small></td>`;
@@ -899,9 +925,9 @@ function desenharContaAberta() { // 2) uma conta: resumo + lista do que foi marc
   const linhaC = (rot, f, cl) => `<tr class="${cl || ""}"><td class="dia">${rot}</td>${cols.map((c) => `<td>${f(RC.get(c.id))}</td>`).join("")}</tr>`;
   const corpo = dividir
     ? Array.from({ length: meio }, (_, i) => `<tr>${tdDia(dias[i], "dia")}${tdCels(dias[i])}${dias[i + meio] ? tdDia(dias[i + meio], "dia2") + tdCels(dias[i + meio]) : `<td class="dia2"></td>${cols.map(() => "<td></td>").join("")}`}</tr>`).join("")
-    : dias.map((d) => `<tr class="${dom(d) ? "dom" : ""}">${tdDia(d, "dia")}${tdCels(d)}</tr>`).join("") + linhaC("REFEIÇÕES", (x) => x.qtd || "", "tot") + linhaC("TOTAL VALOR", (x) => (x.total ? brl(x.total) : ""), "tot");
+    : dias.map((d) => `<tr class="${dom(d) ? "dom" : ""}">${tdDia(d, "dia")}${tdCels(d)}</tr>`).join("") + linhaC(qtdA ? "QUANTIDADE" : "REFEIÇÕES", (x) => (qtdA ? somaAlm(x.ls) || "" : x.qtd || ""), "tot") + linhaC("TOTAL VALOR", (x) => (x.total ? brl(x.total) : ""), "tot");
   $("#lista").innerHTML = topo + `<div class="gradewrap ${dividir ? "fit" : ""}"><table class="grade compacta"><thead><tr><th class="dia">Dia</th>${th}${dividir ? `<th class="dia2h">Dia</th>${th}` : ""}</tr></thead><tbody>${corpo}</tbody></table></div>
-    ${dividir ? `<div class="div-tot">${cols.map((c) => { const x = RC.get(c.id); return `<span class="ac-chip">${esc(c.nome)}: ${x.qtd ? x.qtd + " ref. · " : ""}${brl(x.total)}</span>`; }).join("")}</div>` : ""}`;
+    ${dividir ? `<div class="div-tot">${cols.map((c) => { const x = RC.get(c.id); return `<span class="ac-chip">${esc(c.nome)}: ${qtdA ? somaAlm(x.ls) + " un. · " : x.qtd ? x.qtd + " ref. · " : ""}${brl(x.total)}</span>`; }).join("")}</div>` : ""}`;
   const w = $(".gradewrap"); if (w && w0Cache) { w.scrollLeft = w0Cache.x; w.scrollTop = w0Cache.y; }
 }
 let w0Cache = null;
@@ -970,7 +996,7 @@ function modalConta(k) { // pagamento da conta: resumo, pagamentos do mês e reg
   const r = resumoEnt(k), emp = k.startsWith("e:") ? k.slice(2) : "", ind = emp ? null : r.cs[0], ref = ind && ind.modo === "refeicao" && ind.valorRefeicao > 0, unitPad = ind && ind.valorRefeicao > 0 ? String(ind.valorRefeicao).replace(".", ",") : (localStorage.getItem("cxUnit:" + k) || "");
   const forma = localStorage.getItem("cxPagForma") || "pix", tel = (ind ? ind.telefone : (r.cs.find((c) => c.telefone) || {}).telefone) || "", cls = r.saldo > 0.009 ? "dev" : "ok";
   abrirModal(`<div class="cm-corpo pg-modal"><h2>${esc(emp || (ind ? ind.nome : "Conta"))}<small>${emp ? "Empresa (paga pelos funcionários)" : (ind && ind.pagamento === "depois") ? "Paga depois" : "Paga antecipado"} · ${nomeMes(mes)}</small></h2>
-    <div class="pg-stats"><div><small>Anterior</small><b>${brl(r.ant)}</b></div><div><small>Consumo</small><b>${brl(r.total)}</b></div><div class="ok"><small>Pago</small><b>${brl(r.pago)}</b></div><div class="${cls}"><small>${r.saldo < -0.009 ? "Crédito" : "A pagar"}</small><b>${brl(Math.abs(r.saldo))}</b></div></div>
+    <div class="pg-stats"><div><small>Anterior</small><b>${brl(r.ant)}</b></div><div><small>Consumo</small><b>${brl(r.totalMes)}</b></div><div class="ok"><small>Pago</small><b>${brl(r.pago)}</b></div><div class="${cls}"><small>${r.saldo < -0.009 ? "Crédito" : "A pagar"}</small><b>${brl(Math.abs(r.saldo))}</b></div></div>
     ${emp ? `<p class="pg-func">${r.cs.filter((c) => resumoCli(c).total).map((c) => `<span class="ac-chip">${esc(c.nome)} ${brl(resumoCli(c).total)}</span>`).join("") || "Nenhum consumo no mês."}</p>` : ""}
     <div class="pg-links"><button class="btn mini" data-a="extrato" data-k="${esc(k)}">🖨 Imprimir extrato</button>${tel ? `<button class="btn mini" data-a="cobrarZap" data-k="${esc(k)}">📲 Mandar resumo no WhatsApp</button>` : ""}<button class="btn mini" data-a="envio" data-k="${esc(k)}">${contas.enviados[k] ? "✓ Enviado (desmarcar)" : "📤 Marcar como enviado"}</button></div>
     ${r.ps.length ? `<h4>Pagamentos do mês</h4><div class="pg-lista">${r.ps.map((p) => `<div class="pg-row"><span>${dataBR(p.data).slice(0, 5)}</span><span>${PAGFORMAS[p.forma] || esc(p.forma || "")}${p.refeicoes ? " · " + String(p.refeicoes).replace(".", ",") + " ref." : ""}${p.obs ? `<small>${esc(p.obs)}</small>` : ""}</span><b>${brl(p.valor)}</b><button class="btn ruim mini" data-a="delPag" data-id="${p.id}" title="Apagar">✕</button></div>`).join("")}</div>` : ""}
@@ -1013,8 +1039,8 @@ document.addEventListener("click", async (e) => {
   else if (a === "pickCli") { $("#modal").hidden = true; escolha(clientes.find((x) => x.id === d.c)); }
   else if (a === "criaPick") { const nome = $("#nc-nome").value.trim(); if (!nome) return; const c = await api("POST", "/api/clientes", { nome, empresa: $("#nc-emp").value }); clientes.push(c); $("#modal").hidden = true; escolha(c); }
   else if (a === "abrirConta" && e.target.closest("button") && e.target.closest("button") !== t) return;
-  else if (a === "abrirConta") { listaY = window.scrollY; contaAberta = d.k; desenharContas(); window.scrollTo(0, 0); }
-  else if (a === "voltaLista") { contaAberta = null; desenharContas(); window.scrollTo(0, listaY || 0); }
+  else if (a === "abrirConta") { listaY = window.scrollY; contaAberta = d.k; quinz = ""; desenharContas(); window.scrollTo(0, 0); }
+  else if (a === "voltaLista") { contaAberta = null; quinz = ""; desenharContas(); window.scrollTo(0, listaY || 0); }
   else if (a === "novoLancConta") { const ms = clientes.filter((c) => c.ativo !== false && chaveCli(c) === d.k), pad = mes === hojeISO().slice(0, 7) ? hojeISO() : mes + "-01"; if (ms.length === 1) modalCelula(ms[0].id, pad); else escolherCliente((cli) => modalCelula(cli.id, pad), d.k); }
   else if (a === "celula") modalCelula(d.c, d.d);
   else if (a === "cliente") modalConta(chaveCli(clientes.find((x) => x.id === d.c)));
@@ -1053,6 +1079,7 @@ document.addEventListener("click", async (e) => {
   else if (a === "mesNav") { const [y, m] = mes.split("-").map(Number), dt = new Date(y, m - 1 + Number(d.d), 15); mes = dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0"); recarregar(); }
   else if (a === "ctFiltro") { filtroSt = d.f; desenharContas(); }
   else if (a === "ctVisao") { visaoConta[contaAberta] = d.v; desenharContas(); }
+  else if (a === "ctQuinz") { quinz = d.q || ""; desenharContas(); }
   else if (a === "pgForma") { $("#p-forma").value = d.f; localStorage.setItem("cxPagForma", d.f); document.querySelectorAll(".pg-formas .ac-tile").forEach((b) => b.classList.toggle("on", b.dataset.f === d.f)); }
   else if (a === "pgSaldo") { $("#p-valor").value = d.v; }
   else if (a === "cobrarZap") {
@@ -1286,6 +1313,11 @@ async function pedidosDoDia(d) { // pedidos de um dia qualquer (guarda 30 s)
   try { const r = await aut("/api/pedidos?dia=" + d); if (r.ok) { const v = await r.json(); cachePedDia[d] = { t: Date.now(), v }; return v; } } catch (e) {}
   return c ? c.v : [];
 }
+// marmita do robô em R$0: na conta vale o valor da refeição do cliente (o servidor faz igual)
+const ehMarm0 = (c) => /^marmita$/i.test(c.nome) && !(c.preco > 0);
+const precoMarmDe = (cid) => { const cl = clientes.find((x) => x.id === cid); return cl && cl.valorRefeicao > 0 ? cl.valorRefeicao : (divisao && divisao.precoMarm) || 0; };
+const valorNaConta = (c, cid) => (ehMarm0(c) && precoMarmDe(cid) > 0 ? round2(precoMarmDe(cid) * (c.qtd || 1)) : valorIt(c));
+const faltaPrecoMarm = (ab, D) => ab.some((c) => ehMarm0(c) && !((clientes.find((x) => x.id === D.atrib[c.iid]) || {}).valorRefeicao > 0));
 function marcarNaConta(id) { // 1º escolhe a pessoa; depois dá pra trocar a pessoa de cada item (ex.: um prato pra cada funcionário)
   const p = pedidos.find((x) => x.id === id); if (!p || !p.itens.some((c) => !c.pago)) return alert("Não tem nenhum item em aberto nesse pedido.");
   escolherCliente((cli) => { divisao = { id, atrib: {}, pickando: false }; p.itens.filter((c) => !c.pago).forEach((c) => { divisao.atrib[c.iid] = cli.id; }); modalDivisao(); });
@@ -1293,11 +1325,12 @@ function marcarNaConta(id) { // 1º escolhe a pessoa; depois dá pra trocar a pe
 function modalDivisao() {
   const D = divisao, p = D && pedidos.find((x) => x.id === D.id); if (!p) { divisao = null; $("#modal").hidden = true; return; }
   const ab = p.itens.filter((c) => !c.pago), tit = rotPed(p) + (p.nome ? " - " + p.nome : ""), tot = {};
-  ab.forEach((c) => { tot[D.atrib[c.iid]] = round2((tot[D.atrib[c.iid]] || 0) + valorIt(c)); });
+  ab.forEach((c) => { tot[D.atrib[c.iid]] = round2((tot[D.atrib[c.iid]] || 0) + valorNaConta(c, D.atrib[c.iid])); });
   abrirModal(`<div class="cm-corpo"><h2>Marcar na conta<small>${esc(tit)}</small></h2>
     <p class="dica" style="text-align:left;margin:2px 0">Toque no nome ao lado de cada item para trocar a pessoa (um prato pra cada funcionário, por exemplo).</p>
-    <div class="div-lista">${ab.map((c) => `<div class="div-it"><span class="div-n"><b>${c.qtd}x ${esc(c.nome)}</b>${(c.grupos || []).length ? `<small>${esc((c.grupos || []).flatMap((g) => g.itens).join(", "))}</small>` : ""}</span><b class="ac-val">${brl(valorIt(c))}</b><button class="btn mini div-cli" data-a="divItem" data-i="${esc(c.iid)}">${esc(nomeCli(D.atrib[c.iid]))} ▾</button></div>`).join("")}</div>
-    <div class="div-tot">${Object.keys(tot).map((id) => `<span class="ac-chip">${esc(nomeCli(id))}: ${brl(tot[id])}</span>`).join("")}<b>Total ${brl(soma(ab, valorIt))}</b></div>
+    <div class="div-lista">${ab.map((c) => `<div class="div-it"><span class="div-n"><b>${c.qtd}x ${esc(c.nome)}</b>${(c.grupos || []).length ? `<small>${esc((c.grupos || []).flatMap((g) => g.itens).join(", "))}</small>` : ""}</span><b class="ac-val">${brl(valorNaConta(c, D.atrib[c.iid]))}</b><button class="btn mini div-cli" data-a="divItem" data-i="${esc(c.iid)}">${esc(nomeCli(D.atrib[c.iid]))} ▾</button></div>`).join("")}</div>
+    <div class="div-tot">${Object.keys(tot).map((id) => `<span class="ac-chip">${esc(nomeCli(id))}: ${brl(tot[id])}</span>`).join("")}<b>Total ${brl(soma(ab, (c) => valorNaConta(c, D.atrib[c.iid])))}</b></div>
+    ${faltaPrecoMarm(ab, D) ? `<label class="cf" style="margin-top:10px">🍱 Valor da marmita <small>(esse cliente não tem valor de refeição cadastrado)</small><input id="div-marm" inputmode="decimal" placeholder="Ex.: 50,00" value="${D.precoMarm ? String(D.precoMarm).replace(".", ",") : ""}" onchange="divisao.precoMarm = parseFloat(this.value.replace(',', '.')) || 0; modalDivisao()"></label>` : ""}
     <button class="btn mini" data-a="divTodos">Trocar a pessoa de todos os itens</button></div>
     <div class="acoes cm-rodape"><button class="btn" data-a="fechar">Voltar</button><button class="btn ok" data-a="divOk">Marcar na conta</button><button class="btn ok" data-a="divOk" data-imp="1">🖨 Marcar e imprimir (2 vias)</button></div>`);
 }
@@ -1308,7 +1341,9 @@ document.addEventListener("click", async (e) => {
   else if (a === "divOk" && divisao) {
     const D = divisao, p = pedidos.find((x) => x.id === D.id); if (!p) return; const ab = p.itens.filter((c) => !c.pago); if (!ab.length) return;
     $("#modal").hidden = true;
-    const ok = await patch(D.id, { status: "conta", clienteId: D.atrib[ab[0].iid], divisao: ab.map((c) => ({ iid: c.iid, clienteId: D.atrib[c.iid] })) });
+    if ($("#div-marm")) D.precoMarm = parseFloat(String($("#div-marm").value).replace(",", ".")) || 0;
+    if (faltaPrecoMarm(ab, D) && !(D.precoMarm > 0)) { $("#modal").hidden = false; return alert("Digite o valor da marmita."); }
+    const ok = await patch(D.id, { status: "conta", clienteId: D.atrib[ab[0].iid], divisao: ab.map((c) => ({ iid: c.iid, clienteId: D.atrib[c.iid] })), precoMarmita: D.precoMarm || undefined });
     if (!ok) return modalDivisao(); // o servidor recusou: volta pra janela sem perder o que foi escolhido
     divisao = null; if (d.imp) imprimirVias(docConta(p, ab, D.atrib));
   }
@@ -1322,8 +1357,8 @@ const agoraBR = () => new Date().toLocaleString("pt-BR", { day: "2-digit", month
 function docConta(p, its, atrib) { // papel do que foi marcado na conta: itens, preços, total e assinatura
   const ids = [...new Set(its.map((c) => atrib[c.iid]))], rot = rotPed(p), nomeDe = (id) => { const cl = clientes.find((x) => x.id === id) || {}; return (cl.nome || "?") + (cl.empresa ? " - " + cl.empresa : ""); };
   const L = [{ t: "CONSUMO MARCADO NA CONTA", a: "c", b: 1 }, { hr: 1 }, { e: rot + (p.nome ? " - " + p.nome : ""), d: dataBR(p.dia), b: 1 }, { e: "Impresso em", d: agoraBR() }, { hr: 1 }];
-  ids.forEach((id) => { const mine = its.filter((c) => atrib[c.iid] === id); L.push({ t: nomeDe(id), b: 1 }); mine.forEach((c) => L.push(...itemDoc(c))); if (ids.length > 1) L.push({ e: "Subtotal", d: brl(soma(mine, valorIt)), b: 1 }, { t: "" }); });
-  L.push({ hr: 1 }, { e: "TOTAL", d: brl(soma(its, valorIt)), b: 1, s: "alta" });
+  ids.forEach((id) => { const mine = its.filter((c) => atrib[c.iid] === id); L.push({ t: nomeDe(id), b: 1 }); mine.forEach((c) => L.push(...itemDoc({ ...c, preco: valorNaConta(c, id) / (c.qtd || 1) }))); if (ids.length > 1) L.push({ e: "Subtotal", d: brl(soma(mine, (c) => valorNaConta(c, id))), b: 1 }, { t: "" }); });
+  L.push({ hr: 1 }, { e: "TOTAL", d: brl(soma(its, (c) => valorNaConta(c, atrib[c.iid]))), b: 1, s: "alta" });
   ids.forEach((id) => L.push({ assin: nomeDe(id) }));
   return L;
 }
@@ -1339,6 +1374,7 @@ async function impLancamento(id) {
   if (!p) return imprimirVias(docLancGenerico(l));
   const its = l.itensIds ? p.itens.filter((c) => l.itensIds.includes(c.iid)) : p.itens.filter((c) => !c.pago), atrib = {}; its.forEach((c) => { atrib[c.iid] = l.clienteId; }); imprimirVias(docConta(p, its, atrib));
 }
+const qtdExt = (l, peds) => { if (l.qtd > 0) return l.qtd; if (qtdObs(l.obs)) return qtdObs(l.obs); const p = l.pedidoId && (peds[l.dia] || []).find((x) => x.id === l.pedidoId); return p ? pratosDe(l, p) : 0; };
 async function docExtrato(k) { // papel com tudo que a pessoa/empresa consumiu no mês, dia a dia
   const r = resumoEnt(k), emp = k.startsWith("e:"), nome = emp ? k.slice(2) : nomeCli(k.slice(2)), peds = {};
   for (const d of [...new Set(r.ls.filter((l) => l.pedidoId).map((l) => l.dia))]) peds[d] = await pedidosDoDia(d);
@@ -1348,15 +1384,19 @@ async function docExtrato(k) { // papel com tudo que a pessoa/empresa consumiu n
     const partes = String(l.obs || "").replace(/\s*\(WhatsApp\)\s*$/, "").split(" + ").map((x) => x.trim()).filter(Boolean);
     return [{ e: `${dd} ${l.qtd ? l.qtd + " refeição(ões)" : partes.length > 1 ? "Pedido" : partes[0] || "Consumo"}`, d: brl(l.valor), b: 1 }, ...(partes.length > 1 ? partes.map((x) => ({ det: x })) : [])];
   };
-  const L = [{ t: "EXTRATO DE CONSUMO - " + mes.split("-").reverse().join("/"), a: "c", b: 1 }, { hr: 1 }, { t: nome, b: 1, s: "alta" }, { e: "Impresso em", d: agoraBR() }, { hr: 1 }];
+  const L = [{ t: "EXTRATO DE CONSUMO - " + (quinz ? rotQuinz() + "/" + mes.slice(0, 4) : mes.split("-").reverse().join("/")), a: "c", b: 1 }, { hr: 1 }, { t: nome, b: 1, s: "alta" }, { e: "Impresso em", d: agoraBR() }, { hr: 1 }];
   let tem = false;
   r.cs.forEach((c) => { const ls = r.ls.filter((l) => l.clienteId === c.id).sort((a, b) => a.dia.localeCompare(b.dia)); if (!ls.length) return; tem = true;
     if (emp || r.cs.length > 1) L.push({ t: c.nome, b: 1, u: 1 });
     ls.forEach((l) => L.push(...desc(l)));
+    if (emp && porQtd(k)) L.push({ e: "Quantidade " + c.nome, d: String(soma(ls, (l) => qtdExt(l, peds))) });
     if (emp) L.push({ e: "Subtotal " + c.nome, d: brl(soma(ls, (l) => l.valor)), b: 1 });
     L.push({ t: "" }); });
-  if (!tem) L.push({ det: "Sem consumo no mês." });
+  if (!tem) L.push({ det: quinz ? "Sem consumo no período." : "Sem consumo no mês." });
+  const nAlm = porQtd(k) ? soma(r.ls, (l) => qtdExt(l, peds)) : 0;
+  if (quinz) { L.push({ hr: 1 }, ...(nAlm ? [{ e: "Quantidade", d: String(nAlm) }] : r.qtd ? [{ e: "Refeições", d: String(r.qtd) }] : []), { e: "TOTAL " + rotQuinz(), d: brl(r.total), b: 1, s: "alta" }, { assin: nome }); return L; }
   L.push({ hr: 1 }); if (r.ant) L.push({ e: "Saldo anterior", d: brl(r.ant) });
+  if (nAlm) L.push({ e: "Quantidade no mês", d: String(nAlm) });
   L.push({ e: "Total do mês", d: brl(r.total) });
   r.ps.forEach((p) => L.push({ e: `${dataBR(p.data).slice(0, 5)} Pagamento (${PAGFORMAS[p.forma] || p.forma || ""})${p.refeicoes ? " " + p.refeicoes + " ref." : ""}`, d: "- " + brl(p.valor) }));
   L.push({ e: r.saldo > 0.009 ? "A PAGAR" : "SALDO", d: brl(Math.abs(r.saldo)) + (r.saldo < -0.009 ? " (credito)" : ""), b: 1, s: "alta" }, { assin: nome });
@@ -1462,7 +1502,7 @@ async function mandarImp(bytes) {
   finally { clearTimeout(to); }
 }
 function avisoImp(txt, tipo) {
-  let el = $("#aviso-imp"); if (!el) { el = document.createElement("div"); el.id = "aviso-imp"; el.style.cssText = "position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:4000;padding:12px 22px;border-radius:16px;font-weight:700;box-shadow:0 10px 28px rgba(0,0,0,.3);transition:opacity .3s"; document.body.appendChild(el); }
+  let el = $("#aviso-imp"); if (!el) { el = document.createElement("div"); el.id = "aviso-imp"; el.style.cssText = "position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:4000;pointer-events:none;padding:12px 22px;border-radius:16px;font-weight:700;box-shadow:0 10px 28px rgba(0,0,0,.3);transition:opacity .3s"; document.body.appendChild(el); }
   clearTimeout(el._t); el.textContent = txt; el.style.opacity = "1";
   el.style.background = tipo === "ok" ? "#e9f6ec" : tipo === "erro" ? "#fde0e0" : "#fff3d6"; el.style.color = tipo === "ok" ? "#16793a" : tipo === "erro" ? "#a50f14" : "#7a3b00";
   if (tipo) el._t = setTimeout(() => (el.style.opacity = "0"), 2500);
@@ -1538,6 +1578,29 @@ function bip() {
   if (localStorage.getItem("caixaSom") === "0") return;
   try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = 880; g.gain.value = .15; o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + .18); } catch (e) {}
 }
+// ----- FIADO: cliente avulso com consumo sem pagar há 2 dias ou mais -----
+function fiadosAtrasados(C) { // [{ c, saldo, desde }] — "desde" = dia do consumo mais antigo ainda não pago (null = vem do mês passado)
+  if (!C) return []; const lim = addDias(hojeISO(), -2), out = [];
+  for (const c of clientes.filter((x) => x.ativo !== false && ehAvulso(x))) {
+    const k = chaveCli(c), ls = C.lancamentos.filter((l) => l.clienteId === c.id).sort((a, b) => a.dia.localeCompare(b.dia));
+    let pago = soma(C.pagamentos.filter((p) => p.chave === k), (p) => p.valor) - Math.max(0, C.anterior[k] || 0), desde;
+    if (pago < -0.009) desde = null; // ainda deve coisa do mês passado
+    else { const l = ls.find((x) => { pago -= x.valor; return pago < -0.009; }); if (!l) continue; desde = l.dia; } // pagamentos cobrem o mais antigo primeiro
+    const saldo = round2((C.anterior[k] || 0) + soma(ls, (l) => l.valor) - soma(C.pagamentos.filter((p) => p.chave === k), (p) => p.valor));
+    if (saldo > 0.009 && (desde === null || desde <= lim)) out.push({ c, saldo, desde });
+  }
+  return out.sort((a, b) => String(a.desde || "").localeCompare(String(b.desde || "")));
+}
+let fiadoUltBip = 0;
+async function checarFiado() {
+  let C; try { const r = await aut("/api/contas?mes=" + hojeISO().slice(0, 7)); if (!r.ok) return; C = await r.json(); } catch (e) { return; }
+  const L = fiadosAtrasados(C); let el = $("#aviso-fiado");
+  if (!L.length) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement("button"); el.id = "aviso-fiado"; el.type = "button"; el.dataset.a = "verFiado"; el.style.cssText = "position:fixed;right:16px;bottom:16px;z-index:900;max-width:min(420px,calc(100vw - 32px));text-align:left;border:0;border-radius:16px;padding:12px 16px;background:#fde0e0;color:#a50f14;font:700 .95rem system-ui;box-shadow:0 10px 28px rgba(0,0,0,.25);cursor:pointer"; document.body.appendChild(el); }
+  el.innerHTML = `⏰ Fiado sem pagar há 2 dias ou mais: ${L.map((x) => esc(x.c.nome) + " " + brl(x.saldo)).join(" · ")}<br><small style="font-weight:500">Toque para ver</small>`;
+  if (Date.now() - fiadoUltBip > 60 * 60e3) { fiadoUltBip = Date.now(); bip(); setTimeout(bip, 300); setTimeout(bip, 600); } // apita (3 bipes) no máximo 1x por hora
+}
+document.addEventListener("click", (e) => { if (e.target.closest && e.target.closest("#aviso-fiado")) { cliFiltro = "deve"; aba = "clientes"; desenhar(); window.scrollTo(0, 0); } });
 function avisarNovos() { const n = pedidos.filter((p) => p.status === "aguardando").length; if (ultimoAguard !== null && n > ultimoAguard) bip(); ultimoAguard = n; } // apita quando chega pedido novo
 
 const norm = (n) => String(n).replace(/\s*\(R\$[^)]*\)/g, "").replace(/\s\d+ g\b/, "").replace(/\s*\([^)]*\)$/, "").trim();
@@ -1789,9 +1852,11 @@ function desenharGaveta() {
 async function gavetaAcao(corpo) { gaveta = await api("POST", "/api/gaveta", corpo); desenharGaveta(); }
 
 function textoExtrato(k) { // texto simples: serve pra imprimir ou mandar por WhatsApp
-  const r = resumoEnt(k), emp = k.startsWith("e:") ? k.slice(2) : "", ind = emp ? null : r.cs[0], L = ["Da Lúcia - Extrato " + mes.split("-").reverse().join("/"), emp || (ind ? ind.nome : ""), ""];
-  r.cs.forEach((c) => { const ls = contas.lancamentos.filter((l) => l.clienteId === c.id).sort((a, b) => a.dia.localeCompare(b.dia)); if (!ls.length) return; if (emp) L.push(c.nome + ":");
+  const r = resumoEnt(k), emp = k.startsWith("e:") ? k.slice(2) : "", ind = emp ? null : r.cs[0], L = ["Da Lúcia - Extrato " + (quinz ? rotQuinz() + "/" + mes.slice(0, 4) : mes.split("-").reverse().join("/")), emp || (ind ? ind.nome : ""), ""];
+  r.cs.forEach((c) => { const ls = r.ls.filter((l) => l.clienteId === c.id).sort((a, b) => a.dia.localeCompare(b.dia)); if (!ls.length) return; if (emp) L.push(c.nome + ":");
     ls.forEach((l) => L.push("  " + dataBR(l.dia).slice(0, 5) + "  " + (l.qtd ? l.qtd + " ref. = " : "") + brl(l.valor) + (l.obs ? "  " + l.obs : ""))); });
+  if (porQtd(k)) L.push("", "Quantidade: " + somaAlm(r.ls));
+  if (quinz) { L.push("", ...(r.qtd && !porQtd(k) ? ["Refeições: " + r.qtd] : []), "TOTAL " + rotQuinz() + ": " + brl(r.total)); return L.join("\n"); }
   L.push("", "Saldo anterior: " + brl(r.ant), "Total do mês: " + brl(r.total), "Pago: " + brl(r.pago), (r.saldo > 0 ? "A PAGAR: " : "Crédito: ") + brl(Math.abs(r.saldo)));
   return L.join("\n");
 }
@@ -1925,6 +1990,8 @@ document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.
 
 // ===================== CLIENTES (visual novo) =====================
 let cliFiltro = "todos", cliBusca = "", contasCli = null;
+const ehMarmCli = (c) => !c.empresa && /marmit|\bmta\b/i.test(c.nome || ""); // "POLYANA MARMITA": cliente de marmita (tem conta), não é avulso
+const ehAvulso = (c) => !c.empresa && !ehMarmCli(c); // marca no restaurante e não tem conta: é fiado
 const contaDoCli = (c) => { // resumo do mês atual pra mostrar na lista
   const C = contasCli; if (!C) return null; const k = chaveCli(c), ids = new Set(clientes.filter((x) => chaveCli(x) === k).map((x) => x.id));
   const tot = soma(C.lancamentos.filter((l) => ids.has(l.clienteId)), (l) => l.valor), pg = soma(C.pagamentos.filter((p) => p.chave === k), (p) => p.valor);
@@ -1933,8 +2000,8 @@ const contaDoCli = (c) => { // resumo do mês atual pra mostrar na lista
 async function abrirClientes() { await carregarClientes(); try { contasCli = await (await aut("/api/contas?mes=" + hojeISO().slice(0, 7))).json(); } catch (e) { contasCli = null; } desenharClientes(); }
 function desenharClientes() {
   const ativos = clientes.filter((c) => c.ativo !== false), arq = clientes.filter((c) => c.ativo === false), emps = [...new Set(ativos.map((c) => c.empresa).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  const F = [["todos", "Todos", ativos.length], ["emp", "Empresas", emps.length], ["avulso", "Avulsos", ativos.filter((c) => !c.empresa).length], ["deve", "Devendo", 0], ["arq", "Arquivados", arq.length]];
-  const devendo = (c) => { const s = contaDoCli(c); return s != null && s > 0.009; }; F[3][2] = ativos.filter((c) => !c.empresa && devendo(c)).length + emps.filter((e) => devendo(ativos.find((c) => c.empresa === e))).length;
+  const F = [["todos", "Todos", ativos.length], ["emp", "Empresas", emps.length], ["marm", "Marmita", ativos.filter(ehMarmCli).length], ["avulso", "Avulsos (fiado)", ativos.filter(ehAvulso).length], ["deve", "Devendo", 0], ["arq", "Arquivados", arq.length]];
+  const devendo = (c) => { const s = contaDoCli(c); return s != null && s > 0.009; }; F[4][2] = ativos.filter((c) => !c.empresa && devendo(c)).length + emps.filter((e) => devendo(ativos.find((c) => c.empresa === e))).length;
   const saldoPill = (c) => { const s = contaDoCli(c); if (s == null || (Math.abs(s) < 0.009)) return ""; return s > 0 ? `<span class="st-pill dev">deve ${brl(s)}</span>` : `<span class="st-pill ok">crédito ${brl(-s)}</span>`; };
   const zap = (t) => { const n = String(t || "").replace(/\D/g, ""); return n ? `<a class="btn mini cl-zap" href="https://wa.me/${n.length <= 11 ? "55" + n : n}" target="_blank" rel="noopener" title="Abrir WhatsApp">📲 ${esc(t)}</a>` : `<span class="cl-semtel">sem telefone</span>`; };
   const tipo = (c) => `<span class="st-pill">${c.modo === "refeicao" ? "🍽 Refeição " + brl(c.valorRefeicao) : "R$ Valor livre"}</span>${c.empresa ? "" : `<span class="st-pill">${c.pagamento === "depois" ? "Paga depois" : "Antecipado"}</span>`}`;
@@ -1945,10 +2012,12 @@ function desenharClientes() {
   if (cliFiltro === "arq") corpo = arq.map((c) => linha(c)).join("") || `<div class="vazio-box"><span>🗃️</span>Nenhum cliente arquivado.</div>`;
   else {
     const grupoEmp = (e) => { const ms = ativos.filter((c) => c.empresa === e).sort((a, b) => a.nome.localeCompare(b.nome)); return `<div class="cl-grupo" data-nome="${esc((e + " " + ms.map((m) => m.nome).join(" ")).toLowerCase())}"><div class="cl-gtopo"><span class="cli-av emp">🏢</span><div class="cl-info"><b>${esc(e)}</b><div class="cl-tags"><span class="st-pill">${ms.length} funcionário(s)</span><span class="st-pill">Empresa paga</span>${saldoPill(ms[0])}</div></div><button class="btn mini" data-a="cliNovo" data-emp="${esc(e)}">＋ Funcionário</button><button class="btn mini" data-a="cliConta" data-k="${esc("e:" + e)}">📒 Conta</button></div>${ms.map((c) => linha(c, true)).join("")}</div>`; };
-    const avulsos = ativos.filter((c) => !c.empresa).sort((a, b) => a.nome.localeCompare(b.nome));
+    const avulsos = ativos.filter(ehAvulso).sort((a, b) => a.nome.localeCompare(b.nome)), marms = ativos.filter(ehMarmCli).sort((a, b) => a.nome.localeCompare(b.nome)), atr = new Map(fiadosAtrasados(contasCli).map((x) => [x.c.id, x]));
+    const linhaF = (c) => { const x = atr.get(c.id); return x ? linha(c).replace('<div class="cl-tags">', `<div class="cl-tags"><span class="st-pill dev">⏰ fiado desde ${x.desde ? dataBR(x.desde).slice(0, 5) : "o mês passado"}</span>`) : linha(c); };
+    if (cliFiltro === "todos" || cliFiltro === "marm") corpo += marms.length ? `<div class="cl-grupo"><div class="cl-gtit">🍱 Marmita <small>${marms.length}</small></div>${marms.map((c) => linha(c)).join("")}</div>` : "";
     if (cliFiltro === "todos" || cliFiltro === "emp") corpo += emps.map(grupoEmp).join("");
-    if (cliFiltro === "todos" || cliFiltro === "avulso") corpo += avulsos.length ? `<div class="cl-grupo"><div class="cl-gtit">👤 Clientes avulsos <small>${avulsos.length}</small></div>${avulsos.map((c) => linha(c)).join("")}</div>` : "";
-    if (cliFiltro === "deve") corpo = emps.filter((e) => devendo(ativos.find((c) => c.empresa === e))).map(grupoEmp).join("") + avulsos.filter(devendo).map((c) => linha(c)).join("");
+    if (cliFiltro === "todos" || cliFiltro === "avulso") corpo += avulsos.length ? `<div class="cl-grupo"><div class="cl-gtit">👤 Clientes avulsos (fiado) <small>${avulsos.length}</small></div>${avulsos.map(linhaF).join("")}</div>` : "";
+    if (cliFiltro === "deve") corpo = emps.filter((e) => devendo(ativos.find((c) => c.empresa === e))).map(grupoEmp).join("") + [...marms, ...avulsos].filter(devendo).map(linhaF).join("");
     corpo = corpo || `<div class="vazio-box"><span>👥</span>${cliFiltro === "deve" ? "Ninguém devendo este mês. 🎉" : "Nenhum cliente ainda. Toque em “＋ Novo cliente”."}</div>`;
   }
   $("#lista").innerHTML = `<div class="ct-topo"><div class="ct-seg">${F.map(([k, n, q]) => `<button class="btn ${cliFiltro === k ? "on" : ""}" data-a="cliFiltro" data-f="${k}">${n} <i>${q}</i></button>`).join("")}</div><span class="ct-esp"></span><button class="btn ok" data-a="cliNovo">＋ Novo cliente</button></div>
@@ -1969,7 +2038,7 @@ function modalCliente(id, empPad) {
     <label class="cf" id="cf-preco" ${e.modo === "refeicao" ? "" : "hidden"}>Valor de cada refeição<input id="c-preco" inputmode="decimal" placeholder="Ex.: 22,00" value="${e.valorRefeicao ? String(e.valorRefeicao).replace(".", ",") : ""}"></label>
     <div class="cf" id="cf-pag" ${e.empresa ? "hidden" : ""}>Pagamento<input type="hidden" id="c-pag" value="${e.pagamento === "depois" ? "depois" : "antecipado"}"><div class="ct-seg cf-seg" data-campo="c-pag"><button class="btn ${e.pagamento !== "depois" ? "on" : ""}" data-a="cfSeg" data-v="antecipado">Paga antecipado</button><button class="btn ${e.pagamento === "depois" ? "on" : ""}" data-a="cfSeg" data-v="depois">Paga depois (fiado)</button></div></div>
     <label class="cf">Telefone / WhatsApp<input id="c-tel" inputmode="tel" value="${esc(e.telefone || "")}" placeholder="(12) 99999-9999"></label>
-    ${id ? `<button class="btn ruim cf-arq" data-a="cliArq" data-c="${id}">🗃 Arquivar cliente</button>` : ""}</div>
+    ${id ? `<button class="btn cf-arq" data-a="cliJuntar" data-c="${id}">🔀 Cadastro repetido? Juntar com outro cliente</button><button class="btn ruim cf-arq" data-a="cliArq" data-c="${id}">🗃 Arquivar cliente</button>` : ""}</div>
     <div class="acoes cm-rodape"><button class="btn" data-a="fechar">Cancelar</button><button class="btn ok" data-a="cliSalvar" data-c="${id || ""}">${id ? "Salvar" : "Adicionar cliente"}</button></div>`);
   const n = $("#c-nome"); if (n && !id) setTimeout(() => n.focus(), 50);
   checaDup(id);
@@ -1995,6 +2064,17 @@ document.addEventListener("click", async (e) => {
     $("#modal").hidden = true; await carregarClientes(); desenharClientes(); avisoImp(d.c ? "✓ Cliente salvo" : "✓ Cliente adicionado", "ok");
   }
   else if (a === "cliArq") { if (!confirm("Arquivar este cliente? Ele some das listas, mas o histórico continua guardado (dá pra reativar depois).")) return; await api("PUT", "/api/clientes/" + d.c, { ativo: false }); $("#modal").hidden = true; await carregarClientes(); desenharClientes(); }
+  else if (a === "cliJuntar") { // tudo que foi marcado neste cliente passa pro escolhido, e este cadastro some
+    const de = clientes.find((x) => x.id === d.c); if (!de) return;
+    escolherCliente(async (para) => {
+      if (!para || para.id === de.id) return;
+      if (!confirm(`Passar tudo de “${de.nome}” para “${para.nome}${para.empresa ? " (" + para.empresa + ")" : ""}” e apagar “${de.nome}”?
+
+Isso não dá pra desfazer.`)) return;
+      try { const r = await api("POST", "/api/clientes/" + de.id + "/juntar", { para: para.id }); avisoImp(`✓ ${r.lancamentos} lançamento(s) passaram para ${para.nome}`, "ok"); } catch (err) { return; }
+      await carregarClientes(); if (aba === "contas") recarregar(); else desenharClientes();
+    }, null, "");
+  }
   else if (a === "cliReat") { await api("PUT", "/api/clientes/" + d.c, { ativo: true }); await carregarClientes(); desenharClientes(); avisoImp("✓ Cliente reativado", "ok"); }
   // gaveta
   else if (a === "gAvisoOk") { const el = $("#aviso-gav"); if (el) el.remove(); }

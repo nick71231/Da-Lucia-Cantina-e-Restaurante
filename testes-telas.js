@@ -14,7 +14,7 @@ const sobe = () => new Promise((res, rej) => { const i = setInterval(() => { if 
 async function abre(caminho, antes) { // abre uma página do servidor como se fosse um navegador
   const vc = new VirtualConsole(); vc.on("jsdomError", (e) => erros.push(caminho + ": " + (e.detail && e.detail.message || e.message)));
   const dom = await JSDOM.fromURL(B + caminho, { runScripts: "dangerously", resources: "usable", pretendToBeVisual: true, virtualConsole: vc, beforeParse(w) {
-    w.fetch = (u, o) => nodeFetch(new URL(u, B).href, o); w.alert = (m) => erros.push(caminho + " alert: " + m); w.confirm = () => true; w.scrollTo = () => {};
+    w.fetch = (u, o) => nodeFetch(new URL(u, B).href, o); w.AbortController = AbortController; w.alert = (m) => erros.push(caminho + " alert: " + m); w.confirm = () => true; w.scrollTo = () => {};
     w.Element.prototype.scrollIntoView = () => {}; w.addEventListener("error", (e) => erros.push(caminho + ": " + e.message)); if (antes) antes(w);
   } });
   await new Promise((r) => (dom.window.document.readyState === "complete" ? r() : dom.window.addEventListener("load", r))); await dorme(900); return dom.window;
@@ -31,6 +31,9 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
   await api("POST", "/api/pedidos", { uid: "s3", nome: "Ana", comanda: 36, itens: [{ nome: "Marmitex de R$22,00", preco: 22, qtd: 1, grupos: [{ rotulo: "Arroz", itens: ["Branco"] }] }] });
   await api("POST", "/api/pedidos", { uid: "s4", nome: "Beto", itens: [{ nome: "Marmitex de R$24,00", preco: 24, qtd: 1, grupos: [{ rotulo: "Carne", itens: ["Bife"] }] }] });
   await api("POST", "/api/clientes", { nome: "Elza" }, cx);
+  const mesT = new Date().toLocaleDateString("en-CA").slice(0, 7), almC = await api("POST", "/api/clientes", { nome: "ALMOÇO", empresa: "CARAMURU" }, cx);
+  await api("POST", "/api/lancamentos", { clienteId: almC.id, dia: mesT + "-03", qtd: 4, valor: 120 }, cx); await api("POST", "/api/lancamentos", { clienteId: almC.id, dia: mesT + "-20", qtd: 2, valor: 77 }, cx);
+  const cafeC = await api("POST", "/api/clientes", { nome: "CAFE DA MANHÃ", empresa: "CARAMURU" }, cx); await api("POST", "/api/lancamentos", { clienteId: cafeC.id, dia: mesT + "-04", valor: 300, obs: "30x marmitex R$ 10,00 = R$ 300,00 (WhatsApp)" }, cx);
 
   console.log("\nCaixa");
   const w = await abre("/caixa.html", (win) => { win.sessionStorage.setItem("caixaToken", admin); win.sessionStorage.setItem("caixaRole", "admin"); });
@@ -40,6 +43,24 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
   for (const [aba, esperado] of [["clientes", "Novo cliente"], ["aberto", "C36"], ["painel", "Vendas por hora"], ["gaveta", "Gaveta de hoje"], ["aberto", "C36"], ["fechamento", "Por forma de pagamento"], ["contas", "A receber"], ["conta", ""], ["pagos", ""], ["aberto", "C36"]]) {
     await clica(w, `[data-aba="${aba}"]`);
     t(texto(w, "#lista").includes(esperado) && texto(w, "#lista").trim().length > 0, `aba ${aba}: mostra o conteúdo certo (sem ficar com a aba anterior)`);
+  }
+  { // conta da Caramuru: filtro de quinzena e planilha com a quantidade de almoços
+    await clica(w, '[data-aba="contas"]'); await clica(w, '[data-a="abrirConta"][data-k="e:CARAMURU"]');
+    await clica(w, '[data-a="ctQuinz"][data-q="1"]'); const q1 = texto(w, "#lista");
+    t(q1.includes("420,00") && q1.includes("34 no total") && !q1.includes("77,00"), "conta: 1ª quinzena mostra só o consumo do dia 1 ao 15, com os almoços");
+    await clica(w, '[data-a="ctVisao"][data-v="planilha"]'); const cels = [...w.document.querySelectorAll("td.cel")].map((x) => x.textContent.trim()).filter(Boolean);
+    t(cels.sort().join() === "30,4" && w.document.querySelectorAll("td.dia").length <= 8, "planilha da Caramuru: só os dias da quinzena e a célula mostra a quantidade de almoços");
+    await clica(w, '[data-a="ctQuinz"][data-q="2"]'); t(texto(w, "#lista").includes("77,00") && !texto(w, "#lista").includes("120,00"), "2ª quinzena mostra só do dia 16 ao fim");
+    await clica(w, '[data-a="voltaLista"]'); await clica(w, '[data-aba="aberto"]');
+  }
+  { // clientes: "MARMITA" no nome vai pro grupo Marmita; avulso com consumo de 3 dias atrás sem pagar = alerta de fiado
+    const zm = await api("POST", "/api/clientes", { nome: "ZECA MARMITA" }, cx), zf = await api("POST", "/api/clientes", { nome: "ZECA FIADO" }, cx);
+    const d3 = new Date(Date.now() - 3 * 864e5).toLocaleDateString("en-CA"); await api("POST", "/api/lancamentos", { clienteId: zf.id, dia: d3, valor: 40 }, cx);
+    const wf = await abre("/caixa.html", (win) => { win.sessionStorage.setItem("caixaToken", admin); win.sessionStorage.setItem("caixaRole", "admin"); }); await dorme(4600);
+    t(texto(wf, "#aviso-fiado").includes("ZECA FIADO") && !texto(wf, "#aviso-fiado").includes("ZECA MARMITA"), "alerta de fiado: avulso sem pagar há 2+ dias aparece (cliente de marmita não)");
+    await clica(wf, '[data-aba="clientes"]'); await clica(wf, '[data-a="cliFiltro"][data-f="marm"]');
+    t(texto(wf, "#lista").includes("ZECA MARMITA") && !texto(wf, "#lista").includes("ZECA FIADO"), "clientes: quem tem MARMITA no nome fica no grupo Marmita, não nos avulsos");
+    wf.close();
   }
   await clica(w, '[data-a="receber"]'); // 1º cartão = pedido do Beto (1 item)
   t(!w.document.querySelector("#modal").hidden && w.document.querySelectorAll(".ac-li").length === 1 && w.document.querySelector("#ac-ok").disabled, "janela de acerto lista o item e só libera depois de escolher a forma");

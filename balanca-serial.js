@@ -14,9 +14,12 @@
   const selo = document.createElement("button");
   selo.id = "selo-bal"; selo.type = "button";
   selo.style.cssText = "border:0;border-radius:999px;padding:7px 14px;font:600 .85rem system-ui;cursor:pointer;margin-left:8px;white-space:nowrap";
-  const pinta = () => {
+  let pintado = "";
+  const pinta = () => { // só mexe na tela quando o selo muda (mexer a cada leitura deixava o tablet lento)
     const ok = est.estado === "conectada", vivo = ok && Date.now() - ultChegou < 3000;
-    selo.textContent = ok ? (vivo ? "⚖ Balança " + (ultimo && ultimo.peso != null ? fmtKg(ultimo.peso) : "ok") : "⚖ Balança sem resposta") : est.estado === "sempermissao" ? "⚖ Permitir o cabo" : "⚖ Balança desligada";
+    const txt = ok ? (vivo ? "⚖ Balança " + (ultimo && ultimo.peso != null ? fmtKg(ultimo.peso) : "ok") : "⚖ Balança sem resposta") : est.estado === "sempermissao" ? "⚖ Permitir o cabo" : "⚖ Balança desligada";
+    const cor = vivo ? "v" : ok ? "o" : "x"; if (txt + cor === pintado) return; pintado = txt + cor;
+    selo.textContent = txt;
     selo.style.background = vivo ? "#e1f2e6" : ok ? "#fff0d6" : "#ffe1e1"; selo.style.color = vivo ? "#1e7e3e" : ok ? "#a35b00" : "#a50f14";
   };
   const fmtKg = (kg) => kg.toFixed(3).replace(".", ",") + " kg";
@@ -31,8 +34,9 @@
     ultChegou = Date.now();
     for (let i = 0; i + 1 < d.hex.length; i += 2) buf.push(parseInt(d.hex.substr(i, 2), 16));
     if (buf.length > 512) buf = buf.slice(-256);
-    quadros();
+    if (!tQuadros) tQuadros = setTimeout(() => { tQuadros = 0; quadros(); }, 120); // junta os pedacinhos: processa no máximo ~8x por segundo
   };
+  let tQuadros = 0;
   // separa em mensagens: termina em ETX (03), CR (0d) ou LF (0a)
   function quadros() {
     let k;
@@ -66,6 +70,8 @@
     iguais = igual ? iguais + 1 : 0; ultimo = r;
     if (kg != null && kg < 0.005) { trava = false; preenchi = null; return; } // prato saiu da balança: libera a próxima
     if (r.instavel || iguais < 2) return; // espera parar (3 leituras iguais)
+    if (typeof ultTecla !== "undefined" && Date.now() - ultTecla < 4000) return; // a pessoa está digitando: não mexe na tela agora
+    if (cents && !(preenchi && preenchi.c === cents)) return; // valor digitado na mão: a balança não passa por cima
     // lançou e limpou a tela com o mesmo prato ainda em cima: não preenche de novo até tirar o prato
     if (preenchi && cents === "" && peso === "") { trava = true; preenchi = null; }
     if (trava) return;
@@ -80,7 +86,9 @@
     tela();
   }
   // pede o peso de tempos em tempos (modo sob demanda)
-  setInterval(() => { if (est.estado === "conectada" && C.pedido && Date.now() - tPed >= C.intervalo) { tPed = Date.now(); N.enviar(C.pedido); } if (Date.now() % 2000 < 450) pinta(); }, 100);
+  // (se a balança não responde há 10 s, pede só a cada 3 s: cada pedido trava a página um instante dentro do app)
+  setInterval(() => { const calada = Date.now() - ultChegou > 10000, iv = calada ? 3000 : C.intervalo; if (est.estado === "conectada" && C.pedido && Date.now() - tPed >= iv) { tPed = Date.now(); N.enviar(C.pedido); } }, 250);
+  setInterval(pinta, 1000);
   try { est = JSON.parse(N.estado()); } catch (e) {}
   if (est.estado !== "conectada") { if (C.baud !== 9600 || C.par !== "N" || C.bits !== 8 || C.stop !== 1) N.configurar(C.baud, C.bits, C.par, C.stop); else N.conectar(); }
 

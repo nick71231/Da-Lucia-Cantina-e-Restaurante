@@ -22,7 +22,8 @@ const temDoce = () => docesLista().some((b) => !indisponiveis.has("doce:" + b.no
 const avulsos = (tp) => (tp === "doce" ? docesLista() : bebidasLista()); // bebidas e doces: itens com preço próprio, fora da marmitex
 
 const categorias = () => etapasLista().map((c) => ({ ...c, itens: [...new Set([...c.itens, ...(extras[c.id] || [])])].filter((n) => !removidos.has(c.id + ":" + n)) }));
-const disponiveis = (c) => c.itens.filter((n) => !indisponiveis.has(c.id + ":" + n));
+const ehSem = (n) => /^\s*sem\s/i.test(n); // "Sem Arroz", "Sem Salada"... sempre por último, pro cliente achar fácil
+const disponiveis = (c) => { const l = c.itens.filter((n) => !indisponiveis.has(c.id + ":" + n)); return [...l.filter((n) => !ehSem(n)), ...l.filter(ehSem)]; };
 const toast = (m) => { const t = $("#toast"); t.textContent = m; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 2000); };
 
 const logoPeq = () => `<div class="logo-box" data-acao="logo"><img class="logo" src="${esc(ler("logoPequena", "img/logo.png"))}" alt="Da Lúcia"></div>`;
