@@ -1627,7 +1627,7 @@ const DOCES = [
 let bebidasCx = BEBIDAS.slice();
 async function carregarBebidasCx() { // respeita o que o admin do totem ligou/desligou e as bebidas que ele criou
   try {
-    const d = ((await (await fetch("/api/config", { cache: "no-store" })).json()) || {}).dados || {}, j = (k, p) => { try { return d[k] ? JSON.parse(d[k]) : p; } catch (e) { return p; } };
+    const d = ((await (await fetch("/api/config?leve=1", { cache: "no-store" })).json()) || {}).dados || {}, j = (k, p) => { try { return d[k] ? JSON.parse(d[k]) : p; } catch (e) { return p; } };
     const rem = j("removidos", []), off = j("indisponiveis", []), extras = j("bebidasExtras", []);
     bebidasCx = [...BEBIDAS, ...extras].filter((x, i, a) => x && x.nome && a.findIndex((y) => y.nome === x.nome) === i && !rem.includes("bebida:" + x.nome) && !off.includes("bebida:" + x.nome));
   } catch (e) {}

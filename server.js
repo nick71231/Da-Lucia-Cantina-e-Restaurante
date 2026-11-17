@@ -651,7 +651,12 @@ async function tratar(req, res) {
     res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Content-Disposition": 'attachment; filename="backup-totem-' + hoje() + '.json"' });
     return res.end(JSON.stringify({ geradoEm: Date.now(), dados: db, config: cfg }));
   }
-  if (p === "/api/config" && req.method === "GET") return json(res, 200, cfg);
+  if (p === "/api/config" && req.method === "GET") {
+    // ?leve=1: sem logo e fotos (a balança, o garçom e o caixa só querem saber das bebidas: ~395 KB virava ~20 KB a cada minuto)
+    if (url.searchParams.get("so") === "t") return json(res, 200, { t: (cfg && cfg.t) || 0 }); // o totem só quer saber se tem versão nova
+    if (url.searchParams.get("leve")) { const d = {}; Object.entries((cfg && cfg.dados) || {}).forEach(([k, v]) => { if (!/^(logo|foto:)/.test(k)) d[k] = v; }); return json(res, 200, { t: cfg.t, dados: d }); }
+    return json(res, 200, cfg);
+  }
   if (p === "/api/config" && req.method === "PUT") {
     const b = await corpo(req, 12e6);
     if (!b || !b.t || !b.dados || typeof b.dados !== "object") return json(res, 400, { erro: "configuração inválida" });

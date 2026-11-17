@@ -240,7 +240,7 @@ async function carregar0() {
 }
 async function carregarBebidas() {
   try {
-    const d = ((await (await aut("/api/config")).json()).dados) || {}, j = (k, p) => { try { return d[k] ? JSON.parse(d[k]) : p; } catch (e) { return p; } };
+    const d = ((await (await aut("/api/config?leve=1")).json()).dados) || {}, j = (k, p) => { try { return d[k] ? JSON.parse(d[k]) : p; } catch (e) { return p; } };
     const rem = j("removidos", []), off = j("indisponiveis", []), extras = j("bebidasExtras", []);
     bebidas = comSorvetes([...BEBIDAS, ...extras].filter((x, i, a) => a.findIndex((y) => y.nome === x.nome) === i && !rem.includes("bebida:" + x.nome) && !off.includes("bebida:" + x.nome)));
   } catch (e) {}

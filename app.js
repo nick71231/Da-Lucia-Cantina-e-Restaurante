@@ -273,12 +273,15 @@ async function finalizar(comandaNum) {
   const ped = { uid: novoUid(), comanda: comandaNum || undefined, dia, nome: nomeCliente, quando: Date.now(), itens: carrinho,
     unidades: carrinho.reduce((s, c) => s + c.qtd, 0), valor: carrinho.reduce((s, c) => s + c.qtd * c.preco, 0) };
   let numero = local, pendente = false;
+  // Wi-Fi lento: o cliente vê que está enviando (antes a tela ficava parada sem resposta e ele tocava de novo)
+  const tEnv = setTimeout(() => { if (!enviando) return; const m = $("#modal"); m.hidden = false; m.innerHTML = `<div class="modal-caixa larga pp"><div class="pp-ic">⏳</div><h2>Enviando seu pedido…</h2><p class="pp-sub">Só um instante</p></div>`; }, 600);
   try { // manda pro servidor (o caixa enxerga na hora); ele devolve o número do pedido
     // Wi-Fi ruim: espera no máximo 8 s (antes o cliente ficava olhando a tela parada); não chegou, vai pra fila e o servidor não duplica (uid)
     const ab = typeof AbortController !== "undefined" ? new AbortController() : null, tm = ab && setTimeout(() => ab.abort(), 8000);
     let r; try { r = await fetch("/api/pedidos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(ped), signal: ab ? ab.signal : undefined }); } finally { clearTimeout(tm); }
     if (!r.ok) throw 0; numero = (await r.json()).numero;
   } catch (e) { pendente = true; salvar("fila", [...ler("fila", []), { ...ped, numero: local }]); } // servidor fora: guarda e reenvia depois
+  clearTimeout(tEnv); $("#modal").hidden = true;
   salvar("contador", { dia, n: Math.max(local, numero) });
   ultimo = { ...ped, numero, pendente }; salvar("pedidos", [...ler("pedidos", []), ultimo]);
   carrinho = []; tela = "sucesso"; enviando = false; render();
@@ -1189,8 +1192,10 @@ async function enviarConfig() {
 }
 async function puxarConfig() {
   try {
-    const r = await fetch("/api/config"); if (!r.ok) return;
-    const srv = await r.json(), local = parseInt(localStorage.getItem("cfgT") || "0", 10);
+    // 1º pergunta só a versão (uns bytes); baixa tudo (logo, fotos: ~400 KB) só quando o servidor tem uma mais nova
+    const r0 = await fetch("/api/config?so=t"); if (!r0.ok) return;
+    let srv = await r0.json(); const local = parseInt(localStorage.getItem("cfgT") || "0", 10);
+    if (srv.t && srv.t > local && tela === "descanso" && localStorage.getItem("cfgSujo") !== "1") { const r = await fetch("/api/config"); if (!r.ok) return; srv = await r.json(); }
     if (!srv.t) return enviarConfig();                      // servidor ainda sem cópia: manda a daqui
     if (localStorage.getItem("cfgSujo") === "1") return enviarConfig(); // mudança local ainda não enviada: tenta mandar em vez de apagar com a cópia velha do servidor
     if (srv.t > local && tela === "descanso") {             // servidor tem versão mais nova: aplica (só com o totem parado)
