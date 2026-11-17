@@ -262,6 +262,12 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
     t(d63 && d63.status === "conta" && d63.clienteId === gi.id, "na conta pelo telefone cadastrado (outro nome no pedido)");
     t(d64 && d64.status === "aguardando", "na conta sem achar o cliente: fica em aberto pro caixa");
   }
+  { // gaveta: retirada digitada errada pode ser apagada (só com a gaveta aberta)
+    await reqEm(sd.base, "POST", "/api/gaveta", { acao: "abrir", valor: 50 }, tkD);
+    const g1 = (await reqEm(sd.base, "POST", "/api/gaveta", { acao: "movimento", tipo: "sangria", valor: 999, motivo: "errado" }, tkD)).j, m = g1.movimentos.find((x) => x.motivo === "errado");
+    const g2 = (await reqEm(sd.base, "POST", "/api/gaveta", { acao: "apagarMov", id: m.id }, tkD)).j;
+    t(g1.sangrias - g2.sangrias === 999 && !g2.movimentos.some((x) => x.id === m.id), "gaveta: dá pra apagar uma retirada digitada errada");
+  }
   { // apagar lançamento pelo código (iid): se a comanda mudou, não apaga o item errado
     const c1 = (await reqEm(sd.base, "POST", "/api/balanca", { comanda: 777, valor: 10, uid: "rm1" }, tkD)).j;
     await reqEm(sd.base, "POST", "/api/balanca", { comanda: 777, valor: 20, uid: "rm2" }, tkD);

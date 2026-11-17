@@ -634,6 +634,10 @@ async function tratar(req, res) {
       if (!g.abertura || g.fechamento) return json(res, 409, { erro: "a gaveta não está aberta" });
       if (!(contado >= 0 && contado <= 100000)) return json(res, 400, { erro: "valor contado inválido" });
       const esperado = gavetaDia(dia).esperado; g.fechamento = { contado, esperado, diferenca: cents(contado - esperado), quando: Date.now() };
+    } else if (b.acao === "apagarMov") { // retirada/reforço digitado errado: apaga (só com a gaveta aberta)
+      if (!g.abertura || g.fechamento) return json(res, 409, { erro: "reabra a gaveta pra apagar um movimento" });
+      const i = g.movimentos.findIndex((m) => m.id === String(b.id || "")); if (i < 0) return json(res, 404, { erro: "movimento não encontrado" });
+      g.movimentos.splice(i, 1);
     } else if (b.acao === "reabrir") { delete g.fechamento; }
     else return json(res, 400, { erro: "ação inválida" });
     await gravar(); return json(res, 200, gavetaDia(dia));

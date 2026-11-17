@@ -654,7 +654,7 @@ const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
 const hora = (t) => new Date(t).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 const FORMAS = { dinheiro: "Dinheiro", pix: "Pix", credito: "Crédito", debito: "Débito", refeicao: "Refeição", cartao: "Cartão", marmita: "Marmita (na conta)" }; // "cartao" fica só pra ler vendas antigas
 const FORMAS_PAG = ["dinheiro", "pix", "credito", "debito", "refeicao"]; // o que aparece nos botões
-let pedidos = [], aba = "aberto", dia = new Date().toLocaleDateString("en-CA"), sel = null;
+let pedidos = [], aba = "aberto", dia = new Date().toLocaleDateString("en-CA"), diaDeHoje = dia, sel = null;
 
 const aut = async (url, opt = {}) => { // toda chamada leva a senha (token) do caixa; se o servidor disser que expirou, volta pro login
   // desiste em 20 s: antes, se a rede travasse, o caixa parava de atualizar pra sempre mostrando "online"
@@ -688,6 +688,9 @@ let carregando = false, ultimoHtml = ""; // guarda o último desenho: se nada mu
 function pintar(h) { if (h === ultimoHtml) return; ultimoHtml = h; $("#lista").innerHTML = h; }
 async function carregar() {
   if (carregando) return; carregando = true; // não deixa duas consultas ao mesmo tempo
+  // virou o dia com o caixa aberto (computador ficou ligado a noite toda): passa sozinho pro dia de hoje.
+  // Antes continuava mostrando ontem, e os pedidos novos não apareciam. (Se alguém escolheu outra data de propósito, respeita.)
+  const hj = new Date().toLocaleDateString("en-CA"); if (diaDeHoje !== hj) { if (dia === diaDeHoje) { dia = hj; const di = $("#dia"); if (di) di.value = hj; ultimoAguard = null; } diaDeHoje = hj; }
   try { const r = await aut("/api/pedidos?dia=" + dia); if (!r.ok) throw 0; pedidos = await r.json(); avisarNovos(); autoGaveta(); $("#status").textContent = "online - " + new Date().toLocaleTimeString("pt-BR"); $("#status").className = ""; }
   catch (e) { $("#status").textContent = "SEM CONEXÃO - dados podem estar desatualizados"; $("#status").className = "off"; }
   carregando = false;
@@ -1087,7 +1090,7 @@ document.addEventListener("click", async (e) => {
   else if (a === "cobrarZap") {
     const r = resumoEnt(d.k), emp = d.k.startsWith("e:"), ind = emp ? null : r.cs[0], nome = emp ? d.k.slice(2) : ind.nome, tel = String((ind ? ind.telefone : (r.cs.find((c) => c.telefone) || {}).telefone) || "").replace(/\D/g, "");
     if (!tel) return alert("Esse cliente não tem telefone no cadastro.");
-    const txt = `Olá, ${nome}! Aqui é do restaurante Da Lúcia 😊\nResumo da sua conta de ${nomeMes(mes).toLowerCase()}:\n${r.ant ? "• Saldo anterior: " + brl(r.ant) + "\n" : ""}• Consumo do mês: ${brl(r.total)}${r.qtd ? " (" + r.qtd + " refeições)" : ""}\n• Pago: ${brl(r.pago)}\n${r.saldo > 0.009 ? "• *A pagar: " + brl(r.saldo) + "*" : r.saldo < -0.009 ? "• Crédito: " + brl(-r.saldo) : "• Tudo pago! ✅"}\nQualquer dúvida é só chamar. Obrigado!`;
+    const txt = `Olá, ${nome}! Aqui é do restaurante Da Lúcia 😊\nResumo da sua conta de ${nomeMes(mes).toLowerCase()}:\n${r.ant ? "• Saldo anterior: " + brl(r.ant) + "\n" : ""}• Consumo do mês: ${brl(r.totalMes)}${r.qtd ? " (" + r.qtd + " refeições)" : ""}\n• Pago: ${brl(r.pago)}\n${r.saldo > 0.009 ? "• *A pagar: " + brl(r.saldo) + "*" : r.saldo < -0.009 ? "• Crédito: " + brl(-r.saldo) : "• Tudo pago! ✅"}\nQualquer dúvida é só chamar. Obrigado!`;
     window.open("https://wa.me/" + (tel.length <= 11 ? "55" : "") + tel + "?text=" + encodeURIComponent(txt), "_blank");
     if (!contas.enviados[d.k]) { await api("PUT", "/api/enviado", { mes, chave: d.k, enviado: true }); await recarregar(); modalConta(d.k); }
   }
@@ -1764,7 +1767,9 @@ async function receberAcerto() {
   A.ps.forEach((p) => { const lista = p.itens.filter((x) => !x.pago && A.itens[kIt(p, x)].on).map((x) => ({ iid: x.iid, forma: A.itens[kIt(p, x)].forma, v: valorIt(x) })); if (lista.length) grupos.push({ p, lista }); });
   let novo = null;
   if (dl.length) {
-    const com = A.ps.find((p) => p.tipo === "balanca"); // tem comanda: o doce entra nela; senão vira um pedido separado
+    // tem comanda: o doce entra nela; senão vira um pedido separado. (Marmitex M do totem tem número 10000+, que não dá pra usar
+    // como comanda de cartão: antes dava "número de comanda inválido" ao pôr bebida/doce no pagamento de uma M.)
+    const com = A.ps.find((p) => p.tipo === "balanca" && p.numero <= 9999);
     if (com) {
       const r = await lancarDocesNaComanda(dl, com); if (!r) return atualizarAcerto();
       if (r === "reabrir") { await esperaCarregar(); return abrirAcerto(A.ps.map((p) => p.id)); }
@@ -1850,7 +1855,7 @@ function desenharGaveta() {
     ${aberta ? `<div class="gv-cols"><div class="gv-box"><h4>Tirar ou colocar dinheiro</h4><input type="hidden" id="g-tipo" value="sangria"><div class="ct-seg gv-tipo"><button class="btn on" data-a="gTipo" data-t="sangria">➖ Retirada (sangria)</button><button class="btn" data-a="gTipo" data-t="suprimento">➕ Reforço (suprimento)</button></div>
         <div class="gv-mv"><input id="g-mv" inputmode="decimal" placeholder="Valor (R$)"><input id="g-mot" placeholder="Motivo (ex.: pagamento do gás)"><button class="btn" data-a="gMov">Registrar</button></div></div>
       <div class="gv-box"><h4>Fechar a gaveta</h4><p class="gv-dica">Conte o dinheiro da gaveta e digite o total:</p><div class="gv-mv"><input id="g-cont" inputmode="decimal" placeholder="Dinheiro contado (R$)"><button class="btn ok" data-a="gFechar">Fechar e conferir</button></div></div></div>` : ""}
-    ${g.movimentos.length || g.abertura.ajustado ? `<h4 class="gv-h">Movimentos do dia</h4><div class="tl">${g.abertura.ajustado ? `<div class="tl-it ant"><span class="tl-dia"><b>${hora(g.abertura.ajustado)}</b></span><div class="tl-txt"><b>Troco corrigido</b><span>de ${brl(g.abertura.anterior)} para ${brl(g.abertura.valor)}</span></div><b class="tl-v">${brl(g.abertura.valor)}</b><span></span></div>` : ""}${g.movimentos.map((m) => `<div class="tl-it ${m.tipo === "sangria" ? "" : "pag"}" style="cursor:default"><span class="tl-dia"><b>${hora(m.quando)}</b></span><div class="tl-txt"><b>${m.tipo === "sangria" ? "➖ Retirada" : "➕ Reforço"}</b><span>${esc(m.motivo)}</span></div><b class="tl-v">${m.tipo === "sangria" ? "− " : "+ "}${brl(m.valor)}</b><span></span></div>`).join("")}</div>` : ""}`;
+    ${g.movimentos.length || g.abertura.ajustado ? `<h4 class="gv-h">Movimentos do dia</h4><div class="tl">${g.abertura.ajustado ? `<div class="tl-it ant"><span class="tl-dia"><b>${hora(g.abertura.ajustado)}</b></span><div class="tl-txt"><b>Troco corrigido</b><span>de ${brl(g.abertura.anterior)} para ${brl(g.abertura.valor)}</span></div><b class="tl-v">${brl(g.abertura.valor)}</b><span></span></div>` : ""}${g.movimentos.map((m) => `<div class="tl-it ${m.tipo === "sangria" ? "" : "pag"}" style="cursor:default"><span class="tl-dia"><b>${hora(m.quando)}</b></span><div class="tl-txt"><b>${m.tipo === "sangria" ? "➖ Retirada" : "➕ Reforço"}</b><span>${esc(m.motivo)}</span></div><b class="tl-v">${m.tipo === "sangria" ? "− " : "+ "}${brl(m.valor)}</b><span class="tl-bts">${aberta ? `<button class="btn ruim mini" data-a="gApaga" data-id="${esc(m.id)}" title="Apagar (digitou errado)">✕</button>` : ""}</span></div>`).join("")}</div>` : ""}`;
 }
 async function gavetaAcao(corpo) { gaveta = await api("POST", "/api/gaveta", corpo); desenharGaveta(); }
 
@@ -1887,6 +1892,7 @@ document.addEventListener("click", async (e) => {
   else if (a === "gMov") gavetaAcao({ acao: "movimento", tipo: $("#g-tipo").value, valor: num("#g-mv"), motivo: $("#g-mot").value });
   else if (a === "gFechar") { const v = num("#g-cont"); if (!(v >= 0)) return alert("Digite o dinheiro contado."); gavetaAcao({ acao: "fechar", contado: v }); }
   else if (a === "gReabrir") gavetaAcao({ acao: "reabrir" });
+  else if (a === "gApaga") { const m = gaveta && gaveta.movimentos.find((x) => x.id === d.id); if (!m || !confirm(`Apagar "${m.motivo}" de ${brl(m.valor)}?`)) return; try { await gavetaAcao({ acao: "apagarMov", id: d.id }); pagBoys = {}; } catch (er) {} }
   else if (a === "backup") {
     try { const r = await aut("/api/backup"); if (!r.ok) throw 0; const u = URL.createObjectURL(await r.blob()), l = document.createElement("a"); l.href = u; l.download = "backup-totem-" + hojeISO() + ".json"; l.click(); setTimeout(() => URL.revokeObjectURL(u), 5000); }
     catch (e) { alert("Não consegui baixar o backup."); }
