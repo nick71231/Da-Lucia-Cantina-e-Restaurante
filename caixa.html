@@ -799,8 +799,25 @@ const num = (id) => parseFloat(($(id) || { value: "" }).value.replace(",", "."))
 let clientes = [], contas = { lancamentos: [], pagamentos: [], enviados: {}, anterior: {} }, mes = hojeISO().slice(0, 7), filtroEmp = "", mostrarTodos = false, editId = null, escolha = null, filtroCli = "", modalAtual = null;
 const nomeCli = (id) => (clientes.find((x) => x.id === id) || {}).nome || "(cliente apagado)";
 const chaveCli = (c) => (c.empresa ? "e:" + c.empresa : "c:" + c.id); // quem paga: a empresa (se tiver) ou o próprio cliente
+// cada ação de "gravar" leva um código (uid). Clique duplo ou tentar de novo depois de uma falha mandam o MESMO código,
+// e o servidor faz só 1 vez. Se a anterior deu certo, a próxima igual é uma ação nova (ex.: duas retiradas iguais de propósito).
+const tentativasApi = new Map();
 const api = async (m, url, body) => {
-  const r = await aut(url, { method: m, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined }), j = await r.json().catch(() => ({}));
+  let corpoEnv = body;
+  if (m === "POST" && body && typeof body === "object" && !Array.isArray(body) && !body.uid) {
+    const k = url + "|" + JSON.stringify(body), x = tentativasApi.get(k);
+    if (x && x.andando) throw new Error("já enviando"); // 2º toque enquanto o 1º ainda está indo: ignora
+    const u = x && !x.ok && Date.now() - x.t < 5 * 60e3 ? x.uid : (window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+    tentativasApi.set(k, { uid: u, ok: false, andando: true, t: Date.now() }); corpoEnv = { ...body, uid: u };
+    try { const j = await api0(m, url, corpoEnv); tentativasApi.set(k, { uid: u, ok: true, andando: false, t: Date.now() }); return j; }
+    catch (e) { tentativasApi.set(k, { uid: u, ok: false, andando: false, t: Date.now() }); throw e; }
+  }
+  return api0(m, url, corpoEnv);
+};
+const api0 = async (m, url, body) => {
+  let r; try { r = await aut(url, { method: m, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined }); }
+  catch (e) { alert("Sem conexão com o servidor. Tente de novo (não duplica)."); throw e; }
+  const j = await r.json().catch(() => ({}));
   if (!r.ok) { alert(j.erro || "O servidor recusou a operação."); throw new Error(j.erro || "erro"); }
   return j;
 };

@@ -486,7 +486,8 @@ async function tratar(req, res) {
   if (p === "/api/clientes" && req.method === "GET") return json(res, 200, db.clientes);
   if (p === "/api/clientes" && req.method === "POST") {
     const b = await corpo(req); if (!String(b.nome || "").trim()) return json(res, 400, { erro: "nome" });
-    const c = { id: uid("c"), nome: String(b.nome).trim(), empresa: String(b.empresa || "").trim(), modo: b.modo === "refeicao" ? "refeicao" : "valor", valorRefeicao: Number(b.valorRefeicao) || 0, telefone: String(b.telefone || "").trim(), pagamento: b.pagamento === "depois" ? "depois" : "antecipado", ativo: true };
+    const uc = String(b.uid || "").slice(0, 80); if (uc) { const ja = db.clientes.find((x) => x.uid === uc); if (ja) return json(res, 200, ja); } // clique duplo: não cadastra 2x
+    const c = { id: uid("c"), uid: uc || undefined, nome: String(b.nome).trim(), empresa: String(b.empresa || "").trim(), modo: b.modo === "refeicao" ? "refeicao" : "valor", valorRefeicao: Number(b.valorRefeicao) || 0, telefone: String(b.telefone || "").trim(), pagamento: b.pagamento === "depois" ? "depois" : "antecipado", ativo: true };
     db.clientes.push(c); await gravar(); return json(res, 200, c);
   }
   const mc = p.match(/^\/api\/clientes\/([^/]+)$/);
@@ -520,7 +521,9 @@ async function tratar(req, res) {
     return json(res, 200, { lancamentos: db.lancamentos.filter((l) => l.dia.startsWith(mes)), pagamentos: db.pagamentos.filter((x) => x.mes === mes), enviados, anterior });
   }
   if (p === "/api/lancamentos" && req.method === "POST") {
-    const b = await corpo(req), l = { id: uid("l"), clienteId: String(b.clienteId || ""), dia: String(b.dia || ""), qtd: Number(b.qtd) || 0, valor: cents(b.valor), obs: String(b.obs || "").slice(0, 120) };
+    const b = await corpo(req), ul = String(b.uid || "").slice(0, 80);
+    if (ul) { const ja = db.lancamentos.find((x) => x.uid === ul); if (ja) return json(res, 200, ja); } // clique duplo: não marca 2x
+    const l = { id: uid("l"), uid: ul || undefined, clienteId: String(b.clienteId || ""), dia: String(b.dia || ""), qtd: Number(b.qtd) || 0, valor: cents(b.valor), obs: String(b.obs || "").slice(0, 120) };
     const cli = db.clientes.find((x) => x.id === l.clienteId && x.ativo !== false);
     if (!cli || !/^\d{4}-\d\d-\d\d$/.test(l.dia) || !(l.valor > 0 && l.valor <= 5000) || !(l.qtd >= 0 && l.qtd <= 99)) return json(res, 400, { erro: "dados inválidos (cliente, dia ou valor)" });
     db.lancamentos.push(l); await gravar(); return json(res, 200, l);
@@ -536,7 +539,9 @@ async function tratar(req, res) {
     await gravar(); return json(res, 200, { ok: true });
   }
   if (p === "/api/pagamentos" && req.method === "POST") {
-    const b = await corpo(req), x = { id: uid("p"), chave: String(b.chave || ""), mes: String(b.mes || ""), valor: cents(b.valor), refeicoes: Number(b.refeicoes) || 0, forma: String(b.forma || ""), data: String(b.data || hoje()), obs: String(b.obs || "").slice(0, 200) };
+    const b = await corpo(req), up = String(b.uid || "").slice(0, 80);
+    if (up) { const ja = db.pagamentos.find((x) => x.uid === up); if (ja) return json(res, 200, ja); } // clique duplo: não registra o pagamento 2x
+    const x = { id: uid("p"), uid: up || undefined, chave: String(b.chave || ""), mes: String(b.mes || ""), valor: cents(b.valor), refeicoes: Number(b.refeicoes) || 0, forma: String(b.forma || ""), data: String(b.data || hoje()), obs: String(b.obs || "").slice(0, 200) };
     const existe = db.clientes.some((c) => (c.empresa ? "e:" + c.empresa : "c:" + c.id) === x.chave);
     if (!existe || !/^\d{4}-\d\d$/.test(x.mes) || !/^\d{4}-\d\d-\d\d$/.test(x.data) || !["dinheiro", "pix", "credito", "debito", "transferencia"].includes(x.forma) || !(x.valor > 0 && x.valor <= 100000)) return json(res, 400, { erro: "pagamento inválido" });
     db.pagamentos.push(x); await gravar(); return json(res, 200, x);
@@ -627,8 +632,9 @@ async function tratar(req, res) {
       const motivo = String(b.motivo || "").trim().slice(0, 120);
       if (!g.abertura || g.fechamento) return json(res, 409, { erro: "abra a gaveta (ou ela já foi fechada)" });
       if (!["sangria", "suprimento"].includes(b.tipo) || !(valor > 0 && valor <= 20000) || motivo.length < 3) return json(res, 400, { erro: "informe tipo, valor e motivo" });
+      const um = String(b.uid || "").slice(0, 80); if (um && g.movimentos.some((m) => m.uid === um)) return json(res, 200, gavetaDia(dia)); // clique duplo: não tira 2x
       const boy = b.tipo === "sangria" ? String(b.entregador || "").trim().slice(0, 40) : ""; // pagamento do motoboy: sai da gaveta e aparece no fechamento
-      g.movimentos.push({ id: uid("m"), tipo: b.tipo, valor, motivo, quando: Date.now(), ...(boy ? { categoria: "motoboy", entregador: boy } : {}) });
+      g.movimentos.push({ id: uid("m"), uid: um || undefined, tipo: b.tipo, valor, motivo, quando: Date.now(), ...(boy ? { categoria: "motoboy", entregador: boy } : {}) });
     } else if (b.acao === "fechar") {
       const contado = cents(b.contado);
       if (!g.abertura || g.fechamento) return json(res, 409, { erro: "a gaveta não está aberta" });

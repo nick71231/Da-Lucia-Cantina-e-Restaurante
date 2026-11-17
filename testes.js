@@ -262,6 +262,14 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
     t(d63 && d63.status === "conta" && d63.clienteId === gi.id, "na conta pelo telefone cadastrado (outro nome no pedido)");
     t(d64 && d64.status === "aguardando", "na conta sem achar o cliente: fica em aberto pro caixa");
   }
+  { // clique duplo (mesmo código uid 2x ao mesmo tempo): pagamento, marcar na conta, retirada e cliente novo ficam 1 vez só
+    const dd = (u, b) => Promise.all([reqEm(sd.base, "POST", u, b, tkD), reqEm(sd.base, "POST", u, b, tkD)]);
+    const cdu = (await dd("/api/clientes", { nome: "CLIQUE DUPLO", uid: "cd1" }))[0].j, mesT = new Date().toLocaleDateString("en-CA").slice(0, 7);
+    await dd("/api/pagamentos", { chave: "c:" + cdu.id, mes: mesT, valor: 50, forma: "pix", data: hoje, uid: "pgd1" });
+    await dd("/api/lancamentos", { clienteId: cdu.id, dia: hoje, valor: 22, uid: "lcd1" });
+    const ct = (await reqEm(sd.base, "GET", "/api/contas?mes=" + mesT, undefined, tkD)).j, cl = (await reqEm(sd.base, "GET", "/api/clientes", undefined, tkD)).j;
+    t(cl.filter((c) => c.nome === "CLIQUE DUPLO").length === 1 && ct.pagamentos.filter((p) => p.chave === "c:" + cdu.id).length === 1 && ct.lancamentos.filter((l) => l.clienteId === cdu.id).length === 1, "clique duplo: cliente, pagamento e lançamento ficam 1 vez só");
+  }
   { // gaveta: retirada digitada errada pode ser apagada (só com a gaveta aberta)
     await reqEm(sd.base, "POST", "/api/gaveta", { acao: "abrir", valor: 50 }, tkD);
     const g1 = (await reqEm(sd.base, "POST", "/api/gaveta", { acao: "movimento", tipo: "sangria", valor: 999, motivo: "errado" }, tkD)).j, m = g1.movimentos.find((x) => x.motivo === "errado");
