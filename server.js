@@ -406,7 +406,8 @@ function resumoGestao(dia) {
   const g = gavetaDia(dia), mov = g.movimentos || [];
   R.gaveta = { abertura: g.abertura ? g.abertura.valor : null, fechamento: g.fechamento ? { contado: g.fechamento.contado ?? g.fechamento.valor ?? null, diferenca: g.fechamento.diferenca ?? null } : null,
     esperado: g.esperado, sangrias: r2(mov.filter((m) => m.tipo === "sangria" && m.categoria !== "motoboy").reduce((s, m) => s + m.valor, 0)),
-    motoboys: r2(mov.filter((m) => m.categoria === "motoboy").reduce((s, m) => s + m.valor, 0)), suprimentos: g.suprimentos };
+    motoboys: r2(mov.filter((m) => m.categoria === "motoboy").reduce((s, m) => s + m.valor, 0)), suprimentos: g.suprimentos,
+    sangriasLista: mov.filter((m) => m.tipo === "sangria" && m.categoria !== "motoboy").map((m) => ({ motivo: String(m.motivo || "Sangria").slice(0, 60), valor: r2(m.valor) })) }; // cada sangria com o nome que foi digitado (a Gestão mostra assim)
   return R;
 }
 const gestaoEnv = {}; let gestaoPrimeira = true, enviandoGestao = false;
