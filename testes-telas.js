@@ -37,10 +37,10 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
 
   console.log("\nCaixa");
   const w = await abre("/caixa.html", (win) => { win.sessionStorage.setItem("caixaToken", admin); win.sessionStorage.setItem("caixaRole", "admin"); });
-  { const wc = await abre("/caixa.html", (win) => win.sessionStorage.setItem("caixaToken", cx)); t(!wc.document.querySelector('[data-aba="painel"]'), "funcionário (senha do caixa) não vê o Painel de faturamento"); t(!!w.document.querySelector('[data-aba="painel"]'), "dono (senha admin) vê o Painel"); }
+  { const wc = await abre("/caixa.html", (win) => win.sessionStorage.setItem("caixaToken", cx)); t(!wc.document.querySelector('[data-aba="painel"]'), "funcionário (senha do caixa) não vê o Painel de faturamento"); t(!w.document.querySelector('[data-aba="painel"]'), "Painel saiu do caixa (os números ficam no Fechamento e na Gestão do site)"); }
   t(texto(w, "#lista").includes("C36") && texto(w, "#lista").includes("Beto"), "'Em aberto' mostra a comanda com bebida e o pedido do totem");
   t(texto(w, "#n-aberto") === "2", "contador de abertos bate (2)");
-  for (const [aba, esperado] of [["clientes", "Novo cliente"], ["aberto", "C36"], ["painel", "Vendas por hora"], ["gaveta", "Gaveta de hoje"], ["aberto", "C36"], ["fechamento", "Por forma de pagamento"], ["contas", "A receber"], ["conta", ""], ["pagos", ""], ["aberto", "C36"]]) {
+  for (const [aba, esperado] of [["clientes", "Novo cliente"], ["aberto", "C36"], ["gaveta", "Gaveta de hoje"], ["aberto", "C36"], ["fechamento", "Por forma de pagamento"], ["contas", "A receber"], ["conta", ""], ["pagos", ""], ["aberto", "C36"]]) {
     await clica(w, `[data-aba="${aba}"]`);
     t(texto(w, "#lista").includes(esperado) && texto(w, "#lista").trim().length > 0, `aba ${aba}: mostra o conteúdo certo (sem ficar com a aba anterior)`);
   }
