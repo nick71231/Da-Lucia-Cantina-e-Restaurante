@@ -284,9 +284,18 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   }
   cancelarNoSite = true; await dorme(1600);
   t((await delDe()).filter((x) => x.numero < 60).every((x) => x.status === "cancelado"), "cancelado no site depois de chegar pago: cancela no caixa e sai das vendas");
+  { const ds = await delDe(), ct = (await reqEm(sd.base, "GET", "/api/contas", undefined, tkD)).j, d62 = ds.find((x) => x.numero === 62);
+    t(d62 && d62.status === "cancelado" && !ct.lancamentos.some((l) => l.pedidoId === d62.id), "cancelado no site depois de ir sozinho pra conta: sai da conta do cliente (não fica cobrado)"); }
   const sa = (await reqEm(sd.base, "GET", "/api/saude", undefined, "")).j;
   t(!!sa.delivery && sa.delivery.ligado && !sa.delivery.erro && !JSON.stringify(sa).includes("tk-teste"), "a saúde do servidor mostra a busca do delivery (sem mostrar a senha)");
   sd.srv.kill(); site.close();
+  { // pedidos.json estragado (luz caiu no meio da gravação): liga com o backup mais novo, não liga vazio
+    const dE = fs.mkdtempSync(path.join(os.tmpdir(), "totem-estragado-")); fs.mkdirSync(path.join(dE, "backups"));
+    fs.writeFileSync(path.join(dE, "pedidos.json"), '{"pedidos":[{"id":"x"'); // cortado no meio
+    fs.writeFileSync(path.join(dE, "backups", "pedidos-2026-01-01.json"), JSON.stringify({ pedidos: [], clientes: [{ id: "c1", nome: "VEIO DO BACKUP", ativo: true }] }));
+    const se = sobe(3991, dE); await se.pronto; const sa2 = (await reqEm(se.base, "GET", "/api/saude", undefined, "")).j;
+    t(sa2.clientes === 1 && fs.readdirSync(dE).some((a) => a.startsWith("pedidos.json.estragado-")), "pedidos.json estragado: liga com o backup (antes ligava vazio e apagava tudo na próxima gravação)");
+    se.srv.kill(); }
 
   console.log("\nProteção contra adivinhar senha");
   for (let i = 0; i < 5; i++) await req("POST", "/api/login", { role: "balanca", pin: "9999" }, "");

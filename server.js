@@ -57,8 +57,23 @@ function acertarValores(ped, partes, recebido, papel) {
   return { ok: true };
 }
 const TRANS = { aguardando: ["pago", "conta", "cancelado"], conta: ["aguardando", "cancelado"], pago: ["cancelado"], cancelado: [] }; // mudanças de estado permitidas
-let db = { pedidos: [] };
-try { db = JSON.parse(fs.readFileSync(ARQ, "utf8")); } catch (e) {}
+// lê os dados. Se o pedidos.json estiver estragado (luz caiu no meio da gravação, disco...), usa o .tmp ou o backup mais novo.
+// NUNCA liga vazio por engano: antes, um arquivo estragado fazia o servidor subir sem nada e a próxima gravação apagava tudo.
+function lerDados() {
+  if (!fs.existsSync(ARQ)) return { pedidos: [] }; // instalação nova
+  const dirB = path.join(DIR_DADOS, "backups"), bks = fs.existsSync(dirB) ? fs.readdirSync(dirB).filter((a) => /^pedidos-.*\.json$/.test(a)).sort().reverse().map((a) => path.join(dirB, a)) : [];
+  for (const f of [ARQ, ARQ + ".tmp", ...bks]) {
+    try {
+      const d = JSON.parse(fs.readFileSync(f, "utf8"));
+      if (!d || !Array.isArray(d.pedidos)) continue;
+      if (f !== ARQ) { console.error("ATENÇÃO: pedidos.json estava estragado. Usei " + path.basename(f) + " (o estragado ficou guardado como pedidos.json.estragado-*)."); try { fs.copyFileSync(ARQ, ARQ + ".estragado-" + Date.now()); } catch (e) {} }
+      return d;
+    } catch (e) {}
+  }
+  console.error("ERRO GRAVE: não consegui ler o pedidos.json nem nenhum backup. O servidor NÃO liga, pra não apagar nada. Chame o suporte.");
+  process.exit(1);
+}
+let db = lerDados();
 db.pedidos = db.pedidos || []; db.caixa = db.caixa || {};
 db.clientes = db.clientes || []; db.lancamentos = db.lancamentos || []; db.pagamentos = db.pagamentos || []; db.enviados = db.enviados || {};
 db.entregadores = Array.isArray(db.entregadores) ? db.entregadores : []; // motoboys (nomes)
@@ -218,7 +233,8 @@ function contaDoPedido(p) { // cliente com conta pra um pedido "na conta": telef
   const ativos = db.clientes.filter((c) => c.ativo !== false), fim = (t) => String(t || "").replace(/\D/g, "").slice(-8), tel = fim(p.telefone);
   if (tel.length === 8) { const l = ativos.filter((x) => fim(x.telefone) === tel); if (l.length === 1) return l[0]; }
   const np = " " + nomeBase(p.nome) + " ", tem = (s) => { const b = nomeBase(s); return b.length >= 3 && np.includes(" " + b + " "); };
-  let l = ativos.filter((c) => tem(c.nome)); if (l.length === 1) return l[0];
+  // pelo nome: só nome com 2 palavras ou mais ("JOSE ROBERTO"), ou cliente de empresa. Nome de 1 palavra ("MARIA") casaria com outra Maria qualquer.
+  let l = ativos.filter((c) => tem(c.nome) && (nomeBase(c.nome).includes(" ") || c.empresa)); if (l.length === 1) return l[0];
   if (!l.length) { l = ativos.filter((c) => c.empresa && tem(c.empresa)); if (l.length && l.every((c) => c.empresa === l[0].empresa)) return l.find((c) => nomeBase(c.nome) === nomeBase(c.empresa)) || l[0]; }
   return null;
 }
@@ -247,7 +263,8 @@ function pagarDoSite(p) {
     if (p.valor === 0 && (!marm.length || p.contaCliente)) { p.status = "pago"; p.pagamento = "marmita"; p.pagoEm = Date.now(); p.pagoAuto = true; }
     return;
   }
-  const forma = p.pagPrevisto === "cartao_entrega" && ["credito", "debito", "refeicao"].includes(p.cartaoTipo) ? p.cartaoTipo : FORMA_DO_SITE[p.pagPrevisto]; // cartão na entrega: crédito/débito/refeição (o que o cliente escolheu); sem tipo: "Cartão" if (!forma || !p.itens.length) return;
+  const forma = p.pagPrevisto === "cartao_entrega" && ["credito", "debito", "refeicao"].includes(p.cartaoTipo) ? p.cartaoTipo : FORMA_DO_SITE[p.pagPrevisto]; // cartão na entrega: crédito/débito/refeição (o que o cliente escolheu); sem tipo: "Cartão"
+  if (!forma || !p.itens.length) return; // forma desconhecida: fica em aberto pro caixa
   const r = acertar(p, p.itens.map((c) => ({ iid: c.iid, forma })), forma === "dinheiro" ? Math.max(p.valor, p.trocoPara || 0) : 0, "site");
   if (r.ok) { p.pagoAuto = true; p.pagamentos.forEach((g) => (g.auto = "site")); } else console.error("delivery: não consegui lançar o pagamento de D" + p.numero + ": " + r.erro);
 }
@@ -285,7 +302,8 @@ function textoWhats(p, loja = {}, agora = Date.now()) {
   } else L.push("🏃 Retirada na loja", `(Previsão: pronto entre ${hm(de)} e ${hm(ate)})`);
   if (p.pagPrevisto !== "conta" || p.valor > 0) L.push(SEP, `*Total: ${rs(p.valor)}*`); L.push(SEP);
   // Pix: a loja não tem como ver sozinha que o dinheiro caiu, então a marmitex só entra em produção com o comprovante
-  if (p.pagPrevisto === "pix" && p.status !== "pago") L.push("⚠ *Pagamento no Pix:* pra gente começar a preparar sua marmitex, mande o *comprovante do Pix* aqui nesta conversa 🙏", "");
+  // (o caixa já marca como recebido no Pix sozinho; o comprovante é o que confirma de verdade)
+  if (p.pagPrevisto === "pix") L.push("⚠ *Pagamento no Pix:* pra gente começar a preparar sua marmitex, mande o *comprovante do Pix* aqui nesta conversa 🙏", "");
   L.push("Obrigado pela preferência, se precisar de algo é só chamar! 😉");
   return L.join("\n");
 }
@@ -308,13 +326,17 @@ async function sincronizarDelivery() {
       await delApi("importado", { token: s.token, id_local: p.id }); // só avisa o site depois de gravar aqui
     }
     // cancelado no site depois de vir pro caixa: cancela aqui também (o pago automático sai das vendas; o recebido à mão no caixa, não)
-    const abertos = db.pedidos.filter((x) => x.tipo === "delivery" && x.siteToken && (x.status === "aguardando" || (x.status === "pago" && x.pagoAuto && Date.now() - x.quando < 2 * 864e5))).slice(-100);
+    // (inclui o que foi pra conta sozinho: cancelado no site, sai da conta do cliente também; antes continuava cobrado)
+    const abertos = db.pedidos.filter((x) => x.tipo === "delivery" && x.siteToken && (x.status === "aguardando" || ((x.pagoAuto || x.contaAuto) && (x.status === "pago" || x.status === "conta") && Date.now() - x.quando < 2 * 864e5))).slice(-100);
     if (abertos.length) {
       const { pedidos: sit = [] } = await delApi("situacao", { tokens: abertos.map((x) => x.siteToken) });
       let mudou = false;
       sit.filter((x) => x && x.status === "cancelado").forEach((x) => {
         const p = abertos.find((y) => y.siteToken === x.token);
-        if (p && (p.pagoAuto ? p.status === "pago" : !pagsDe(p).length && !p.itens.some((c) => c.pago))) { p.status = "cancelado"; p.motivoCancelamento = "cancelado no site"; mudou = true; }
+        if (p && (p.contaAuto ? p.status === "conta" : p.pagoAuto ? p.status === "pago" : !pagsDe(p).length && !p.itens.some((c) => c.pago))) {
+          p.status = "cancelado"; p.motivoCancelamento = "cancelado no site"; mudou = true;
+          db.lancamentos = db.lancamentos.filter((l) => l.pedidoId !== p.id); // marmita/conta lançada sozinha: tira da conta do cliente
+        }
       });
       if (mudou) await gravar();
     }
@@ -504,7 +526,15 @@ async function tratar(req, res) {
     db.lancamentos.push(l); await gravar(); return json(res, 200, l);
   }
   const ml = p.match(/^\/api\/lancamentos\/([^/]+)$/);
-  if (ml && req.method === "DELETE") { db.lancamentos = db.lancamentos.filter((x) => x.id !== ml[1]); await gravar(); return json(res, 200, { ok: true }); }
+  if (ml && req.method === "DELETE") {
+    const l = db.lancamentos.find((x) => x.id === ml[1]);
+    db.lancamentos = db.lancamentos.filter((x) => x.id !== ml[1]);
+    // apagou da conta o lançamento de um pedido marcado na conta e não sobrou nenhum: o pedido volta pro "em aberto" do caixa
+    // (antes ficava "na conta" sem estar em conta nenhuma: sumia do caixa e a Gestão ainda contava como vendido na conta)
+    const ped = l && l.pedidoId && db.pedidos.find((x) => x.id === l.pedidoId);
+    if (ped && ped.status === "conta" && !db.lancamentos.some((x) => x.pedidoId === ped.id)) { ped.status = "aguardando"; ped.clienteId = null; delete ped.clienteIds; ped.pagamento = null; delete ped.contaAuto; }
+    await gravar(); return json(res, 200, { ok: true });
+  }
   if (p === "/api/pagamentos" && req.method === "POST") {
     const b = await corpo(req), x = { id: uid("p"), chave: String(b.chave || ""), mes: String(b.mes || ""), valor: cents(b.valor), refeicoes: Number(b.refeicoes) || 0, forma: String(b.forma || ""), data: String(b.data || hoje()), obs: String(b.obs || "").slice(0, 200) };
     const existe = db.clientes.some((c) => (c.empresa ? "e:" + c.empresa : "c:" + c.id) === x.chave);
@@ -636,7 +666,10 @@ async function tratar(req, res) {
     const mAberta = num > 10000 && num <= 19999 && db.pedidos.some((x) => x.tipo === "balanca" && x.dia === dia && x.numero === num && x.status === "aguardando");
     if (!Number.isInteger(num) || num < 1 || (num > 9999 && !mAberta) || !(valor > 0 && valor <= (nomeB ? 300 : 2000)) || !(peso >= 0 && peso <= 30000)) return json(res, 400, { erro: "comanda, valor ou peso inválido" });
     let ped = db.pedidos.find((x) => x.tipo === "balanca" && x.dia === dia && x.numero === num && x.status === "aguardando");
-    if (ped && uidl && ped.itens.some((c) => c.uid === uidl)) return json(res, 200, ped); // reenvio do mesmo lançamento: não soma duas vezes
+    if (uidl) { // reenvio do mesmo lançamento (Wi-Fi caiu na resposta): não soma 2x, nem abre comanda nova se a 1ª já foi paga
+      const ja = db.pedidos.find((x) => x.tipo === "balanca" && x.dia === dia && x.numero === num && x.itens.some((c) => c.uid === uidl));
+      if (ja) return json(res, 200, ja);
+    }
     if (!ped) { ped = { id: Date.now() + "-c" + num, tipo: "balanca", dia, numero: num, nome: "", quando: Date.now(), itens: [], unidades: 0, valor: 0, status: "aguardando", pagamento: null }; db.pedidos.push(ped); }
     ped.itens.push(nomeB ? { iid: uid("i"), qtd: 1, nome: nomeB, preco: valor, tipo: b.tipo === "doce" ? "doce" : "bebida", grupos: [], obs: "", hora: Date.now(), uid: uidl || undefined }
       : { iid: uid("i"), qtd: 1, nome: "Prato por quilo" + (peso ? " " + peso + " g" : "") + " (R$ " + valor.toFixed(2).replace(".", ",") + ")", preco: valor, peso: peso || undefined, grupos: [], obs: "", hora: Date.now(), uid: uidl || undefined });
