@@ -724,7 +724,8 @@ function card(p) {
     : p.status === "aguardando"
     ? (gs.length ? `<p class="pg">Já recebido: ${gs.map(fmt).join(" + ")} - <b>falta ${brl(falta)}</b></p>${estornos}` : "") + `<div class="acoes"><button class="btn ok" data-a="receber" data-id="${p.id}">${gs.length ? "Receber o resto " + brl(falta) : "Receber " + brl(p.valor)}</button><button class="btn mais-op" data-a="menuPed" data-id="${p.id}" title="Mais opções">⋯</button></div>`
     : p.status === "conta" ? `<p class="pg">Na conta de <b>${esc((p.clienteIds && p.clienteIds.length ? p.clienteIds : [p.clienteId]).map(nomeCli).join(" + "))}</b>${pagsDe(p).length ? " - resto de <b>" + brl(valConta(p)) + "</b> (o resto já foi pago)" : ""} <button class="btn ruim" data-a="desfazConta" data-id="${p.id}">Desfazer</button></p>`
-    : p.status === "pago" ? `<p class="pg">Pago: ${gs.map(fmt).join(" + ")} às ${hora(p.pagoEm || p.quando)}</p>${estornos} <button class="btn ruim mini" data-a="cancelar" data-id="${p.id}">Cancelar/estornar tudo</button>` : "";
+    // pago numa forma só: 1 botão (estornar essa forma = cancelar o pedido). Em 2+ formas: dá pra estornar cada uma, ou tudo
+    : p.status === "pago" ? `<p class="pg">Pago: ${gs.map(fmt).join(" + ")} às ${hora(p.pagoEm || p.quando)}</p>${gs.length > 1 ? estornos + " " : ""}<button class="btn ruim mini" data-a="cancelar" data-id="${p.id}">${gs.length > 1 ? "Cancelar/estornar tudo" : "Cancelar/estornar"}</button>` : "";
   const rec = p.status === "aguardando" && p.itens.some((c) => !c.pago);
   return `<article class="card st-${p.status}${par ? " parado" : ""}${rec ? " clicavel" : ""}${juntar.has(p.id) ? " marcado" : ""}"${rec ? ` data-rec="${p.id}"` : ""}><div class="topo"><b class="num">${curto(p)}</b>${p.numeroLocal && p.numeroLocal !== p.numero ? `<small>ticket ${p.numeroLocal}</small>` : ""}<span class="nome">${esc(p.nome || "Sem nome")}${ehMarm(p) ? ' <span class="mm-tag">marmitex</span>' : ""}${ehDel(p) ? ' <span class="mm-tag dl-tag">delivery</span>' : ""}</span>${juntar.has(p.id) ? `<span class="jt-badge">🔗 juntar</span>` : ""}${par ? `<span class="par-badge">⏰ há ${fmtMin(minP)}</span>` : ""}<span class="hora">${hora(p.quando)}</span><b class="valor">${brl(p.valor)}</b></div>
     ${ehDel(p) ? infoDel(p) : ""}<ul>${p.itens.map(linha).join("")}</ul>${rodape}</article>`;
@@ -741,7 +742,7 @@ function fechamento() {
   const porC = Object.keys(PAGFORMAS).map((f) => [f, round2(soma(CP.filter((g) => g.forma === f), (g) => g.valor))]).filter(([, v]) => v > 0);
   const linhaR = (ic, t, v, sub, cls) => `<div class="fx-li ${cls || ""}"><span class="fx-ic">${ic}</span><div><b>${t}</b>${sub ? `<small>${sub}</small>` : ""}</div><strong>${v}</strong></div>`;
   return `<div class="fx-hero"><div class="fx-total"><small>Total recebido ${qd}</small><b>${brl(totV + totC)}</b><span>vendas ${brl(totV)}${totC ? " + contas " + brl(totC) : ""}</span>
-      <div class="fx-acoes"><button class="btn" data-a="zapResumo">📲 WhatsApp</button><button class="btn" data-a="copiaResumo">📋 Copiar resumo</button><button class="btn" data-a="csv">⬇ CSV</button><button class="btn" data-a="backup">💾 Backup</button></div></div>
+      <div class="fx-acoes"><button class="btn" data-a="zapResumo" title="Abre o WhatsApp com o resumo e também deixa ele copiado">📲 Enviar resumo</button><button class="btn" data-a="csv">⬇ CSV</button><button class="btn" data-a="backup">💾 Backup</button></div></div>
     <div class="ct-stats fx-mini"><div class="ok"><small>Pedidos pagos</small><b>${pagos}</b><span>ticket médio ${brl(pagos ? totV / pagos : 0)}</span></div><div class="${ab.length ? "dev" : ""}"><small>Em aberto</small><b>${ab.length}</b><span>${brl(vAb)} a receber</span></div>
       <div><small>Na conta</small><b>${brl(soma(conta, valConta))}</b><span>${conta.length} pedido(s)</span></div><div class="${canc || est.length ? "dev" : ""}"><small>Cancelados</small><b>${canc}</b><span>${est.length ? est.length + " estorno(s) · " + brl(soma(est, (x) => x.valor)) : "nenhum estorno"}</span></div></div></div>
     <div class="fx-cols"><div class="gv-box"><h4>Por forma de pagamento</h4>${formas.map((x) => `<div class="fx-fp"><span class="fx-ic">${FIC[x.f] || "💰"}</span><div class="fx-fp-n"><b>${FORMAS[x.f]}</b><small>${x.n} recebimento(s)</small></div><div class="fx-bar"><i style="width:${(x.v / mx) * 100}%"></i></div><strong>${brl(x.v)}</strong><em>${pct(x.v, totV)}</em></div>`).join("") || `<p class="cel-vazio">Nenhum recebimento ${qd}.</p>`}</div>
@@ -1020,7 +1021,6 @@ function modalConta(k) { // pagamento da conta: resumo, pagamentos do mês e reg
   abrirModal(`<div class="cm-corpo pg-modal"><h2>${esc(emp || (ind ? ind.nome : "Conta"))}<small>${emp ? "Empresa (paga pelos funcionários)" : (ind && ind.pagamento === "depois") ? "Paga depois" : "Paga antecipado"} · ${nomeMes(mes)}</small></h2>
     <div class="pg-stats"><div><small>Anterior</small><b>${brl(r.ant)}</b></div><div><small>Consumo</small><b>${brl(r.totalMes)}</b></div><div class="ok"><small>Pago</small><b>${brl(r.pago)}</b></div><div class="${cls}"><small>${r.saldo < -0.009 ? "Crédito" : "A pagar"}</small><b>${brl(Math.abs(r.saldo))}</b></div></div>
     ${emp ? `<p class="pg-func">${r.cs.filter((c) => resumoCli(c).total).map((c) => `<span class="ac-chip">${esc(c.nome)} ${brl(resumoCli(c).total)}</span>`).join("") || "Nenhum consumo no mês."}</p>` : ""}
-    <div class="pg-links"><button class="btn mini" data-a="extrato" data-k="${esc(k)}">🖨 Imprimir extrato</button>${tel ? `<button class="btn mini" data-a="cobrarZap" data-k="${esc(k)}">📲 Mandar resumo no WhatsApp</button>` : ""}<button class="btn mini" data-a="envio" data-k="${esc(k)}">${contas.enviados[k] ? "✓ Enviado (desmarcar)" : "📤 Marcar como enviado"}</button></div>
     ${r.ps.length ? `<h4>Pagamentos do mês</h4><div class="pg-lista">${r.ps.map((p) => `<div class="pg-row"><span>${dataBR(p.data).slice(0, 5)}</span><span>${PAGFORMAS[p.forma] || esc(p.forma || "")}${p.refeicoes ? " · " + String(p.refeicoes).replace(".", ",") + " ref." : ""}${p.obs ? `<small>${esc(p.obs)}</small>` : ""}</span><b>${brl(p.valor)}</b><button class="btn ruim mini" data-a="delPag" data-id="${p.id}" title="Apagar">✕</button></div>`).join("")}</div>` : ""}
     <h4>Registrar pagamento</h4>
     <div class="pg-valor"><span>R$</span><input id="p-valor" inputmode="decimal" placeholder="0,00" value="${r.saldo > 0.009 ? r.saldo.toFixed(2).replace(".", ",") : ""}">${r.saldo > 0.009 ? `<button class="btn mini" data-a="pgSaldo" data-v="${r.saldo.toFixed(2).replace(".", ",")}">Tudo: ${brl(r.saldo)}</button>` : ""}</div>
@@ -1959,7 +1959,7 @@ document.addEventListener("click", async (e) => {
   } else if (a === "zapResumo" || a === "copiaResumo") {
     let g = null; if (per.modo === "dia" && dia === new Date().toLocaleDateString("en-CA")) { try { g = await (await aut("/api/gaveta")).json(); } catch (err) {} }
     const txt = textoFechamento(g);
-    if (a === "zapResumo") window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank");
+    if (a === "zapResumo") { try { await copiarTexto(txt); } catch (err) {} window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank"); } // e deixa copiado (pra colar em outro lugar)
     else { const ant = t.textContent; await copiarTexto(txt); t.textContent = "✓ Copiado!"; setTimeout(() => (t.textContent = ant), 1800); }
   }
 });
@@ -1990,7 +1990,6 @@ function menuPed(id) {
       ${pode ? `<div class="mp-bloco"><b>➜ Pôr numa comanda</b><small>A pessoa também pesou? O pedido entra na comanda e paga tudo junto no final.</small>
         ${cs.length ? `<div class="mp-chips">${[...sugest, ...cs.filter((c) => !sugest.includes(c))].slice(0, 12).map((c) => `<button class="btn mp-chip ${sugest.includes(c) ? "casa" : ""}" data-a="pcFazer" data-id="${id}" data-n="${c.numero}">${curto(c)}${c.nome ? " · " + esc(c.nome) : ""}</button>`).join("")}</div>` : ""}
         <div class="mp-num"><input id="pc-num" inputmode="numeric" maxlength="4" placeholder="Nº da comanda"><button class="btn ok" data-a="pcDigitado" data-id="${id}">Pôr</button></div></div>` : ""}
-      <button class="btn menu-op" data-a="juntaSel" data-id="${id}">${j ? "✓ Desmarcar do juntar" : "🔗 Juntar com outra (pagar várias juntas)"}</button>
       <button class="btn menu-op" data-a="marcar" data-id="${id}">📒 ${gs.length ? "Marcar o resto na conta" : "Marcar na conta de um cliente"}</button>
       <button class="btn menu-op ruim" data-a="cancelar" data-id="${id}">✕ Cancelar ${p.tipo === "balanca" ? "comanda" : "pedido"}</button>
     </div><div class="acoes"><button class="btn" data-a="fechar">Fechar</button></div>`);
