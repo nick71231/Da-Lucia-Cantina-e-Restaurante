@@ -442,8 +442,9 @@ async function tratar(req, res) {
     req.papel = papel;
   }
   if (p === "/api/pedidos" && req.method === "GET") {
-    const dia = url.searchParams.get("dia");
-    return json(res, 200, dia ? db.pedidos.filter((x) => x.dia === dia) : db.pedidos);
+    const dia = url.searchParams.get("dia"), tipo = url.searchParams.get("tipo"), st = url.searchParams.get("status");
+    // ?tipo=balanca&status=aguardando: só as comandas abertas (o celular do garçom baixa bem menos que o dia inteiro)
+    return json(res, 200, db.pedidos.filter((x) => (!dia || x.dia === dia) && (!tipo || (x.tipo || "totem") === tipo) && (!st || x.status === st)));
   }
   if (p === "/api/pedidos" && req.method === "POST") {           // totem manda o pedido
     const b = await corpo(req), base = limparPedido(b), uidp = String(b.uid || "").slice(0, 80), com = b.comanda ? Number(b.comanda) : 0;

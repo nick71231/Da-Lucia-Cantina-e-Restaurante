@@ -233,7 +233,8 @@ async function carregar() {
   try { await carregar0(); } finally { carregandoG = false; }
 }
 async function carregar0() {
-  try { const r = await aut("/api/pedidos?dia=" + hoje(), { limite: 8000 }); if (!r.ok) throw 0; const novos = (await r.json()).filter((p) => p.tipo === "balanca"); if (enviando > 0) return; pedidos = novos; offline = false; otim = {}; }
+  try { const r = await aut("/api/pedidos?dia=" + hoje() + "&tipo=balanca&status=aguardando", { limite: 8000 }); if (!r.ok) throw 0; // só as comandas abertas: bem mais leve no celular
+ const novos = (await r.json()).filter((p) => p.tipo === "balanca"); if (enviando > 0) return; pedidos = novos; offline = false; otim = {}; }
   catch (e) { offline = true; }
   status(); desenhar(false);
 }
