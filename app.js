@@ -906,7 +906,11 @@ document.addEventListener("change", (e) => {
   if (d.restore && e.target.files[0]) {
     const fr = new FileReader();
     fr.onload = () => { try { const b = JSON.parse(fr.result); if (b.app !== "totem-da-lucia") throw 0;
-      Object.entries(b.dados).forEach(([k, v]) => localStorage.setItem(k, v)); alert("Backup restaurado! O totem vai recarregar."); location.reload(); }
+      Object.entries(b.dados).forEach(([k, v]) => localStorage.setItem(k, v));
+      // marca como "mudança deste aparelho ainda não enviada": ao recarregar, ele manda pro servidor (antes o servidor podia
+      // devolver a configuração velha por cima e desfazer a restauração; e o site/caixa nunca ficavam sabendo)
+      localStorage.setItem("cfgSujo", "1"); localStorage.setItem("cfgT", String(Date.now()));
+      alert("Backup restaurado! O totem vai recarregar."); location.reload(); }
       catch (err) { toast("Esse arquivo não é um backup válido."); } };
     fr.readAsText(e.target.files[0]);
   }
