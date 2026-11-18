@@ -2062,6 +2062,7 @@ function modalCliente(id, empPad) {
     <label class="cf" id="cf-preco" ${e.modo === "refeicao" ? "" : "hidden"}>Valor de cada refeição<input id="c-preco" inputmode="decimal" placeholder="Ex.: 22,00" value="${e.valorRefeicao ? String(e.valorRefeicao).replace(".", ",") : ""}"></label>
     <div class="cf" id="cf-pag" ${e.empresa ? "hidden" : ""}>Pagamento<input type="hidden" id="c-pag" value="${e.pagamento === "depois" ? "depois" : "antecipado"}"><div class="ct-seg cf-seg" data-campo="c-pag"><button class="btn ${e.pagamento !== "depois" ? "on" : ""}" data-a="cfSeg" data-v="antecipado">Paga antecipado</button><button class="btn ${e.pagamento === "depois" ? "on" : ""}" data-a="cfSeg" data-v="depois">Paga depois (fiado)</button></div></div>
     <label class="cf">Telefone / WhatsApp<input id="c-tel" inputmode="tel" value="${esc(e.telefone || "")}" placeholder="(12) 99999-9999"></label>
+    <label class="cf">Endereço de entrega <small>(o robô do WhatsApp usa na marmita, sem perguntar toda vez)</small><input id="c-end" value="${esc(e.endereco || "")}" placeholder="Ex.: Rua das Flores, 25, Centro, apto 3" maxlength="200"></label>
     ${id ? `<button class="btn cf-arq" data-a="cliJuntar" data-c="${id}">🔀 Cadastro repetido? Juntar com outro cliente</button><button class="btn ruim cf-arq" data-a="cliArq" data-c="${id}">🗃 Arquivar cliente</button>` : ""}</div>
     <div class="acoes cm-rodape"><button class="btn" data-a="fechar">Cancelar</button><button class="btn ok" data-a="cliSalvar" data-c="${id || ""}">${id ? "Salvar" : "Adicionar cliente"}</button></div>`);
   const n = $("#c-nome"); if (n && !id) setTimeout(() => n.focus(), 50);
@@ -2082,7 +2083,7 @@ document.addEventListener("click", async (e) => {
   else if (a === "cfSeg") { const box = t.closest(".cf-seg"); box.querySelectorAll(".btn").forEach((b) => b.classList.toggle("on", b === t)); $("#" + box.dataset.campo).value = d.v; if (box.dataset.campo === "c-modo") $("#cf-preco").hidden = d.v !== "refeicao"; }
   else if (a === "cliSalvar") {
     const nome = $("#c-nome").value.trim(); if (!nome) return alert("Digite o nome.");
-    const b = { nome, empresa: $("#c-emp").value.trim(), modo: $("#c-modo").value, valorRefeicao: num("#c-preco") || 0, pagamento: $("#c-pag").value, telefone: $("#c-tel").value.trim() };
+    const b = { nome, empresa: $("#c-emp").value.trim(), modo: $("#c-modo").value, valorRefeicao: num("#c-preco") || 0, pagamento: $("#c-pag").value, telefone: $("#c-tel").value.trim(), endereco: ($("#c-end") || { value: "" }).value.trim() };
     if (b.modo === "refeicao" && !(b.valorRefeicao > 0)) return alert("Informe o valor de cada refeição.");
     try { await api(d.c ? "PUT" : "POST", "/api/clientes" + (d.c ? "/" + d.c : ""), b); } catch (err) { return; }
     $("#modal").hidden = true; await carregarClientes(); desenharClientes(); avisoImp(d.c ? "✓ Cliente salvo" : "✓ Cliente adicionado", "ok");

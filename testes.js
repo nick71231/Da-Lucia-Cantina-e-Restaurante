@@ -59,6 +59,13 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   console.log("\nClientes, contas e empresas");
   const cli = await req("POST", "/api/clientes", { nome: "Elza", modo: "refeicao", valorRefeicao: 24 });
   const cli2 = await req("POST", "/api/clientes", { nome: "João", empresa: "Acme" });
+  { // endereço de entrega no cadastro (o robô do WhatsApp usa na marmita)
+    const cm = await req("POST", "/api/clientes", { nome: "TESTE MARMITA", endereco: "  Rua das Flores, 25, Centro  " });
+    t(cm.j.endereco === "Rua das Flores, 25, Centro", "cliente novo guarda o endereço");
+    const up = await req("PUT", "/api/clientes/" + cm.j.id, { endereco: "Rua B, 9, Vila Nova, apto 3" });
+    t(up.s === 200 && (await req("GET", "/api/clientes")).j.find((c) => c.id === cm.j.id).endereco === "Rua B, 9, Vila Nova, apto 3", "editar o cliente troca o endereço");
+    await req("PUT", "/api/clientes/" + cm.j.id, { ativo: false });
+  }
   t((await req("POST", "/api/lancamentos", { clienteId: cli.j.id, dia: hoje, qtd: 2, valor: 48 })).s === 200, "lançamento válido");
   t((await req("POST", "/api/lancamentos", { clienteId: "inexistente", dia: hoje, valor: 10 })).s === 400, "lançamento p/ cliente inexistente é recusado");
   t((await req("POST", "/api/pagamentos", { chave: "c:" + cli.j.id, mes: hoje.slice(0, 7), valor: 100, forma: "pix", data: hoje })).s === 200, "pagamento antecipado");

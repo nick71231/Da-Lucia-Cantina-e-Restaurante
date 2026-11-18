@@ -487,7 +487,7 @@ async function tratar(req, res) {
   if (p === "/api/clientes" && req.method === "POST") {
     const b = await corpo(req); if (!String(b.nome || "").trim()) return json(res, 400, { erro: "nome" });
     const uc = String(b.uid || "").slice(0, 80); if (uc) { const ja = db.clientes.find((x) => x.uid === uc); if (ja) return json(res, 200, ja); } // clique duplo: não cadastra 2x
-    const c = { id: uid("c"), uid: uc || undefined, nome: String(b.nome).trim(), empresa: String(b.empresa || "").trim(), modo: b.modo === "refeicao" ? "refeicao" : "valor", valorRefeicao: Number(b.valorRefeicao) || 0, telefone: String(b.telefone || "").trim(), pagamento: b.pagamento === "depois" ? "depois" : "antecipado", ativo: true };
+    const c = { id: uid("c"), uid: uc || undefined, nome: String(b.nome).trim(), empresa: String(b.empresa || "").trim(), modo: b.modo === "refeicao" ? "refeicao" : "valor", valorRefeicao: Number(b.valorRefeicao) || 0, telefone: String(b.telefone || "").trim(), endereco: String(b.endereco || "").trim().slice(0, 200) || undefined, pagamento: b.pagamento === "depois" ? "depois" : "antecipado", ativo: true };
     db.clientes.push(c); await gravar(); return json(res, 200, c);
   }
   const mc = p.match(/^\/api\/clientes\/([^/]+)$/);
@@ -495,6 +495,7 @@ async function tratar(req, res) {
     const c = db.clientes.find((x) => x.id === mc[1]); if (!c) return json(res, 404, { erro: "nao achei" });
     const b = await corpo(req);
     ["nome", "empresa", "telefone"].forEach((k) => { if (b[k] !== undefined) c[k] = String(b[k]).trim(); });
+    if (b.endereco !== undefined) c.endereco = String(b.endereco).trim().slice(0, 200); // endereço de entrega (o robô do WhatsApp usa pro cliente de marmita)
     if (b.modo) c.modo = b.modo === "refeicao" ? "refeicao" : "valor";
     if (b.valorRefeicao !== undefined) c.valorRefeicao = Number(b.valorRefeicao) || 0;
     if (b.pagamento) c.pagamento = b.pagamento === "depois" ? "depois" : "antecipado";
