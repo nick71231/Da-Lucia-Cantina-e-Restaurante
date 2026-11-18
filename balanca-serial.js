@@ -8,7 +8,7 @@
   const CFG_PADRAO = { baud: 9600, bits: 8, par: "N", stop: 1, pedido: "05", intervalo: 400, usar: "auto" }; // pedido "05" = ENQ
   const ler = () => { try { return { ...CFG_PADRAO, ...JSON.parse(localStorage.getItem("balSerial") || "{}") }; } catch (e) { return { ...CFG_PADRAO }; } };
   const salvar = (c) => { try { localStorage.setItem("balSerial", JSON.stringify(c)); } catch (e) {} };
-  let C = ler(), est = { estado: "desconectada", detalhe: "" }, buf = [], log = [], ultimo = null, iguais = 0, trava = false, preenchi = null, tPed = 0, ultChegou = 0;
+  let C = ler(), est = { estado: "desconectada", detalhe: "" }, buf = [], log = [], ultimo = null, iguais = 0, trava = null, preenchi = null, tPed = 0, ultChegou = 0;
 
   // ---------- selo no topo ----------
   const selo = document.createElement("button");
@@ -72,14 +72,17 @@
   function aplicar(r) {
     const kg = r.peso, igual = ultimo && ultimo.peso === kg && ultimo.total === r.total;
     iguais = igual ? iguais + 1 : 0; ultimo = r;
-    if (kg != null && kg < 0.005) { trava = false; preenchi = null; return; } // prato saiu da balança: libera a próxima
+    if (kg != null && kg < 0.005) { trava = null; preenchi = null; return; } // prato saiu da balança: libera a próxima
     if (r.instavel || iguais < 2) return; // espera parar (3 leituras iguais)
-    if (typeof ultTecla !== "undefined" && Date.now() - ultTecla < 4000) return; // a pessoa está digitando: não mexe na tela agora
-    if (cents && !(preenchi && preenchi.c === cents)) return; // valor digitado na mão: a balança não passa por cima
-    // lançou e limpou a tela com o mesmo prato ainda em cima: não preenche de novo até tirar o prato
-    if (preenchi && cents === "" && peso === "") { trava = true; preenchi = null; }
-    if (trava) return;
     const g = kg != null ? String(Math.round(kg * 1000)) : "", c = r.total > 0 ? String(Math.round(r.total * 100)) : "";
+    // trocou o prato sem a balança chegar a zero (peso parado, 10 g ou mais diferente do que foi lançado): libera
+    const outroPrato = (x) => (g ? Math.abs(+g - +x.g) >= 10 : c !== x.c);
+    if (trava && outroPrato(trava)) trava = null;
+    if (typeof ultTecla !== "undefined" && Date.now() - ultTecla < 4000) return; // a pessoa está digitando: não mexe na tela agora
+    if (cents && !(preenchi && preenchi.v === cents)) return; // valor digitado na mão: a balança não passa por cima
+    // lançou e limpou a tela com o mesmo prato ainda em cima: não preenche de novo até tirar o prato
+    if (preenchi && cents === "" && peso === "") { trava = preenchi; preenchi = null; if (!outroPrato(trava)) return; trava = null; }
+    if (trava) return;
     if (preenchi && preenchi.g === g && preenchi.c === c) return;
     let mudou = false;
     if (g && cfg().usarPeso) { peso = g; mudou = true; }
@@ -88,7 +91,7 @@
       if (g && typeof toast === "function" && Date.now() - avisouKg > 15000) { avisouKg = Date.now(); toast("Balança leu " + fmtKg(kg) + ": preencha o Preço por kg em ⚙ Ajustes"); }
       return;
     }
-    preenchi = { g, c };
+    preenchi = { g, c, v: cents };
     if (campo === "comanda" && !comanda) { /* deixa a pessoa digitar a comanda; o valor já está pronto */ }
     tela();
   }
