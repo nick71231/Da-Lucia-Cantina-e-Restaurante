@@ -5,7 +5,7 @@
 // números ("PESO 0,456 kg  R$ 12,34"). A janela "Diagnóstico" (toque no selo da balança) mostra o que chegou cru.
 (function () {
   const N = window.BalancaNativa; if (!N) return;
-  const CFG_PADRAO = { baud: 9600, bits: 8, par: "N", stop: 1, pedido: "05", intervalo: 400, usar: "auto" }; // pedido "05" = ENQ
+  const CFG_PADRAO = { baud: 9600, bits: 8, par: "N", stop: 1, pedido: "05", intervalo: 300, usar: "auto" }; // pedido "05" = ENQ
   const ler = () => { try { return { ...CFG_PADRAO, ...JSON.parse(localStorage.getItem("balSerial") || "{}") }; } catch (e) { return { ...CFG_PADRAO }; } };
   const salvar = (c) => { try { localStorage.setItem("balSerial", JSON.stringify(c)); } catch (e) {} };
   let C = ler(), est = { estado: "desconectada", detalhe: "" }, buf = [], log = [], ultimo = null, iguais = 0, trava = null, preenchi = null, tPed = 0, ultChegou = 0;
@@ -75,12 +75,12 @@
     iguais = igual ? iguais + 1 : 0; ultimo = r;
     if (kg != null && kg < 0.005) { trava = null; preenchi = null; return; } // prato saiu da balança (zero ou negativo, com tara): libera a próxima
     if (kg != null && kg > 40) return; // leitura absurda (mais do que a balança aguenta): ignora
-    if (r.instavel || iguais < 2) return; // espera parar (3 leituras iguais)
+    if (r.instavel || iguais < 1) return; // espera parar (2 leituras iguais seguidas)
     const g = kg != null ? String(Math.round(kg * 1000)) : "", c = r.total > 0 ? String(Math.round(r.total * 100)) : "";
     // trocou o prato sem a balança chegar a zero (peso parado, 10 g ou mais diferente do que foi lançado): libera
     const outroPrato = (x) => (g ? Math.abs(+g - +x.g) >= 10 : c !== x.c);
     if (trava && outroPrato(trava)) trava = null;
-    if (typeof ultTecla !== "undefined" && Date.now() - ultTecla < 4000) return; // a pessoa está digitando: não mexe na tela agora
+    if (typeof ultTecla !== "undefined" && Date.now() - ultTecla < 4000 && campo !== "comanda") return; // digitando valor/peso na mão: não mexe agora (digitando a comanda pode: o valor já vai aparecendo)
     if (cents && !(preenchi && preenchi.v === cents)) return; // valor digitado na mão: a balança não passa por cima
     // lançou e limpou a tela com o mesmo prato ainda em cima: não preenche de novo até tirar o prato
     if (preenchi && cents === "" && peso === "") { trava = preenchi; preenchi = null; if (!outroPrato(trava)) return; trava = null; }
@@ -99,7 +99,7 @@
   }
   // pede o peso de tempos em tempos (modo sob demanda)
   // (se a balança não responde há 10 s, pede só a cada 3 s: cada pedido trava a página um instante dentro do app)
-  setInterval(() => { const calada = Date.now() - ultChegou > 10000, iv = calada ? 3000 : C.intervalo; if (est.estado === "conectada" && C.pedido && Date.now() - tPed >= iv) { tPed = Date.now(); N.enviar(C.pedido); } }, 250);
+  setInterval(() => { const calada = Date.now() - ultChegou > 10000, iv = calada ? 3000 : Math.min(C.intervalo || 300, 300); if (est.estado === "conectada" && C.pedido && Date.now() - tPed >= iv) { tPed = Date.now(); N.enviar(C.pedido); } }, 100);
   setInterval(pinta, 1000);
   try { est = JSON.parse(N.estado()); } catch (e) {}
   if (est.estado !== "conectada") { if (C.baud !== 9600 || C.par !== "N" || C.bits !== 8 || C.stop !== 1) N.configurar(C.baud, C.bits, C.par, C.stop); else N.conectar(); }

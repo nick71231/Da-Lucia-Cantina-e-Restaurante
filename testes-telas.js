@@ -97,6 +97,12 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
   const c41 = (await api("GET", "/api/pedidos?dia=" + hojeISO, undefined, bl)).find((p) => p.tipo === "balanca" && p.numero === 41);
   t(c41 && c41.nome === "Joana" && c41.valor === 25, "balança registra a comanda 41 (R$ 25,00) com o nome Joana");
   t(texto(bw, "#lista").includes("Joana"), "o nome aparece no cartão da comanda");
+  // valor já veio da balança: digitou a comanda e o botão já é "Lançar" (sem passar pelo "Próximo: valor")
+  bw.eval('cents = "1850"; tela();'); for (const k of ["4", "2"]) await toca(bw, `[data-k="${k}"]`);
+  t(/Lançar R\$\s?18,50 na comanda 42/.test(texto(bw, "#reg")), "com valor da balança, o botão vira 'Lançar R$ 18,50 na comanda 42'");
+  await clica(bw, "#reg"); await dorme(400);
+  const c42 = (await api("GET", "/api/pedidos?dia=" + hojeISO, undefined, bl)).find((p) => p.tipo === "balanca" && p.numero === 42);
+  t(c42 && c42.valor === 18.5, "um toque só lança R$ 18,50 na comanda 42");
   // no app Android o confirm() do navegador não aparece e responde "não" sozinho: o ✕ tem que usar a janela da própria página
   bw.confirm = () => false;
   const extra = (await api("POST", "/api/balanca", { comanda: 41, valor: 7, uid: "s-apagar" }, bl)); await bw.carregar(true); await dorme(300);

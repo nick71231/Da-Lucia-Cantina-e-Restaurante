@@ -407,8 +407,10 @@ function tela() {
     <button class="campo ${campo === "valor" ? "on" : ""}" data-c="valor"><small>Valor da balança</small><b>${calc ? "≈ " : ""}${brl(v)}</b></button>
     ${c.usarPeso ? `<button class="campo ${campo === "peso" ? "on" : ""}" data-c="peso"><small>Peso (g)</small><b>${peso || "-"}</b></button>` : ""}`;
   $("#resumo").innerHTML = resumo(); atualizarAviso();
-  const reg = $("#reg"); reg.classList.toggle("prox", campo === "comanda");
-  reg.textContent = campo === "comanda" ? "Próximo: valor →" : "Registrar na comanda";
+  // já tem valor (da balança ou digitado) e a comanda foi digitada: o botão já lança, sem passar pelo "Próximo"
+  const direto = campo === "comanda" && n > 0 && v > 0;
+  const reg = $("#reg"); reg.classList.toggle("prox", campo === "comanda" && !direto);
+  reg.textContent = direto ? "✓ Lançar " + brl(v) + " na comanda " + numTxt(n) : campo === "comanda" ? "Próximo: valor →" : "Registrar na comanda";
   reg.disabled = campo === "comanda" ? !(n > 0) : !(n > 0 && v > 0);
   $("#som").textContent = c.som ? "🔔" : "🔕"; listarJa();
 }
@@ -419,7 +421,7 @@ function digitar(k) {
   if (campo === "comanda") { if (parseInt(comanda || "0", 10) > 9999) comanda = ""; comanda = tira(comanda, 4); } else if (campo === "valor") cents = tira(cents, 7); else peso = tira(peso, 5);
   tela();
 }
-const acao = () => { if (campo === "comanda") { if (parseInt(comanda || "0", 10) > 0) { campo = "valor"; tela(); } } else registrar(); };
+const acao = () => { const n = parseInt(comanda || "0", 10); if (campo === "comanda" && !(n > 0 && valorAtual() > 0)) { if (n > 0) { campo = "valor"; tela(); } } else registrar(); };
 
 async function registrar() {
   const n = parseInt(comanda || "0", 10), v = valorAtual(), c = cfg(); if (!(n > 0 && v > 0) || enviando) return;
@@ -674,6 +676,6 @@ if (!token()) mostrarLogin();
 tela(); status(); carregar(true); carregarBebidas(); setInterval(carregar, 4000); setInterval(carregarBebidas, 60000); setInterval(enviarFila, 5000);
 </script>
 <script src="caixa-tema.js"></script>
-<script src="balanca-serial.js?v=6"></script>
+<script src="balanca-serial.js?v=7"></script>
 </body>
 </html>

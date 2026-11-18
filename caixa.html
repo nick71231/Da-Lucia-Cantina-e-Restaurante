@@ -229,6 +229,8 @@ body.tec-on .caixa-modal:has(#lista-cli) { max-height: calc(100vh - var(--tec-h,
 .eb-cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 4px; } .eb-cab b { font: 700 1.1rem Georgia, serif; color: #6b4a38; }
 .ent-boys { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
 .eb { background: #fff; border: 2px solid #ece4d9; border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; } .eb.sem { border-color: #f0b46a; background: #fff8e8; }
+.eb.eb-on { border-color: #c0392b; box-shadow: 0 0 0 3px #f6d5cf; } .eb-ver { min-height: 40px; font-weight: 700; } .eb-ver.on { background: #c0392b; color: #fff; }
+.eb-faixa { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #fff4e0; border: 2px solid #f0b46a; border-radius: 12px; padding: 10px 14px; margin: 10px 0; font-size: 1.05rem; } .eb-faixa .btn { margin-left: auto; }
 .eb-top { display: flex; align-items: center; gap: 8px; } .eb-top b { font-size: 1.15rem; } .eb-top span { color: #8a7468; font-size: .85rem; } .eb-top .btn { margin-left: auto; min-height: 36px; padding: 2px 10px; }
 .eb-l { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; } .eb-l span { color: #6b5a50; } .eb-l b { font-size: 1.05rem; white-space: nowrap; }
 .eb-l.din b, .eb-l.car b { font-size: 1.45rem; } .eb-l.din b { color: #157a3e; } .eb-l.car b { color: #1d4ed8; }
@@ -1174,7 +1176,7 @@ function pintarPeriodo(h) { // a barra de datas fica quieta (não some enquanto 
   if (h !== ultCorpo) { ultCorpo = h; $("#per-corpo").innerHTML = h; }
 }
 // ===== FECHAMENTO DAS ENTREGAS (pedidos do site): quanto o motoboy traz em dinheiro, quanto passou no cartão, Pix e taxas =====
-let entFil = "entrega";
+let entFil = "entrega", entBoy = ""; // entBoy: mostrando só as entregas desse motoboy ("__sem" = sem motoboy marcado)
 const formaEnt = (p) => (p.pagPrevisto === "cartao_entrega" ? "cartao" : p.pagPrevisto || p.pagamento || "");
 const taxaEnt = (p) => round2(soma(p.itens.filter((c) => c.tipo === "taxa"), (c) => c.preco * (c.qtd || 1)));
 const trocoEnt = (p) => (formaEnt(p) === "dinheiro" && p.trocoPara > p.valor ? round2(p.trocoPara - p.valor) : 0);
@@ -1214,8 +1216,9 @@ function cardsBoys(r) {
   const ents = r.ds.filter((p) => p.status !== "cancelado" && (p.entrega || "entrega") === "entrega");
   if (!ents.length) return "";
   const nomes = [...new Set([...(boys || []), ...ents.map((p) => p.entregador).filter(Boolean)])];
-  const card = (nome, lista, sem) => { const c = contaBoy(lista); return `<div class="eb ${sem ? "sem" : ""}">
+  const card = (nome, lista, sem) => { const c = contaBoy(lista), k = sem ? "__sem" : nome, on = entBoy === k; return `<div class="eb ${sem ? "sem" : ""} ${on ? "eb-on" : ""}">
       <div class="eb-top"><b>${sem ? "⚠ Sem motoboy marcado" : "🛵 " + esc(nome)}</b><span>${c.n} ${c.n === 1 ? "entrega" : "entregas"}</span>${sem || !c.n ? "" : `<button class="btn" data-a="boyImp" data-k="${esc(nome)}">🖨</button>`}</div>
+      ${c.n ? `<button class="btn eb-ver ${on ? "on" : ""}" data-a="boyVer" data-k="${esc(k)}">${on ? "✕ Voltar a ver todas" : "📋 Ver as entregas " + (sem ? "sem motoboy" : "do " + esc(nome))}</button>` : ""}
       <div class="eb-l din"><span>💵 Tem que trazer em dinheiro</span><b>${brl(c.traz)}</b></div>
       ${c.troco ? `<small>${brl(c.din)} dos pedidos + ${brl(c.troco)} de troco que levou</small>` : ""}
       <div class="eb-l car"><span>💳 Tem que ter na maquininha</span><b>${brl(c.car)}</b></div>
@@ -1243,7 +1246,10 @@ function desenharEntregas() {
   const seg = [["entrega", "Entregas", nE], ["retirada", "Retiradas", nR], ["todos", "Todos", nE + nR]].map(([k, n, q]) => `<button class="btn ${entFil === k ? "on" : ""}" data-a="entFil" data-k="${k}">${n} <small>${q}</small></button>`).join("");
   const fp = (p) => { const f = formaEnt(p); return f === "dinheiro" ? `Dinheiro${p.trocoPara ? ` <small>troco p/ ${brl(p.trocoPara)} → levar ${brl(trocoEnt(p))}</small>` : " <small>sem troco</small>"}` : f === "cartao" ? (p.cartaoTipo === "refeicao" ? "Cartão refeição" : "Cartão " + (p.cartaoTipo === "debito" ? "débito" : p.cartaoTipo === "credito" ? "crédito" : "")) + " (maquininha)" : f === "pix" ? "Pix" : esc(f || "-"); };
   const chave = (p) => { const e = p.endereco || {}; return semAcento([nDel(p), `d${p.numero}`, p.numero, p.nome, p.telefone, e.rua, e.numero, e.bairro, e.complemento, p.entregador, formaEnt(p)].filter(Boolean).join(" ")); };
-  const linhas = r.sel.map((p) => { const e = p.endereco || {}; return `<tr data-busca="${esc(chave(p))}" class="${p.status === "aguardando" ? "ab" : ""}"><td><b>${nDel(p)}</b></td><td>${hora(p.quando)}</td><td>${esc(p.nome || "-")}<small>${p.entrega === "retirada" ? "retirada na loja" : esc([e.rua && e.rua + ", " + (e.numero || ""), e.bairro].filter(Boolean).join(" · "))}</small>${escolheBoy(p)}</td><td class="f-${formaEnt(p)}">${fp(p)}</td><td class="n">${taxaEnt(p) ? brl(taxaEnt(p)) : "-"}</td><td class="n"><b>${brl(p.valor)}</b>${p.status === "aguardando" ? '<small class="ab">em aberto no caixa</small>' : ""}</td></tr>`; }).join("");
+  const doBoy = (p) => !entBoy || entFil === "retirada" || (entBoy === "__sem" ? (p.entrega || "entrega") === "entrega" && !p.entregador : p.entregador === entBoy);
+  const vis = r.sel.filter(doBoy);
+  const faixaBoy = entBoy && entFil !== "retirada" ? `<div class="eb-faixa">📋 ${entBoy === "__sem" ? "Entregas <b>sem motoboy marcado</b>" : "Entregas do <b>" + esc(entBoy) + "</b>"} hoje: ${vis.length} · total ${brl(round2(soma(vis, (p) => p.valor)))} · taxas ${brl(round2(soma(vis, taxaEnt)))}<button class="btn" data-a="boyVer" data-k="">✕ Ver todas</button></div>` : "";
+  const linhas = vis.map((p) => { const e = p.endereco || {}; return `<tr data-busca="${esc(chave(p))}" class="${p.status === "aguardando" ? "ab" : ""}"><td><b>${nDel(p)}</b></td><td>${hora(p.quando)}</td><td>${esc(p.nome || "-")}<small>${p.entrega === "retirada" ? "retirada na loja" : esc([e.rua && e.rua + ", " + (e.numero || ""), e.bairro].filter(Boolean).join(" · "))}</small>${escolheBoy(p)}</td><td class="f-${formaEnt(p)}">${fp(p)}</td><td class="n">${taxaEnt(p) ? brl(taxaEnt(p)) : "-"}</td><td class="n"><b>${brl(p.valor)}</b>${p.status === "aguardando" ? '<small class="ab">em aberto no caixa</small>' : ""}</td></tr>`; }).join("");
   pintar(`<div class="ent">
   <div class="ent-topo"><div class="ent-seg">${seg}</div><div class="ent-busca"><input id="ent-q" type="search" placeholder="🔎 Buscar: nº, nome, telefone, rua, bairro, motoboy" autocomplete="off"><span id="ent-qn"></span></div><button class="btn" data-a="entImp" ${r.sel.length ? "" : "disabled"}>🖨 Imprimir fechamento</button></div>
   <div class="ent-cards">
@@ -1254,6 +1260,7 @@ function desenharEntregas() {
     <div class="ec tot"><small>Total</small><b>${brl(r.total)}</b><span>${r.canc.length ? r.canc.length + " cancelado(s) fora da conta" : "sem cancelados"}</span></div>
   </div>
   ${entFil !== "retirada" ? cardsBoys(r) : ""}
+  ${faixaBoy}
   ${r.sel.length ? `<div class="ent-tab"><div id="ent-nada" class="vazio-box" hidden>Nenhuma entrega com esse nome, número ou endereço.</div><table><thead><tr><th>Pedido</th><th>Hora</th><th>Cliente</th><th>Pagamento</th><th class="n">Taxa</th><th class="n">Total</th></tr></thead><tbody>${linhas}</tbody></table></div>` : `<div class="vazio-box"><span>🛵</span>Nenhum pedido do site neste dia.</div>`}
   </div>`);
   buscaEnt(); // a tela se redesenha sozinha a cada poucos segundos: reaplica a busca sem perder o que foi digitado
@@ -1286,6 +1293,7 @@ async function imprimirEntregas() {
 document.addEventListener("click", (e) => { const b = e.target.closest("[data-a]"); if (!b) return;
   if (b.dataset.a === "entFil") { entFil = b.dataset.k; ultimoHtml = ""; desenharEntregas(); } else if (b.dataset.a === "entImp") imprimirEntregas();
   else if (b.dataset.a === "boyEdit") editarBoys();
+  else if (b.dataset.a === "boyVer") { entBoy = entBoy === b.dataset.k ? "" : b.dataset.k; ultimoHtml = ""; desenharEntregas(); const f = $(".eb-faixa") || $(".ent-tab"); if (f && entBoy) f.scrollIntoView({ behavior: "smooth", block: "start" }); }
   else if (b.dataset.a === "boyImp") imprimirBoy(b.dataset.k);
   else if (b.dataset.a === "boyPagar") {
     const nome = b.dataset.k, sug = Number(b.dataset.v) || 0, t = prompt(`Quanto pagar ao motoboy ${nome}?
