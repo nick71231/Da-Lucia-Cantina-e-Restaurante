@@ -234,6 +234,7 @@ body.tec-on .caixa-modal:has(#lista-cli) { max-height: calc(100vh - var(--tec-h,
 .eb-l.din b, .eb-l.car b { font-size: 1.45rem; } .eb-l.din b { color: #157a3e; } .eb-l.car b { color: #1d4ed8; }
 .eb > small { color: #8a7468; font-size: .8rem; margin-top: -4px; }
 .eb-pago b { color: var(--verde, #15803d) !important; } .eb-pagar { margin-top: 6px; min-height: 40px; border-radius: 10px; font-weight: 600; }
+.eb-bts { display: flex; gap: 6px; flex-wrap: wrap; } .eb-bts .btn { flex: 1 1 140px; margin-top: 6px; min-height: 40px; border-radius: 10px; font-weight: 600; }
 .eb-esc { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; } .eb-esc .btn { min-height: 34px; padding: 2px 12px; border-radius: 999px; font-size: .85rem; }
 .eb-esc .btn.on { background: var(--verde, #1f9a45); color: #fff; border-color: transparent; }
 /* ===== tela de pagamento: formas em linha própria, doces, juntar comandas ===== */
@@ -1199,6 +1200,11 @@ async function carregaPagBoys(de, ate) {
   try { pagBoys[k] = await (await aut("/api/gaveta/motoboys?de=" + de + "&ate=" + ate)).json(); } catch (e) { pagBoys[k] = pagBoys[k] || []; }
   pagBoysCarregando[k] = false; if (aba === "entregas" || aba === "fechamento") { ultimoHtml = ""; desenhar(); }
 }
+// vale/adiantamento ao motoboy (ex.: R$20 pra gasolina): retirada da gaveta com motivo "Vale motoboy Fulano (gasolina)"
+let gavEnt = false;
+const motivoDe = (x) => x.motivo || (((gaveta && gaveta.movimentos) || []).find((m) => m.id === x.id) || {}).motivo || "";
+const ehVale = (x) => /^vale\b/i.test(motivoDe(x));
+const motivoVale = (x) => { const m = motivoDe(x).match(/\(([^)]*)\)\s*$/); return "Vale" + (m ? " (" + m[1] + ")" : ""); };
 function contaBoy(lista) { // dinheiro: o que o cliente paga + o troco que ele levou do caixa; cartão: o que tem que aparecer na maquininha dele
   const so = (f) => lista.filter((p) => formaEnt(p) === f), sv = (a) => round2(soma(a, (p) => p.valor));
   const din = sv(so("dinheiro")), troco = round2(soma(lista, trocoEnt));
@@ -1216,9 +1222,11 @@ function cardsBoys(r) {
       ${c.nCar ? `<small>${c.nCar} ${c.nCar === 1 ? "pagamento" : "pagamentos"} no cartão</small>` : ""}
       <div class="eb-l"><span>Pix (já pago)</span><b>${brl(c.pix)}</b></div>
       <div class="eb-l"><span>Taxas de entrega</span><b>${brl(c.taxas)}</b></div>
-      ${sem ? "" : (() => { const pg = (pagBoys[dia + "|" + dia] || []).filter((x) => x.entregador === nome), v = round2(soma(pg, (x) => x.valor)), hj = dia === hojeISO();
-        return (pg.length ? `<div class="eb-l eb-pago"><span>✅ Pago ao motoboy</span><b>${brl(v)}</b></div><small>${pg.map((x) => "às " + hora(x.quando) + " " + brl(x.valor)).join(" · ")} · saiu da gaveta</small>` : "")
-          + (hj ? `<button class="btn eb-pagar" data-a="boyPagar" data-k="${esc(nome)}" data-v="${c.taxas}">💵 ${pg.length ? "Pagar mais" : "Pagar motoboy"}</button>` : ""); })()}
+      ${sem ? "" : (() => { const pg = (pagBoys[dia + "|" + dia] || []).filter((x) => x.entregador === nome), v = round2(soma(pg, (x) => x.valor)), hj = dia === hojeISO(), falta = round2(Math.max(0, c.taxas - v));
+        // vale/adiantamento (ex.: R$20 pra gasolina) também saiu da gaveta pra ele: entra no "já recebeu" e é descontado do que falta pagar
+        return (pg.length ? `<div class="eb-l eb-pago"><span>✅ Já recebeu</span><b>${brl(v)}</b></div><small>${pg.map((x) => (ehVale(x) ? "⛽ " + esc(motivoVale(x)) + " " : "💵 ") + brl(x.valor) + " às " + hora(x.quando)).join(" · ")} · saiu da gaveta</small>
+          <div class="eb-l din"><span>Falta pagar <small>(taxas − já recebeu)</small></span><b>${brl(falta)}</b></div>` : "")
+          + (hj ? `<div class="eb-bts"><button class="btn eb-pagar" data-a="boyPagar" data-k="${esc(nome)}" data-v="${pg.length ? falta : c.taxas}">💵 ${pg.length ? "Pagar o resto" : "Pagar motoboy"}</button><button class="btn" data-a="boyVale" data-k="${esc(nome)}">⛽ Vale / adiantamento</button></div>` : ""); })()}
     </div>`; };
   const sem = ents.filter((p) => !p.entregador);
   return `<div class="eb-cab"><b>Por motoboy</b><button class="btn" data-a="boyEdit">✎ ${nomes.length ? "Motoboys" : "Cadastrar motoboys"}</button></div>
@@ -1230,6 +1238,7 @@ const escolheBoy = (p) => (p.entrega || "entrega") !== "entrega" || p.status ===
 function desenharEntregas() {
   if (boys === null) carregarBoys();
   if (!pagBoys[dia + "|" + dia]) carregaPagBoys(dia, dia);
+  if (!gaveta && !gavEnt) { gavEnt = true; aut("/api/gaveta").then((x) => x.json()).then((g) => { gaveta = g; ultimoHtml = ""; if (aba === "entregas") desenhar(); }).catch(() => {}).finally(() => setTimeout(() => (gavEnt = false), 30000)); } // pra saber quais retiradas foram vale
   const r = resumoEntregas(), nE = r.ds.filter((p) => p.status !== "cancelado" && (p.entrega || "entrega") === "entrega").length, nR = r.ds.filter((p) => p.status !== "cancelado" && p.entrega === "retirada").length;
   const seg = [["entrega", "Entregas", nE], ["retirada", "Retiradas", nR], ["todos", "Todos", nE + nR]].map(([k, n, q]) => `<button class="btn ${entFil === k ? "on" : ""}" data-a="entFil" data-k="${k}">${n} <small>${q}</small></button>`).join("");
   const fp = (p) => { const f = formaEnt(p); return f === "dinheiro" ? `Dinheiro${p.trocoPara ? ` <small>troco p/ ${brl(p.trocoPara)} → levar ${brl(trocoEnt(p))}</small>` : " <small>sem troco</small>"}` : f === "cartao" ? (p.cartaoTipo === "refeicao" ? "Cartão refeição" : "Cartão " + (p.cartaoTipo === "debito" ? "débito" : p.cartaoTipo === "credito" ? "crédito" : "")) + " (maquininha)" : f === "pix" ? "Pix" : esc(f || "-"); };
@@ -1286,6 +1295,16 @@ document.addEventListener("click", (e) => { const b = e.target.closest("[data-a]
       .then(async (r) => { if (!r.ok) return alert(((await r.json().catch(() => ({}))).erro) || "Não deu certo."); delete pagBoys[dia + "|" + dia]; gaveta = null; carregaPagBoys(dia, dia); })
       .catch(() => alert("Sem conexão com o servidor."));
   }
+  else if (b.dataset.a === "boyVale") { // adiantamento (gasolina, lanche...): sai da gaveta agora e é descontado do pagamento dele
+    const nome = b.dataset.k, t = prompt(`Vale / adiantamento para ${nome}
+Quanto ele pegou? (sai da gaveta e é descontado do pagamento dele)`, "20,00");
+    if (t === null) return; const v = round2(parseFloat(String(t).replace(/[^0-9,.]/g, "").replace(",", ".")) || 0); if (!(v > 0)) return alert("Digite o valor do vale.");
+    const pra = prompt("Pra quê? (ex.: gasolina)", "gasolina"); if (pra === null) return;
+    const motivo = ("Vale motoboy " + nome + " (" + (String(pra).trim() || "adiantamento").slice(0, 40) + ")").slice(0, 120);
+    aut("/api/gaveta", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ acao: "movimento", tipo: "sangria", valor: v, motivo, entregador: nome, uid: novoUid() }) })
+      .then(async (r) => { if (!r.ok) return alert(((await r.json().catch(() => ({}))).erro) || "Não deu certo."); avisoImp("✓ Vale de " + brl(v) + " para " + nome + " registrado", "ok"); delete pagBoys[dia + "|" + dia]; gaveta = null; try { gaveta = await (await aut("/api/gaveta")).json(); } catch (e) {} carregaPagBoys(dia, dia); })
+      .catch(() => alert("Sem conexão com o servidor."));
+  }
   else if (b.dataset.a === "boySet") { const p = pedidos.find((x) => x.id === b.dataset.id); if (p) { if (entQ) { entQ = ""; entQfoco = false; buscaEnt(); } patch(p.id, { entregador: p.entregador === b.dataset.k ? "" : b.dataset.k }); } } }); // marcou o motoboy: limpa a busca (volta a lista toda) // clicar de novo no mesmo tira
 async function imprimirBoy(nome) { // papelzinho do acerto com o motoboy
   const lista = resumoEntregas().ds.filter((p) => p.status !== "cancelado" && (p.entrega || "entrega") === "entrega" && p.entregador === nome).sort((a, b) => a.quando - b.quando), c = contaBoy(lista);
@@ -1295,6 +1314,8 @@ async function imprimirBoy(nome) { // papelzinho do acerto com o motoboy
   L.push({ hr: 1 }, { e: "TRAZER EM DINHEIRO", d: brl(c.traz), b: 1 });
   if (c.troco) L.push({ det: brl(c.din) + " dos pedidos + " + brl(c.troco) + " de troco levado" });
   L.push({ e: "NA MAQUININHA", d: brl(c.car), b: 1 }, { e: "Pix (ja pago)", d: brl(c.pix) }, { e: "Taxas de entrega", d: brl(c.taxas) }, { e: "Entregas", d: String(c.n) });
+  { const pg = (pagBoys[dia + "|" + dia] || []).filter((x) => x.entregador === nome); // vales e pagamentos que já saíram da gaveta pra ele
+    if (pg.length) { L.push({ hr: 1 }); pg.forEach((x) => L.push({ e: (ehVale(x) ? motivoVale(x) : "Pagamento") + " " + hora(x.quando), d: "- " + brl(x.valor) })); const v = round2(soma(pg, (x) => x.valor)); L.push({ e: "FALTA PAGAR", d: brl(Math.max(0, c.taxas - v)), b: 1 }); } }
   try { const k = await cfgImp(), img = await logoImp(k.logo); avisoImp("🖨 Imprimindo...", ""); const x = await mandarImp(escposDoc(L, k, img)); avisoImp(x.ok ? "✓ Impresso" : "✕ Não imprimiu: " + x.erro, x.ok ? "" : "erro"); } catch (e) { avisoImp("✕ Não imprimiu", "erro"); }
 }
 async function desenharFechamento() {

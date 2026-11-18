@@ -612,7 +612,7 @@ async function tratar(req, res) {
   }
   if (p === "/api/gaveta/motoboys" && req.method === "GET") { // o que foi pago aos motoboys (saiu da gaveta) num período
     const de = url.searchParams.get("de") || hoje(), ate = url.searchParams.get("ate") || de;
-    const l = Object.keys(db.caixa).filter((d) => d >= de && d <= ate).flatMap((d) => (db.caixa[d].movimentos || []).filter((m) => m.categoria === "motoboy").map((m) => ({ dia: d, entregador: m.entregador, valor: m.valor, quando: m.quando, id: m.id })));
+    const l = Object.keys(db.caixa).filter((d) => d >= de && d <= ate).flatMap((d) => (db.caixa[d].movimentos || []).filter((m) => m.categoria === "motoboy").map((m) => ({ dia: d, entregador: m.entregador, valor: m.valor, quando: m.quando, id: m.id, motivo: m.motivo })));
     return json(res, 200, l);
   }
   if (p === "/api/gaveta" && req.method === "GET") { // + o troco usado da última vez (pra abrir sozinha com ele)
