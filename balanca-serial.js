@@ -68,6 +68,7 @@
     return { peso: nums[0] > 50 ? nums[0] / 1000 : nums[0], instavel }; // número grande sem vírgula = gramas
   }
   // põe o peso/valor na tela da balança quando o prato está parado
+  let avisouKg = 0;
   function aplicar(r) {
     const kg = r.peso, igual = ultimo && ultimo.peso === kg && ultimo.total === r.total;
     iguais = igual ? iguais + 1 : 0; ultimo = r;
@@ -83,7 +84,10 @@
     let mudou = false;
     if (g && cfg().usarPeso) { peso = g; mudou = true; }
     if (c) { cents = c; mudou = true; } else if (g && cfg().precoKg > 0 && !cfg().usarPeso) { cents = String(Math.round(kg * cfg().precoKg * 100)); mudou = true; }
-    if (!mudou) return; // sem preço/kg e sem campo de peso: não tem o que pôr na tela
+    if (!mudou) { // sem preço/kg e sem campo de peso: não tem o que pôr na tela
+      if (g && typeof toast === "function" && Date.now() - avisouKg > 15000) { avisouKg = Date.now(); toast("Balança leu " + fmtKg(kg) + ": preencha o Preço por kg em ⚙ Ajustes"); }
+      return;
+    }
     preenchi = { g, c };
     if (campo === "comanda" && !comanda) { /* deixa a pessoa digitar a comanda; o valor já está pronto */ }
     tela();
