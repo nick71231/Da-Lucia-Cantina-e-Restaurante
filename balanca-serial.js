@@ -61,6 +61,9 @@
     const nums = (txt.match(/-?\d+[.,]\d+|\d+/g) || []).map((x) => Number(x.replace(",", ".")));
     if (!nums.length) return null;
     if (C.usar === "total" && nums.length >= 1) return { peso: null, total: nums[nums.length - 1], instavel };
+    // Toledo com preço/total (ex.: " 00406     0      0      0"): só números inteiros, o 1º com 5/6 dígitos = peso em gramas
+    const partes = txt.split(/\s+/);
+    if (partes.every((x) => /^\d+$/.test(x)) && /^\d{5,6}$/.test(partes[0])) return { peso: parseInt(partes[0], 10) / 1000, instavel };
     if (nums.length >= 3) return { peso: nums[0], total: nums[2], instavel }; // computadora: peso, preço/kg, total
     return { peso: nums[0] > 50 ? nums[0] / 1000 : nums[0], instavel }; // número grande sem vírgula = gramas
   }
