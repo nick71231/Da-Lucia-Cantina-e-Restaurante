@@ -58,12 +58,13 @@
     if (/^\d{5,6}$/.test(txt)) return { peso: parseInt(txt, 10) / 1000, instavel };
     if (/^[NSIs]{1,2}\d{5,6}$/.test(txt.replace(/\s/g, ""))) return { peso: parseInt(txt.replace(/\D/g, ""), 10) / 1000, instavel: instavel || /^I/.test(txt) };
     if (/^-+$|^S{3,}$/.test(txt)) return { peso: 0, instavel: true }; // traços/sobrecarga
-    const nums = (txt.match(/-?\d+[.,]\d+|\d+/g) || []).map((x) => Number(x.replace(",", ".")));
+    const nums = (txt.match(/-?\d+[.,]\d+|-?\d+/g) || []).map((x) => Number(x.replace(",", ".")));
     if (!nums.length) return null;
     if (C.usar === "total" && nums.length >= 1) return { peso: null, total: nums[nums.length - 1], instavel };
-    // Toledo com preço/total (ex.: " 00406     0      0      0"): só números inteiros, o 1º com 5/6 dígitos = peso em gramas
-    const partes = txt.split(/\s+/);
-    if (partes.every((x) => /^\d+$/.test(x)) && /^\d{5,6}$/.test(partes[0])) return { peso: parseInt(partes[0], 10) / 1000, instavel };
+    // Toledo com preço/total (ex.: " 00406     0      0      0"): só números inteiros, o 1º com 5/6 dígitos = peso em gramas.
+    // Com tara e a balança vazia o peso fica NEGATIVO ("-00822 ..." = -822 g): antes o sinal se perdia e virava 822 kg
+    const partes = txt.replace(/^-\s+/, "-").split(/\s+/);
+    if (partes.slice(1).every((x) => /^\d+$/.test(x)) && /^-?\d{5,6}$/.test(partes[0])) return { peso: parseInt(partes[0], 10) / 1000, instavel };
     if (nums.length >= 3) return { peso: nums[0], total: nums[2], instavel }; // computadora: peso, preço/kg, total
     return { peso: nums[0] > 50 ? nums[0] / 1000 : nums[0], instavel }; // número grande sem vírgula = gramas
   }
@@ -72,7 +73,8 @@
   function aplicar(r) {
     const kg = r.peso, igual = ultimo && ultimo.peso === kg && ultimo.total === r.total;
     iguais = igual ? iguais + 1 : 0; ultimo = r;
-    if (kg != null && kg < 0.005) { trava = null; preenchi = null; return; } // prato saiu da balança: libera a próxima
+    if (kg != null && kg < 0.005) { trava = null; preenchi = null; return; } // prato saiu da balança (zero ou negativo, com tara): libera a próxima
+    if (kg != null && kg > 40) return; // leitura absurda (mais do que a balança aguenta): ignora
     if (r.instavel || iguais < 2) return; // espera parar (3 leituras iguais)
     const g = kg != null ? String(Math.round(kg * 1000)) : "", c = r.total > 0 ? String(Math.round(r.total * 100)) : "";
     // trocou o prato sem a balança chegar a zero (peso parado, 10 g ou mais diferente do que foi lançado): libera
