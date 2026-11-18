@@ -1,7 +1,7 @@
 // Monta uma cópia LIMPA do programa para entregar ou compartilhar: só o código, sem dados do restaurante.
 // Uso:  node empacotar.js        (cria entrega/totem-da-lucia/)  — não apaga nem mexe em nada da sua instalação.
 const fs = require("fs"), path = require("path");
-const INCLUIR = ["index.html", "caixa.html", "balanca.html", "garcom.html", "app.js", "dados.js", "server.js", "teclado.js", "style.css", "ui.css", "caixa-tema.css", "balanca-tema.css", "balanca-serial.js", "garcom-tema.css", "caixa-tema.js", "manifest.json", "manifest-caixa.json", "manifest-balanca.json",
+const INCLUIR = ["index.html", "caixa.html", "balanca.html", "garcom.html", "app.js", "dados.js", "server.js", "teclado.js", "dialogo.js", "style.css", "ui.css", "caixa-tema.css", "balanca-tema.css", "balanca-serial.js", "garcom-tema.css", "caixa-tema.js", "manifest.json", "manifest-caixa.json", "manifest-balanca.json",
   "iniciar-servidor.bat", "servico.bat", "servico.ps1","LEIA-ME.md", "package.json", "testes.js", "testes-telas.js", "restaurar.js", "empacotar.js", ".gitignore"];
 const saida = path.join(__dirname, "entrega", "totem-da-lucia");
 fs.rmSync(saida, { recursive: true, force: true }); // só a pasta gerada por este script

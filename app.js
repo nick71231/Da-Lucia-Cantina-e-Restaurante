@@ -291,7 +291,7 @@ async function finalizar(comandaNum) {
 const mudarQtd = (i, d) => { carrinho[i].qtd += d; if (carrinho[i].qtd <= 0) carrinho.splice(i, 1); salvar("carrinho", carrinho); render(); };
 const setCat = (id, ligado) => listaDe(id).forEach((i) => (ligado ? indisponiveis.delete(i.key) : indisponiveis.add(i.key)));
 
-document.addEventListener("click", (e) => {
+document.addEventListener("click", async (e) => {
   const el = e.target.closest("[data-acao]"); if (!el) return;
   const d = el.dataset, a = d.acao;
   if (a === "logo") return;
@@ -301,7 +301,7 @@ document.addEventListener("click", (e) => {
   if (a === "escolher") return escolher(d.item);
   if (a === "proximo") { if (montagem.i < montagem.passos.length) { montagem.aviso = ""; avancarPara(montagem.i + 1); } else adicionar(); return; }
   if (a === "voltar") { let j = montagem.i - 1; while (j >= 0 && montagem.pagos[montagem.passos[j].id] === false) j--; if (j < 0) { montagem = null; tela = "menu"; } else montagem.i = j; return render(); }
-  if (a === "sair") { if ((carrinho.length || montagem) && !confirm("Cancelar o pedido e voltar para o início?")) return; return reiniciar(); }
+  if (a === "sair") { if ((carrinho.length || montagem) && !(await confirmar("Cancelar o pedido e voltar para o início?"))) return; return reiniciar(); }
   if (a === "etapaAtual") { etapaAtual = d.id; filtroAdmin = ""; return render(); }
   if (a === "prodAtual") { prodAtual = d.id; return render(); }
   if (a === "regra") { const [id, campo, cat] = d.k.split("|"), cfg = ler("marmitexCfg", {}), o = (cfg[id] = cfg[id] || {}), m = marmitexLista().find((x) => x.id === id); o.regras = o.regras || {}; const r = (o.regras[cat] = o.regras[cat] || {}), atual = m ? m.regras[cat] : { min: 0, max: 0 };
@@ -316,7 +316,7 @@ document.addEventListener("click", (e) => {
     const cs = ler("cardapios", {}); cs[nome] = { on: ligadosAgora(), dia: cs[nome] ? cs[nome].dia : -1 }; salvar("cardapios", cs); salvar("cardapioAtivo", nome); toast("Cardápio salvo!"); }
   if (a === "atualizarCardapio") { const cs = ler("cardapios", {}); if (cs[d.nome]) { cs[d.nome].on = ligadosAgora(); salvar("cardapios", cs); toast("Cardápio atualizado!"); } }
   if (a === "aplicarCardapio") { aplicarCardapio(d.nome); toast('Cardápio "' + d.nome + '" aplicado!'); }
-  if (a === "apagarCardapio") { if (!confirm('Apagar o cardápio salvo "' + d.nome + '"?')) return; const cs = ler("cardapios", {}); delete cs[d.nome]; salvar("cardapios", cs); }
+  if (a === "apagarCardapio") { if (!(await confirmar('Apagar o cardápio salvo "' + d.nome + '"?'))) return; const cs = ler("cardapios", {}); delete cs[d.nome]; salvar("cardapios", cs); }
   if (a === "duplicarEtapa") {
     const c = etapasLista().find((x) => x.id === d.id), nova = { id: "e" + Date.now(), nome: c.nome + " (cópia)", itens: [...categorias().find((x) => x.id === d.id).itens] };
     salvar("etapasExtras", [...ler("etapasExtras", []), nova]);
@@ -338,7 +338,7 @@ document.addEventListener("click", (e) => {
   if (a === "modoApagar") { modoApagar = !modoApagar; return render(); }
   if (a === "apagarItem") {
     const i = d.id.indexOf(":"), cat = d.id.slice(0, i), nome = d.id.slice(i + 1);
-    if (!confirm(`Apagar "${nome}" do cardápio?`)) return;
+    if (!(await confirmar(`Apagar "${nome}" do cardápio?`))) return;
     if (cat === "bebida") bebidasExtras = bebidasExtras.filter((b) => b.nome !== nome); if (cat === "doce") docesExtras = docesExtras.filter((b) => b.nome !== nome); extras[cat] = (extras[cat] || []).filter((n) => n !== nome); removidos.add(d.id);
     salvar("extras", extras); salvar("bebidasExtras", bebidasExtras); salvar("docesExtras", docesExtras); salvar("removidos", [...removidos]); return render();
   }
@@ -359,7 +359,7 @@ document.addEventListener("click", (e) => {
     toast("Produto criado! Ajuste as etapas dele.");
   }
   if (a === "apagarProduto") {
-    if (!confirm("Apagar este produto?")) return;
+    if (!(await confirmar("Apagar este produto?"))) return;
     const ext = ler("produtosExtras", []);
     if (ext.some((m) => m.id === d.id)) salvar("produtosExtras", ext.filter((m) => m.id !== d.id)); else salvar("produtosRemovidos", [...ler("produtosRemovidos", []), d.id]);
   }
@@ -369,7 +369,7 @@ document.addEventListener("click", (e) => {
     toast("Etapa criada! Defina o mínimo/máximo em cada produto e adicione os itens no Cardápio do dia.");
   }
   if (a === "apagarEtapa") {
-    if (!confirm("Apagar esta etapa e seus itens?")) return;
+    if (!(await confirmar("Apagar esta etapa e seus itens?"))) return;
     const ext = ler("etapasExtras", []);
     if (ext.some((c) => c.id === d.id)) salvar("etapasExtras", ext.filter((c) => c.id !== d.id)); else salvar("etapasRemovidas", [...ler("etapasRemovidas", []), d.id]);
   }
@@ -394,7 +394,7 @@ document.addEventListener("click", (e) => {
   if (a === "aba") { abaAdmin = d.aba; modoApagar = false; filtroAdmin = ""; render(); $(".conteudo").scrollTop = 0; return; }
   if (a === "impRel") return imprimirTicket(linhasRelatorio());
   if (a === "relAtualizar") { relCache = { dia: null, ps: null, erro: "", carregando: false }; return render(); }
-  if (a === "apagarDia") { const dia = diaRel || hoje(); if (confirm("Apagar todos os pedidos de " + dataBR(dia) + "?")) { salvar("pedidos", ler("pedidos", []).filter((p) => p.dia !== dia)); render(); } return; }
+  if (a === "apagarDia") { const dia = diaRel || hoje(); if (await confirmar("Apagar todos os pedidos de " + dataBR(dia) + "?")) { salvar("pedidos", ler("pedidos", []).filter((p) => p.dia !== dia)); render(); } return; }
   if (a === "imprimir") return imprimirEVoltar();
   if (a === "mais") return mudarQtd(+d.i, 1);
   if (a === "menos") return mudarQtd(+d.i, -1);
@@ -406,7 +406,7 @@ document.addEventListener("click", (e) => {
   if (a === "testarImp") return testarConexao();
   if (a === "reimprimirFalhas") return reimprimirFalhas();
   if (a === "fecharFalhaImp") return fecharFalhaImp();
-  if (a === "limparFalhas") { if (confirm("Descartar os pedidos que não foram impressos?")) { salvar("impFalhas", []); fecharFalhaImp(); render(); } return; }
+  if (a === "limparFalhas") { if (await confirmar("Descartar os pedidos que não foram impressos?")) { salvar("impFalhas", []); fecharFalhaImp(); render(); } return; }
   if (a === "testeImp") return imprimirTicket(linhasComanda(amostra()));
   if (a === "todos") setCat(d.cat, true);
   if (a === "nenhum") setCat(d.cat, false);
@@ -910,7 +910,7 @@ document.addEventListener("change", (e) => {
       // marca como "mudança deste aparelho ainda não enviada": ao recarregar, ele manda pro servidor (antes o servidor podia
       // devolver a configuração velha por cima e desfazer a restauração; e o site/caixa nunca ficavam sabendo)
       localStorage.setItem("cfgSujo", "1"); localStorage.setItem("cfgT", String(Date.now()));
-      alert("Backup restaurado! O totem vai recarregar."); location.reload(); }
+      toast("Backup restaurado! O totem vai recarregar."); setTimeout(() => location.reload(), 1500); }
       catch (err) { toast("Esse arquivo não é um backup válido."); } };
     fr.readAsText(e.target.files[0]);
   }

@@ -97,6 +97,17 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
   const c41 = (await api("GET", "/api/pedidos?dia=" + hojeISO, undefined, bl)).find((p) => p.tipo === "balanca" && p.numero === 41);
   t(c41 && c41.nome === "Joana" && c41.valor === 25, "balança registra a comanda 41 (R$ 25,00) com o nome Joana");
   t(texto(bw, "#lista").includes("Joana"), "o nome aparece no cartão da comanda");
+  // no app Android o confirm() do navegador não aparece e responde "não" sozinho: o ✕ tem que usar a janela da própria página
+  bw.confirm = () => false;
+  const extra = (await api("POST", "/api/balanca", { comanda: 41, valor: 7, uid: "s-apagar" }, bl)); await bw.carregar(true); await dorme(300);
+  const c41e = (await api("GET", "/api/pedidos?dia=" + hojeISO, undefined, bl)).find((p) => p.id === c41.id), iApagar = c41e.itens.length - 1;
+  if (!bw.document.querySelector(`[data-rm^="${c41.id}|"]`) && bw.document.querySelector('[data-vcmd="41"]')) await clica(bw, '[data-vcmd="41"]');
+  await clica(bw, `[data-rm="${c41.id}|${iApagar}"]`);
+  const simBt = [...bw.document.querySelectorAll("button")].find((b) => b.textContent === "Sim");
+  t(!!simBt && /Apagar este lançamento/.test(bw.document.body.textContent), "✕ abre a janela 'Apagar este lançamento?' da página (não o confirm do navegador)");
+  if (simBt) { simBt.click(); await dorme(600); }
+  const c41x = (await api("GET", "/api/pedidos?dia=" + hojeISO, undefined, bl)).find((p) => p.id === c41.id);
+  t(!!extra && c41x.itens.length === iApagar && c41x.valor === 25, "tocar em Sim apaga só aquele lançamento (comanda 41 volta a R$ 25,00)");
   bw.close();
   const bs = await abre("/balanca.html"); t(!bs.document.querySelector("#modal").hidden && texto(bs, "#modal").includes("Entrar na balança"), "sem login a balança pede a senha"); bs.close();
 

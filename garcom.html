@@ -160,6 +160,7 @@ body.em-cmd #undo { bottom:calc(var(--barra) + 12px + env(safe-area-inset-bottom
 <div id="undo"></div><div id="toast"></div><div id="modal" class="modal" hidden></div>
 <div id="trava" hidden><div class="tv-box"><div class="tv-ic">🔒</div><b>Tela travada</b><span>Pra não lançar bebida sem querer com o celular no bolso.</span><span class="tv-cmd" id="tv-cmd" hidden></span><div id="tv-trilho"><div id="tv-bola" aria-hidden="true">🔓</div><span>Arraste pra destravar →</span></div></div></div>
 <script src="dados.js"></script>
+<script src="dialogo.js"></script>
 <script>
 const $ = (s) => document.querySelector(s);
 const numTxt = (n) => (n > 10000 ? "M" + (n - 10000) : String(n)); // marmitex do totem que virou comanda
@@ -307,7 +308,7 @@ async function lancar(i) {
   try {
     const r = await aut("/api/balanca", { method: "POST", headers: JSONH, body: JSON.stringify(it) }), j = await r.json().catch(() => ({}));
     if (r.status === 401) throw 0;
-    if (r.status >= 400 && r.status < 500) { otim[x.nome]--; sessao--; desenhar(false); alert(j.erro || "O servidor recusou o lançamento."); return; }
+    if (r.status >= 400 && r.status < 500) { otim[x.nome]--; sessao--; desenhar(false); avisar(j.erro || "O servidor recusou o lançamento."); return; }
     if (!r.ok) throw 0;
     const meu = (j.itens || []).find((c) => c.uid === it.uid) || j.itens[j.itens.length - 1];
     ultimo = { id: j.id, idx: j.itens.indexOf(meu), iid: meu && meu.iid, nome: x.nome, n: p.numero }; mostrarUndo((x.sorvete ? "🍦 " : "🥤 ") + x.nome + " → comanda " + numTxt(p.numero));
@@ -332,7 +333,7 @@ async function tirar(nome) { // tira a última bebida lançada com esse nome
   if (i < 0) return toast("Ainda sincronizando, tente de novo.");
   const q = p.itens[i].qtd || 1;
   const unico = p.itens.length === 1;
-  if (!confirm("Tirar " + (q > 1 ? q + "× " : "") + nome + " da comanda " + p.numero + "?" + (unico ? "\n\nÉ o único item: a comanda será cancelada." : ""))) return;
+  if (!(await confirmar("Tirar " + (q > 1 ? q + "× " : "") + nome + " da comanda " + p.numero + "?" + (unico ? "\n\nÉ o único item: a comanda será cancelada." : "")))) return;
   tirando = true;
   try {
     const r = await aut("/api/pedidos/" + p.id, { method: "PATCH", headers: JSONH, body: JSON.stringify({ removerItem: i, removerIid: p.itens[i].iid || undefined }) });
