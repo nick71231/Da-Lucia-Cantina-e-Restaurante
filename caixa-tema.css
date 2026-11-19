@@ -274,3 +274,22 @@ body.tec-on .modal.lado > .caixa-modal:has(#ac-itens) { height: calc(100vh - var
 .modal.lado .caixa-modal .acoes .btn { min-height: 44px !important; font-size: .95rem !important; border-radius: 12px !important; }
 .modal.lado #ac-ok { font-size: 1rem !important; }
 .modal.lado .ac-item { padding: 8px 10px !important; margin-bottom: 6px !important; }
+/* ajuste: painel mais ESTREITO e o conteúdo ~10% maior que a versão compacta */
+.modal.lado > .caixa-modal:has(#ac-itens) { width: min(470px, 100vw) !important; }
+.modal.lado .ac-cab h2 { font-size: 1.42rem !important; }
+.modal.lado .ac-cab small { font-size: .85rem !important; }
+.modal.lado .ac-x { min-height: 42px !important; min-width: 42px !important; font-size: 1.05rem !important; }
+.modal.lado .ac-li { font-size: .98rem !important; }
+.modal.lado .ac-dividir { min-height: 42px !important; font-size: .9rem !important; }
+.modal.lado .ac-extras .btn { min-height: 40px !important; font-size: .88rem !important; }
+.modal.lado .ac-extras input { height: 40px !important; font-size: .9rem !important; }
+.modal.lado .ac-pag1 > span { font-size: .76rem !important; }
+.modal.lado .ac-tile { min-height: 56px !important; font-size: .95rem !important; }
+.modal.lado .ac-tile .ic, .modal.lado .ac-tile i .ic { width: 19px !important; height: 19px !important; }
+.modal.lado .ac-f { font-size: .68rem !important; }
+.modal.lado .ac-tot small, .modal.lado .ac-aberto small { font-size: .68rem !important; }
+.modal.lado .ac-tot b { font-size: 1.55rem !important; } .modal.lado .ac-aberto b { font-size: 1.05rem !important; }
+.modal.lado .ac-chip { font-size: .8rem !important; }
+.modal.lado .ac-imp { font-size: .86rem !important; } .modal.lado .ac-imp input { width: 18px !important; height: 18px !important; }
+.modal.lado .caixa-modal .acoes .btn { min-height: 48px !important; font-size: 1.02rem !important; }
+.modal.lado #ac-ok { font-size: 1.1rem !important; }
