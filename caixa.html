@@ -914,6 +914,8 @@ function statusCurto(r, ind) { // [texto, classe]
   return ["Pago", "ok"];
 }
 const avatarConta = (nome, emp) => `<span class="cli-av${emp ? " emp" : ""}">${emp ? "🏢" : esc((nome || "?").trim().charAt(0).toUpperCase())}</span>`;
+// busca de contas: null = não bate; "" = bateu no nome da conta; "NOME" = bateu numa pessoa de dentro da empresa
+function achouConta(nome, membros, q) { q = semAcento(String(q || "").trim()); if (!q) return ""; if (semAcento(nome).includes(q)) return ""; const m = (membros || []).filter((n) => semAcento(n).includes(q)); return m.length ? m.slice(0, 3).join(", ") + (m.length > 3 ? "…" : "") : null; }
 function desenharListaContas() { // 1) lista de clientes/empresas, com o resumo do mês de cada um
   const { ent } = ctxContas(), empresas = [...new Set(clientes.filter((c) => c.empresa).map((c) => c.empresa))].sort();
   const ativos = clientes.filter((c) => c.ativo !== false && (!filtroEmp || (filtroEmp === "_sem" ? !c.empresa : c.empresa === filtroEmp)));
@@ -925,8 +927,9 @@ function desenharListaContas() { // 1) lista de clientes/empresas, com o resumo 
   const linha = (x) => {
     const r = x.r, c1 = x.membros[0] || {}, [st, sc] = statusCurto(r, x.emp ? null : c1), cls = r.saldo > 0.009 ? "dev" : x.uso ? "ok" : "";
     const sub = x.emp ? x.membros.length + " funcionário(s)" + (r.qtd ? " · " + r.qtd + " refeições" : "") : (c1.modo === "refeicao" ? "Refeição " + brl(c1.valorRefeicao) : "Valor livre") + (r.qtd ? " · " + r.qtd + " refeições" : "");
-    return `<div class="conta-it ${cls}" role="button" data-a="abrirConta" data-k="${esc(x.k)}" data-nome="${esc(semAcento(x.nome))}" ${q && !semAcento(x.nome).includes(semAcento(q)) ? 'style="display:none"' : ""}>
-      ${avatarConta(x.nome, x.emp)}<span class="ci-nome"><b>${esc(x.nome)}</b><small>${esc(sub)}</small></span>
+    const mem = x.emp ? x.membros.map((c) => c.nome) : [], ach = achouConta(x.nome, mem, q);
+    return `<div class="conta-it ${cls}" role="button" data-a="abrirConta" data-k="${esc(x.k)}" data-nome="${esc(semAcento(x.nome))}" data-membros="${esc(JSON.stringify(mem))}" ${q && ach === null ? 'style="display:none"' : ""}>
+      ${avatarConta(x.nome, x.emp)}<span class="ci-nome"><b>${esc(x.nome)}</b><small>${esc(sub)}</small><em class="ci-achou"${ach ? "" : " hidden"}>${ach ? "👤 " + esc(ach) : ""}</em></span>
       <span class="ci-num mes"><small>Consumo</small><b>${brl(r.total)}</b></span><span class="ci-num pago"><small>Pago</small><b>${brl(r.pago)}</b></span>
       <span class="ci-num ${cls}"><small>${r.saldo < -0.009 ? "Crédito" : r.saldo > 0.009 ? "A pagar" : "Saldo"}</small><b>${brl(Math.abs(r.saldo))}</b></span>
       <span class="ci-st"><span class="st-pill ${sc}">${esc(st)}</span>${contas.enviados[x.k] ? `<span class="st-pill env">📤 enviado</span>` : ""}</span>
@@ -1393,7 +1396,9 @@ function obsLinhas(obs) { // "2x marmitex R$17,00 + 1x refri R$6,00 + entrega R$
 
 document.addEventListener("input", (e) => {
   if (e.target.id !== "busca-conta") return; filtroConta = e.target.value; const q = semAcento(filtroConta);
-  document.querySelectorAll("#conta-lista .conta-it").forEach((b) => { b.style.display = !q || (b.dataset.nome || "").includes(q) ? "" : "none"; });
+  document.querySelectorAll("#conta-lista .conta-it").forEach((b) => { let mem = []; try { mem = JSON.parse(b.dataset.membros || "[]"); } catch (e) {}
+    const ach = achouConta(b.dataset.nome || "", mem, filtroConta), em = b.querySelector(".ci-achou"); b.style.display = ach === null ? "none" : "";
+    if (em) { em.hidden = !ach; em.textContent = ach ? "👤 " + ach : ""; } });
 });
 // ===================== MARCAR NA CONTA (dividindo entre pessoas) + IMPRESSÃO EM 2 VIAS =====================
 const cachePedDia = {}; let divisao = null;

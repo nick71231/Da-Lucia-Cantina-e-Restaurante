@@ -373,3 +373,4 @@ body.tec-on .modal.lado > .caixa-modal:has(#ac-itens) { height: calc(100vh - var
 .modal.lado .ac-item.on:not(:has(.ac-formas .btn.on)) { outline: 2px dashed #e3a6a6 !important; }
 /* Receber travado (falta escolher a forma): parece travado de verdade */
 .modal.lado #ac-ok:disabled { background: #d8d2c8 !important; border-color: #d8d2c8 !important; color: #fff !important; box-shadow: none !important; cursor: not-allowed; }
+.ci-achou { display: inline-block; margin-top: 3px; padding: 1px 8px; border-radius: 999px; background: #fff4e0; color: #8a5a00; font-style: normal; font-weight: 700; font-size: .78rem; } .ci-achou[hidden] { display: none; }
