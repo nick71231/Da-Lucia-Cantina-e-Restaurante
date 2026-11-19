@@ -12,7 +12,7 @@ const copiaImagens = (orig, dest) => { // copia só imagens, mantendo as subpast
   fs.readdirSync(orig, { withFileTypes: true }).forEach((e) => {
     const o = path.join(orig, e.name), d = path.join(dest, e.name);
     if (e.isDirectory()) copiaImagens(o, d);
-    else if (/\.(png|jpe?g|webp|svg)$/i.test(e.name)) { fs.mkdirSync(dest, { recursive: true }); fs.copyFileSync(o, d); n++; }
+    else if (/\.(png|jpe?g|webp|svg|ttf|woff2)$/i.test(e.name)) { fs.mkdirSync(dest, { recursive: true }); fs.copyFileSync(o, d); n++; }
   });
 };
 ["img", "fotos"].forEach((pasta) => { const o = path.join(__dirname, pasta); if (fs.existsSync(o)) copiaImagens(o, path.join(saida, pasta)); });

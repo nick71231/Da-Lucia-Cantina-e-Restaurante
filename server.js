@@ -165,7 +165,7 @@ function backup() { // uma cópia por dia (guarda as últimas 30)
 }
 const hoje = () => new Date().toLocaleDateString("en-CA");
 const tipos = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css", ".png": "image/png",
-  ".json": "application/json", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".svg": "image/svg+xml" };
+  ".json": "application/json", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".svg": "image/svg+xml", ".ttf": "font/ttf", ".woff2": "font/woff2" };
 const json = (res, code, obj) => { res.writeHead(code, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }); res.end(JSON.stringify(obj)); };
 const corpo = (req, max = 1e6) => new Promise((ok, falha) => {
   let b = "", n = 0;
