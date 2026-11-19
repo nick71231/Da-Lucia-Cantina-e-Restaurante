@@ -395,31 +395,5 @@ button:active:not(:disabled) { transform: scale(.96); }
 /* relatório do admin: aviso de onde vieram os dados */
 .rel-aviso { margin: 8px 0 0; padding: 10px 14px; border-radius: 12px; background: #FFF6E0; color: #7a5200; font-weight: 600; }
 .rel-aviso.erro { background: #FDECEC; color: #a11; }
-/* ===== TELA DE DESCANSO (visual novo): foto do buffet + painel vermelho + botão mostarda ===== */
-.descanso.dz { display: grid; grid-template-columns: 52% 48%; align-items: stretch; justify-content: stretch; text-align: left; padding: 0; background: #a50f14; overflow: hidden; }
-.descanso.dz::before { display: none; }
-.dz-foto { position: relative; background: #3a1a12 url("img/descanso/principal.jpg") center / cover no-repeat; }
-.dz-foto::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,0) 55%, rgba(165,15,20,.55) 85%, #a50f14 100%); }
-.dz-mini { position: absolute; left: 3vw; bottom: 4vh; z-index: 1; display: flex; gap: 14px; }
-.dz-mini img { width: clamp(110px, 12vw, 190px); aspect-ratio: 4 / 3; object-fit: cover; border-radius: 16px; border: 3px solid #fff; box-shadow: 0 10px 26px rgba(0,0,0,.35); }
-.dz-lado { position: relative; display: flex; flex-direction: column; justify-content: center; gap: 1.6vh; padding: 6vh 5vw 5vh 3vw; color: #fff; background: radial-gradient(circle at 80% 10%, rgba(255,255,255,.07), transparent 45%), #a50f14; }
-.dz-logo .logo-box { width: clamp(84px, 9vw, 130px); height: clamp(84px, 9vw, 130px); border-radius: 50%; background: #a50f14; border: 2px solid #e6b93c; display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,.25); }
-.dz-logo .logo-box img.logo { width: 86%; height: auto; max-height: 86%; object-fit: contain; }
-.dz-kicker { margin: 1vh 0 0; font-weight: 800; font-size: clamp(13px, 1.25vw, 18px); letter-spacing: .14em; text-transform: uppercase; color: #f2b705; }
-.dz-sub { margin: 0; font-size: clamp(15px, 1.5vw, 22px); line-height: 1.35; color: rgba(255,255,255,.92); max-width: 30ch; }
-.dz-tit { margin: .5vh 0 1vh; font: 700 clamp(44px, 6.4vw, 104px) / 1.02 var(--serif); letter-spacing: -.01em; color: #fff; text-shadow: 0 2px 12px rgba(0,0,0,.18); }
-.dz-aviso { margin: 0; align-self: flex-start; padding: 8px 16px; border-radius: 999px; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.35); font-weight: 700; font-size: clamp(14px, 1.3vw, 20px); }
-.dz-btn { margin-top: 3vh; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: clamp(18px, 2.4vh, 30px) clamp(22px, 2.4vw, 36px); border-radius: 18px;
-  background: linear-gradient(180deg, #f7be16, #e0a106); color: #2b1710; box-shadow: 0 6px 0 #a87400, 0 16px 34px rgba(0,0,0,.28); animation: dzPulsa 2.4s ease-in-out infinite; }
-.dz-btn span { font-weight: 900; font-size: clamp(20px, 2.3vw, 36px); letter-spacing: .08em; text-transform: uppercase; }
-.dz-btn b { font-size: clamp(26px, 2.6vw, 42px); line-height: 1; }
-.descanso.dz:active .dz-btn { transform: translateY(4px); box-shadow: 0 2px 0 #a87400, 0 8px 18px rgba(0,0,0,.25); }
-@keyframes dzPulsa { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.025); } }
-.dz-rod { margin: 1.4vh 0 0; font-size: clamp(13px, 1.15vw, 17px); color: rgba(255,255,255,.85); } .dz-rod b { color: #f2b705; }
-@media (max-aspect-ratio: 1/1) { /* tablet em pé: foto em cima, painel embaixo */
-  .descanso.dz { grid-template-columns: 1fr; grid-template-rows: 42% 58%; }
-  .dz-foto::after { background: linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(165,15,20,.6) 85%, #a50f14 100%); }
-  .dz-lado { padding: 3vh 7vw 4vh; } .dz-tit { font-size: clamp(44px, 10vw, 96px); } .dz-btn span { font-size: clamp(20px, 4.4vw, 36px); }
-}
-@media (prefers-reduced-motion: reduce) { .dz-btn { animation: none; } }
-.dz-btn span { white-space: nowrap; font-size: clamp(18px, 2vw, 34px); letter-spacing: .06em; }
+/* faixa "Toque para começar" da tela de descanso: mostarda (antes ficava branca/bege) */
+.descanso .toque { background: linear-gradient(180deg, #f7be16, #e0a106) !important; color: #2b1710 !important; backdrop-filter: none !important; font: 900 clamp(1.4rem, 2.6vw, 2.2rem) Inter, Arial, sans-serif !important; letter-spacing: .08em; text-transform: uppercase; box-shadow: 0 -8px 30px rgba(0,0,0,.25) !important; animation: pulsa 2.4s ease-in-out infinite !important; }

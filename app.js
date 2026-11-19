@@ -429,21 +429,11 @@ document.addEventListener("error", (e) => {
 }, true);
 
 // ===== DESCANSO, NOME, INATIVIDADE =====
-// tela de descanso (visual novo 19/11): foto do buffet à esquerda, painel vermelho com o convite e o botão mostarda.
-// A tela toda continua sendo o "toque para começar"; segurar a logo continua abrindo o admin.
 function htmlDescanso() {
-  const txt = ler("textoToque", ""), rot = txt && txt !== "Toque na tela para iniciar" ? txt : "Toque para começar", aviso = ler("avisoDescanso", "");
-  return `<div class="descanso dz" data-acao="comecar">
-    <div class="dz-foto"><div class="dz-mini"><img src="img/descanso/salada.jpg" alt=""><img src="img/descanso/forno.jpg" alt=""></div></div>
-    <div class="dz-lado">
-      <div class="dz-logo">${logoPeq()}</div>
-      <p class="dz-kicker">Bem-vindo à Da Lúcia</p>
-      <p class="dz-sub">Mistura, acompanhamentos e salada do jeitinho que você gosta.</p>
-      <h1 class="dz-tit">Monte sua<br>marmitex</h1>
-      ${aviso ? `<p class="dz-aviso">${esc(aviso)}</p>` : ""}
-      <div class="dz-btn"><span>${esc(rot)}</span><b aria-hidden="true">→</b></div>
-      <p class="dz-rod">Self-service? Pese seu prato na <b>balança</b>.</p>
-    </div></div>`;
+  return `<div class="descanso" data-acao="comecar">
+    <img class="logo-grande" src="${esc(ler("logoGrande", "img/logo-grande.png"))}" alt="Da Lúcia Cantina & Restaurante">
+    ${ler("avisoDescanso", "") ? `<p class="aviso">${esc(ler("avisoDescanso", ""))}</p>` : ""}<div class="toque">${esc(ler("textoToque", "Toque na tela para iniciar"))}</div>
+    <div class="logo-canto">${logoPeq()}</div></div>`;
 }
 
 async function imprimirEVoltar() { // imprime a comanda; se deu certo, volta pra tela inicial depois de 2 segundos
