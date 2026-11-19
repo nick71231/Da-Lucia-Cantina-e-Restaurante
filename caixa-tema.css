@@ -338,3 +338,21 @@ body.tec-on .modal.lado > .caixa-modal:has(#ac-itens) { height: calc(100vh - var
 .modal.lado .ac-item .ac-formas .btn { padding: 2px 3px !important; font-size: .76rem !important; gap: 3px !important; min-width: 0; overflow: hidden; }
 .modal.lado .ac-item .ac-formas .btn .ic { width: 13px !important; height: 13px !important; flex: 0 0 auto; }
 @media (max-width: 420px) { .modal.lado .ac-item .ac-formas { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* ---- Conta na QUINZENA: só o período (pra mandar pra empresa conferir) ---- */
+.q-etq { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px; background: #fff4e0; border: 1px solid #f1d29a; color: #8a5a00; font-weight: 800; font-size: .95rem; }
+.q-cards > div::before { background: var(--linha-2, #d6cfc4) !important; }
+.q-cards > .q-tot { background: linear-gradient(135deg, #a50f14, #7d0b0f) !important; border-color: transparent !important; color: #fff; }
+.q-cards > .q-tot::before { display: none; }
+.q-cards > .q-tot small, .q-cards > .q-tot span { color: rgba(255,255,255,.82) !important; }
+.q-cards > .q-tot b { color: #fff !important; font-size: 1.75rem !important; }
+.q-folha-cab { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin: 4px 0 0; padding: 14px 18px 12px; background: #fff; border: 1px solid var(--linha); border-bottom: 0; border-radius: 16px 16px 0 0; }
+.q-folha-cab small { display: block; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted, #78716c); }
+.q-folha-cab b { display: block; font-size: 1.25rem; font-weight: 800; color: var(--tinta); }
+.q-folha-per { text-align: right; } .q-folha-per b { color: var(--vermelho); }
+.gradewrap.q-folha { border-radius: 0 0 16px 16px !important; margin-top: 0 !important; }
+.q-rod { margin-top: 12px; background: #fff; border: 1px solid var(--linha); border-radius: 16px; overflow: hidden; }
+.q-rod-l { display: grid; grid-template-columns: 1fr auto 120px; align-items: center; gap: 12px; padding: 9px 18px; border-bottom: 1px solid var(--linha); font-size: .95rem; }
+.q-rod-l small { color: var(--muted, #78716c); font-weight: 600; font-size: .85rem; }
+.q-rod-l b { text-align: right; font-variant-numeric: tabular-nums; }
+.q-rod-l.tot { border-bottom: 0; background: #fbf3e6; font-weight: 800; font-size: 1.05rem; }
+.q-rod-l.tot span { letter-spacing: .04em; } .q-rod-l.tot b { color: var(--vermelho); font-size: 1.2rem; }
