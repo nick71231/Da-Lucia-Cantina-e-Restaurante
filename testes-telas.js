@@ -64,8 +64,22 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
   }
   await clica(w, '[data-a="receber"]'); // 1º cartão = pedido do Beto (1 item)
   t(!w.document.querySelector("#modal").hidden && w.document.querySelectorAll(".ac-li").length === 1 && w.document.querySelector("#ac-ok").disabled, "janela de acerto lista o item e só libera depois de escolher a forma");
-  await clica(w, '[data-a="acSet"][data-f="pix"]'); t(!w.document.querySelector("#ac-ok").disabled, "escolhida a forma, o botão Receber libera");
+  { // Receber em painel na direita: Esc fecha, F1..F5 escolhem a forma (e o F5 não recarrega), Marcar na conta, imprimir sempre
+    const m = w.document.querySelector("#modal"), d = w.document;
+    t(m.classList.contains("lado") && /aberta às \d\d:\d\d · origem: /.test(texto(w, "#ac-sub")) && !d.querySelector("#ac-conta").hidden, "Receber abre como painel na direita (subtítulo com hora e origem, botão Marcar na conta)");
+    d.dispatchEvent(new w.KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await dorme(100);
+    t(m.hidden, "Esc fecha o painel do Receber");
+    await clica(w, '[data-a="receber"]');
+    const f5 = new w.KeyboardEvent("keydown", { key: "F5", bubbles: true, cancelable: true }); d.dispatchEvent(f5); await dorme(100);
+    t(f5.defaultPrevented && d.querySelector('.ac-tile[data-f="refeicao"]').classList.contains("on"), "F5 escolhe Refeição (e não recarrega a página)");
+    const imp = d.querySelector("#ac-imp"); imp.checked = true; imp.dispatchEvent(new w.Event("change", { bubbles: true })); await dorme(50);
+    t(/^Receber · Imprimir R\$/.test(texto(w, "#ac-ok")), "marcando 'imprimir sempre', o botão vira Receber · Imprimir");
+    imp.checked = false; imp.dispatchEvent(new w.Event("change", { bubbles: true })); await dorme(50);
+    const f2 = new w.KeyboardEvent("keydown", { key: "F2", bubbles: true, cancelable: true }); d.dispatchEvent(f2); await dorme(100);
+  }
+  t(!w.document.querySelector("#ac-ok").disabled && w.document.querySelector('.ac-tile[data-f="pix"]').classList.contains("on"), "escolhida a forma (F2 = Pix), o botão Receber libera");
   await clica(w, "#ac-ok"); await dorme(400);
+  t(!w.document.querySelector("#comp-bar").hidden && /Imprimir comprovante/.test(texto(w, "#comp-bar")), "depois de receber, pergunta se quer imprimir o comprovante");
   const hojeISO = new Date().toLocaleDateString("en-CA"), lista1 = await api("GET", "/api/pedidos?dia=" + hojeISO, undefined, cx);
   t(lista1.find((p) => p.nome === "Beto").status === "pago" && lista1.find((p) => p.nome === "Beto").pagamentos[0].forma === "pix", "pedido do Beto recebido no pix pela tela");
   await clica(w, '[data-a="receber"]'); // agora é a comanda 36 (3 itens)

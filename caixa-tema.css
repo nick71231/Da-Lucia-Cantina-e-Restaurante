@@ -232,3 +232,18 @@ h3, .gv-topo h3, .gv-box > h3, .eb-cab b, .per-rot, .mes-nav b { font-weight: 70
 .ac-item .ac-nome b { font-size: .92rem; }
 .ac-item .ac-val { font-size: .95rem; white-space: nowrap; }
 @media (max-width: 900px) { .ac-item { grid-template-columns: auto 1fr auto !important; } .ac-item .ac-formas { grid-column: 1 / -1 !important; } }
+
+/* ---- Receber em PAINEL NA DIREITA (classe .lado no #modal; as outras janelas continuam no meio) ---- */
+.modal.lado { justify-content: flex-end !important; align-items: stretch !important; background: rgba(28,25,23,.28) !important; backdrop-filter: none !important; }
+.modal.lado > .caixa-modal:has(#ac-itens) { width: min(580px, 100vw) !important; height: 100% !important; max-height: none !important; border-radius: 18px 0 0 18px !important; border: 0 !important; border-left: 4px solid var(--vermelho) !important; animation: entraLado .22s ease-out backwards !important; }
+body.tec-on .modal.lado > .caixa-modal:has(#ac-itens) { height: calc(100vh - var(--tec-h, 0px)) !important; }
+.modal.lado .ac-tile { flex-direction: column !important; min-height: 64px !important; gap: 2px !important; background: #fff !important; }
+.modal.lado .ac-tile.on { background: var(--vermelho) !important; border-color: var(--vermelho) !important; color: #fff !important; box-shadow: 0 6px 16px rgba(165,15,20,.22) !important; }
+.modal.lado .ac-conta { border-style: dashed !important; border-color: #e3a6a6 !important; color: var(--vermelho) !important; }
+@media (max-width: 600px) { .modal.lado > .caixa-modal:has(#ac-itens) { border-radius: 0 !important; border-left: 0 !important; } }
+.modal.lado .ac-cab h2 { padding: 0 !important; }
+.modal.lado .ac-corpo { overflow-x: hidden; }
+.modal.lado .ac-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+.modal.lado .ac-tile, .modal.lado .ac-dividir { white-space: normal !important; text-align: center; }
+.modal.lado .ac-extras input { min-width: 0 !important; }
+@media (max-width: 600px) { .modal.lado .ac-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } .modal.lado .ac-extras input { flex-basis: 100%; } }
