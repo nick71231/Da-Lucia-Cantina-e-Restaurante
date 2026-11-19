@@ -1085,7 +1085,7 @@ function totalCel() { // [valor, qtd de refeições, observação] da aba ativa
   if (W.q > 0) partes.push(W.q + "x marmitex " + brl(W.p) + (W.q > 1 ? " = " + brl(round2(W.q * W.p)) : ""));
   partes.push(...xp);
   if (W.t > 0) partes.push("entrega " + brl(W.t));
-  return [W.valor, 0, partes.join(" + ") + (partes.length ? " (WhatsApp)" : "")];
+  return [W.valor, 0, partes.join(" + ")];
 }
 function atualizaCel() { const b = $("#cel-ok"); if (!b) return; const [v] = totalCel(); b.disabled = !(v > 0); b.textContent = v > 0 ? "Marcar " + brl(v) : "Marcar"; }
 document.addEventListener("input", (e) => { if (e.target.closest && e.target.closest(".cel-modal")) { if (e.target.id === "w-taxa") document.querySelectorAll(".cel-chips .btn").forEach((b) => b.classList.toggle("on", b.dataset.v === e.target.value)); atualizaCel(); } });
@@ -1173,7 +1173,7 @@ document.addEventListener("click", async (e) => {
     const partes = [];
     if (W.q > 0) partes.push(W.q + "x marmitex " + brl(W.p) + " = " + brl(round2(W.q * W.p)));
     if (W.t > 0) partes.push("entrega " + brl(W.t));
-    const valor = W.valor, obs = partes.join(" + ") + " (WhatsApp)";
+    const valor = W.valor, obs = partes.join(" + ");
     if (W.q > 0 && W.p > 0) localStorage.setItem("cxMarmPreco:" + c.id, String(W.p).replace(".", ",")); localStorage.setItem("cxTaxa", W.t > 0 ? String(W.t).replace(".", ",") : "");
     await api("POST", "/api/lancamentos", { clienteId: c.id, dia, qtd: 0, valor, obs }); if (!dia.startsWith(mes)) mes = dia.slice(0, 7);
     await recarregar(); modalCelula(c.id, dia);
