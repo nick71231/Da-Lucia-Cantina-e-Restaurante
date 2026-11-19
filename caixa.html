@@ -1779,11 +1779,13 @@ function abrirAcerto(ids) { // escolhe quais itens acertar e a forma de pagament
   // painel na DIREITA (a lista de comandas continua aparecendo do lado). Mesmos botões e as mesmas funções de antes, só reorganizados.
   abrirModal(`<div class="ac-cab"><div><h2 id="ac-titulo"></h2><small id="ac-sub"></small></div><button class="btn ac-x" data-a="fechar" title="Fechar (Esc)">✕</button></div>
     <div class="ac-corpo">
-    <div id="ac-itens"></div>
+    <section class="ac-sec ac-sec-itens"><div class="ac-sec-t" id="ac-itens-t">Itens <small id="ac-nit"></small></div><div id="ac-itens"></div></section>
     <div class="ac-head">
-    <div class="ac-extras"><button class="btn mini" id="dc-abre" data-a="dcAbrir">➕ Bebida, sorvete ou doce</button><input id="ac-junta" placeholder="Juntar comanda (nº)" title="Juntar outra comanda: nº ou nome"><button class="btn mini" data-a="acJunta">Juntar</button></div>
-    <div id="ac-picker" hidden></div>
-    <div class="ac-pag1"><span>Como vai pagar?</span><div class="ac-tiles">${FORMAS_PAG.map((k, i) => `<button class="btn ac-tile" data-a="acSet" data-f="${k}"><i>${FIC[k]}</i>${FORMAS[k]}<small class="ac-f">F${i + 1}</small></button>`).join("")}<button class="btn ac-tile ac-conta" id="ac-conta" data-a="marcar" data-id="${esc(ps[0].id)}" hidden><i>📒</i>Marcar na conta</button></div></div></div>
+    <section class="ac-sec ac-pag1"><div class="ac-sec-t">Como vai pagar?</div><div class="ac-tiles">${FORMAS_PAG.map((k, i) => `<button class="btn ac-tile" data-a="acSet" data-f="${k}"><i>${FIC[k]}</i>${FORMAS[k]}<small class="ac-f">F${i + 1}</small></button>`).join("")}<button class="btn ac-tile ac-conta" id="ac-conta" data-a="marcar" data-id="${esc(ps[0].id)}" hidden><i>📒</i>Marcar na conta</button></div></section>
+    <section class="ac-sec ac-mais"><div class="ac-sec-t">Outras opções</div>
+    <div id="ac-mais-bts" class="ac-mais-bts"></div>
+    <div class="ac-extras"><button class="btn mini" id="dc-abre" data-a="dcAbrir">➕ Bebida, sorvete ou doce</button><span class="ac-junta"><input id="ac-junta" placeholder="Juntar nº" title="Juntar outra comanda: nº ou nome"><button class="btn mini" data-a="acJunta">Juntar</button></span></div>
+    <div id="ac-picker" hidden></div></section></div>
     </div>
     <div class="ac-rodape"><div id="ac-resumo"></div>
     <div id="ac-din" class="ac-din" hidden><span>💵 Dinheiro recebido</span><input id="ac-rec" inputmode="decimal" placeholder="R$ 0,00"> <b id="ac-tr"></b><div id="ac-rapido" class="ac-rapido"></div></div>
@@ -1794,7 +1796,7 @@ function abrirAcerto(ids) { // escolhe quais itens acertar e a forma de pagament
 }
 function atualizarAcerto() {
   const A = acerto; if (!A || !$("#ac-itens")) return;
-  { const p1 = document.querySelector(".ac-pag1"), ex = document.querySelector(".ac-extras"); if (p1) p1.style.display = A.duas ? "none" : ""; if (ex) ex.style.display = A.duas ? "none" : ""; }
+  document.querySelectorAll(".ac-pag1, .ac-mais, #ac-itens-t").forEach((el) => (el.style.display = A.duas ? "none" : ""));
   if (A.duas) return desenharDuas();
   $("#ac-titulo").textContent = tituloAcerto();
   if ($("#ac-sub")) $("#ac-sub").textContent = subAcerto();
@@ -1817,8 +1819,11 @@ function atualizarAcerto() {
   const todosOn = Object.values(A.itens).every((x) => x.on), formas = new Set([...Object.values(A.itens).filter((x) => x.on).map((x) => x.forma), ...dl.map((d) => d.forma)]);
   const simples = !A.dividir && todosOn && !dl.length && formas.size <= 1;
   document.querySelectorAll(".ac-tile").forEach((b) => b.classList.toggle("on", simples && formas.size === 1 && formas.has(b.dataset.f)));
-  if (simples) h = `<div class="ac-resumo-it">${A.ps.map((p) => (A.ps.length > 1 ? `<div class="ac-grupo"><b>${rotPed(p)}</b>${p.nome ? " - " + esc(p.nome) : ""}<button class="btn mini" data-a="acTira" data-id="${esc(p.id)}">Tirar</button></div>` : "") + p.itens.filter((c) => !c.pago).map((c) => `<div class="ac-li"><span>${c.qtd}x ${esc(c.nome)}</span><b>${brl(valorIt(c))}</b></div>`).join("")).join("")}
-    <button class="btn ac-dividir" data-a="acDividir">✂ Dividir: escolher itens ou formas diferentes</button>${A.ps.length === 1 ? `<button class="btn ac-dividir ac-d2" data-a="d2Abrir">💵 + 💠 Pagar com 2 formas (ex.: dinheiro + Pix)</button>` : ""}</div>`;
+  const nAb = soma(A.ps, (p) => p.itens.filter((c) => !c.pago).length), totAb = round2(soma(A.ps, (p) => soma(p.itens.filter((c) => !c.pago), valorIt)));
+  if ($("#ac-nit")) $("#ac-nit").textContent = nAb + (nAb === 1 ? " item" : " itens");
+  // Dividir / 2 formas ficam em "Outras opções" (embaixo das formas), não no meio da lista
+  if ($("#ac-mais-bts")) $("#ac-mais-bts").innerHTML = simples ? `<button class="btn ac-dividir" data-a="acDividir">✂ Dividir itens</button>${A.ps.length === 1 ? `<button class="btn ac-dividir ac-d2" data-a="d2Abrir">💵 + 💠 2 formas</button>` : ""}` : "";
+  if (simples) h = `<div class="ac-resumo-it">${A.ps.map((p) => (A.ps.length > 1 ? `<div class="ac-grupo"><b>${rotPed(p)}</b>${p.nome ? " - " + esc(p.nome) : ""}<button class="btn mini" data-a="acTira" data-id="${esc(p.id)}">Tirar</button></div>` : "") + p.itens.filter((c) => !c.pago).map((c) => `<div class="ac-li"><span>${c.qtd}x ${esc(c.nome)}</span><b>${brl(valorIt(c))}</b></div>`).join("")).join("")}<div class="ac-li-tot"><span>Total</span><b>${brl(totAb)}</b></div></div>`;
   else if (A.dividir) h += `<button class="btn ac-dividir" data-a="acJuntarTudo">↩ Voltar pro jeito simples</button>`;
   $("#ac-itens").innerHTML = h; total = round2(total); aberto = round2(aberto);
   const din = round2(tot.dinheiro || 0), rec = parseFloat(String($("#ac-rec") ? $("#ac-rec").value : "").replace(",", "."));

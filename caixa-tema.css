@@ -293,3 +293,31 @@ body.tec-on .modal.lado > .caixa-modal:has(#ac-itens) { height: calc(100vh - var
 .modal.lado .ac-imp { font-size: .86rem !important; } .modal.lado .ac-imp input { width: 18px !important; height: 18px !important; }
 .modal.lado .caixa-modal .acoes .btn { min-height: 48px !important; font-size: 1.02rem !important; }
 .modal.lado #ac-ok { font-size: 1.1rem !important; }
+/* ---- Receber (painel lateral) organizado em blocos: 1) Itens  2) Como vai pagar  3) Outras opções; total e botão sempre embaixo ---- */
+.modal.lado .ac-corpo { padding: 4px 0 10px !important; background: var(--sup-2, #faf7f2) !important; }
+.modal.lado .ac-sec { margin: 10px 16px 0 !important; padding: 12px 14px !important; background: #fff !important; border: 1px solid var(--linha, #ece6dc) !important; border-radius: 14px !important; }
+.modal.lado .ac-sec-t { display: flex; align-items: baseline; justify-content: space-between; margin: 0 0 8px; font-size: .74rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--tinta-2, #78716c); }
+.modal.lado .ac-sec-t small { font-size: .78rem; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.modal.lado .ac-pag1 .ac-sec-t { color: var(--vermelho) !important; }
+.modal.lado #ac-itens { padding: 0 !important; max-height: 38vh; overflow-y: auto; }
+.modal.lado .ac-resumo-it { display: block !important; }
+.modal.lado .ac-li { padding: 7px 0 !important; border-bottom: 1px dashed var(--linha, #ece6dc) !important; gap: 10px; }
+.modal.lado .ac-li:last-of-type { border-bottom: 0 !important; }
+.modal.lado .ac-li b { white-space: nowrap; }
+.modal.lado .ac-li-tot { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px; padding-top: 8px; border-top: 2px solid var(--linha, #ece6dc); font-weight: 800; font-size: 1.05rem; }
+.modal.lado .ac-head { padding: 0 !important; }
+.modal.lado .ac-pag1 { margin-top: 10px !important; }
+.modal.lado .ac-mais-bts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.modal.lado .ac-mais-bts:empty { display: none; }
+.modal.lado .ac-mais-bts .ac-dividir { margin: 0 !important; width: 100%; }
+.modal.lado .ac-mais-bts .ac-dividir:only-child { grid-column: 1 / -1; }
+.modal.lado .ac-extras { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px !important; margin-top: 6px !important; }
+.modal.lado .ac-extras > .btn { width: 100%; margin: 0 !important; }
+.modal.lado .ac-junta { display: flex; gap: 6px; min-width: 0; }
+.modal.lado .ac-junta input { flex: 1 1 auto; width: 0 !important; min-width: 0 !important; }
+.modal.lado .ac-junta .btn { flex: 0 0 auto; }
+.modal.lado #ac-picker:not([hidden]) { margin-top: 10px; }
+.modal.lado .ac-rodape { border-top: 1px solid var(--linha, #ece6dc) !important; }
+@media (max-width: 600px) { .modal.lado .ac-extras, .modal.lado .ac-mais-bts { grid-template-columns: 1fr; } .modal.lado .ac-sec { margin: 8px 10px 0 !important; } }
+.modal.lado .ac-li:has(+ .ac-li-tot) { border-bottom: 0 !important; }
+.modal.lado .ac-mais .btn, .modal.lado .ac-junta input { min-height: 42px !important; height: 42px !important; margin: 0 !important; white-space: nowrap !important; }
