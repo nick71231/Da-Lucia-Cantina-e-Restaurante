@@ -1793,7 +1793,7 @@ function abrirAcerto(ids) { // escolhe quais itens acertar e a forma de pagament
     <section class="ac-sec ac-mais"><div class="ac-sec-t">Outras opções</div>
     <div id="ac-mais-bts" class="ac-mais-bts"></div>
     <div class="ac-extras"><button class="btn mini" id="dc-abre" data-a="dcAbrir">➕ Bebida, sorvete ou doce</button><span class="ac-junta"><input id="ac-junta" placeholder="Juntar nº" title="Juntar outra comanda: nº ou nome"><button class="btn mini" data-a="acJunta">Juntar</button></span></div>
-    <div id="ac-picker" hidden></div></section></div>
+    <div id="dc-fundo" class="dc-fundo" data-a="dcFechar" hidden></div><div id="ac-picker" class="dc-pop" hidden></div></section></div>
     </div>
     <div class="ac-rodape"><div id="ac-resumo"></div>
     <div id="ac-din" class="ac-din" hidden><span>💵 Dinheiro recebido</span><input id="ac-rec" inputmode="decimal" placeholder="R$ 0,00"> <b id="ac-tr"></b><div id="ac-rapido" class="ac-rapido"></div></div>
@@ -1843,8 +1843,8 @@ function atualizarAcerto() {
   desenharPicker();
 }
 function desenharPicker() {
-  const A = acerto, box = $("#ac-picker"); if (!A || !box) return; box.hidden = !A.picker; if ($("#dc-abre")) $("#dc-abre").textContent = A.picker ? "✕ Fechar" : "➕ Bebida, sorvete ou doce"; if (!A.picker) return;
-  if (!$("#dc-grade")) box.innerHTML = `<div class="dc-barra"><input id="dc-busca" type="search" placeholder="🔍 Buscar (Enter adiciona se só achar 1)" autocomplete="off"><button class="btn ok dc-pronto" data-a="dcFechar">✓ Pronto</button></div><div class="dc-cats" id="dc-cats"></div><div id="dc-grade"></div>
+  const A = acerto, box = $("#ac-picker"); if (!A || !box) return; box.hidden = !A.picker; if ($("#dc-fundo")) $("#dc-fundo").hidden = !A.picker; // abre como janela no meio da tela (não espreme o painel) if ($("#dc-abre")) $("#dc-abre").textContent = A.picker ? "✕ Fechar" : "➕ Bebida, sorvete ou doce"; if (!A.picker) return;
+  if (!$("#dc-grade")) box.innerHTML = `<div class="dc-pop-cab"><b>➕ Bebida, sorvete ou doce</b><button class="btn ac-x" data-a="dcFechar" title="Fechar (Esc)">✕</button></div><div class="dc-barra"><input id="dc-busca" type="search" placeholder="🔍 Buscar (Enter adiciona se só achar 1)" autocomplete="off"><button class="btn ok dc-pronto" data-a="dcFechar">✓ Pronto</button></div><div class="dc-cats" id="dc-cats"></div><div id="dc-grade"></div>
     <div class="dc-pe"><div class="dc-avulso"><input id="dc-nome" placeholder="Outro item (nome)"><input id="dc-val" inputmode="decimal" placeholder="R$ 0,00"><button class="btn mini" data-a="dcAvulso">Adicionar</button></div><div id="dc-soma"></div></div>`;
   const tudo = catalogo(), n = (c) => tudo.filter((x) => c === "t" || x.c === c).length;
   $("#dc-cats").innerHTML = [["t", "Todos", "✨"], ...CATS_DC].map(([k, nome, ic]) => `<button class="btn dc-cat ${A.cat === k ? "on" : ""}" data-a="dcCat" data-k="${k}"><i>${ic}</i>${nome}<small>${n(k)}</small></button>`).join("");
@@ -2285,7 +2285,8 @@ document.addEventListener("keydown", (e) => {
   const m = $("#modal"); if (!acerto || !m || m.hidden || !m.classList.contains("lado")) return;
   const n = /^F([1-5])$/.exec(e.key);
   if (n) { e.preventDefault(); if (acerto.duas) return; const b = document.querySelector(`.ac-tile[data-f="${FORMAS_PAG[+n[1] - 1]}"]`); if (b) b.click(); return; }
-  if (e.key === "Escape" && !$("#ac-picker:not([hidden]) input:focus")) { e.preventDefault(); const f = m.querySelector('.ac-x[data-a="fechar"]'); if (f) f.click(); }
+  if (e.key === "Escape" && $("#ac-picker:not([hidden])")) { e.preventDefault(); const f = $("#ac-picker .dc-pronto"); if (f) f.click(); }
+  else if (e.key === "Escape" && !$("#ac-picker:not([hidden]) input:focus")) { e.preventDefault(); const f = m.querySelector('.ac-x[data-a="fechar"]'); if (f) f.click(); }
 });
 document.addEventListener("change", (e) => {
   if (e.target.id !== "ac-imp") return;
