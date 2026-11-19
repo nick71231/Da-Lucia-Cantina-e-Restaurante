@@ -806,7 +806,7 @@ document.addEventListener("click", async (e) => {
   const a = e.target.dataset.a, id = e.target.dataset.id; if (!a) return;
   if (a === "csv") return csv();
   if (a === "receber") return abrirAcerto(id);
-  if (a === "fechar") { if (acerto && $("#ac-itens") && Object.values(acerto.doces).some((x) => x.qtd > 0)) return guardarDoces(); acerto = null; $("#modal").hidden = true; if (divisao && divisao.pickando) { divisao.pickando = false; return modalDivisao(); } divisao = null; return; }
+  if (a === "fechar") { if (acerto && $("#ac-itens") && Object.values(acerto.doces).some((x) => x.qtd > 0)) return guardarDoces(); acerto = null; celEx = null; $("#modal").hidden = true; if (divisao && divisao.pickando) { divisao.pickando = false; return modalDivisao(); } divisao = null; return; }
   if (a === "cancelar") {
     const ped = pedidos.find((x) => x.id === id); let motivo;
     if (ped && (ped.status === "pago" || pagsDe(ped).length)) { pedirMotivo(id); return; }
@@ -1001,6 +1001,7 @@ function quinzRodape(cols, RC, qtdA, r) {
 const precoMarm = (c) => localStorage.getItem("cxMarmPreco:" + c.id) || (c.valorRefeicao > 0 ? String(c.valorRefeicao).replace(".", ",") : "22,00"); // preço da marmitex por cliente (fica salvo neste aparelho)
 let celTab = {}; // aba escolhida por cliente (marmitex / refeições / valor)
 async function modalCelula(cid, dia) { // marcar na conta de um cliente num dia: o que já tem + formulário em abas
+  if (!celEx || celEx.cid !== cid) celEx = { cid, itens: [] };
   modalAtual = { t: "c", cid, dia };
   const c = clientes.find((x) => x.id === cid), ls = contas.lancamentos.filter((l) => l.clienteId === cid && l.dia === dia), ref = c.modo === "refeicao" && c.valorRefeicao > 0, peds = {};
   for (const d of [...new Set(ls.filter((l) => l.pedidoId).map((l) => l.dia))]) peds[d] = await pedidosDoDia(d);
@@ -1023,20 +1024,66 @@ async function modalCelula(cid, dia) { // marcar na conta de um cliente num dia:
     <div class="cel-form" data-t="marm" ${tab === "marm" ? "" : "hidden"}>
       <div class="cel-lin"><span>Marmitex</span>${stp("w-qtd", 1)}<span class="x">×</span><div class="cel-rs">R$<input id="w-preco" inputmode="decimal" value="${precoMarm(c)}"></div></div>
       <div class="cel-lin"><span>Entrega</span><div class="cel-chips">${[["", "Sem entrega"], ["3,00", "R$ 3"], ["5,00", "R$ 5"]].map(([v, n]) => `<button class="btn ${taxa === v ? "on" : ""}" data-a="celTaxa" data-v="${v}">${n}</button>`).join("")}<div class="cel-rs">R$<input id="w-taxa" inputmode="decimal" placeholder="outro" value="${taxa}"></div></div></div>
-      <details class="cel-beb"><summary>🥤 Bebida (opcional)</summary><div class="cel-lin"><input id="w-bnome" placeholder="Qual? (ex.: Coca lata)">${stp("w-bqtd", 1)}<span class="x">×</span><div class="cel-rs">R$<input id="w-bval" inputmode="decimal" placeholder="0,00"></div></div></details></div>
+      </div>
     ${ref ? `<div class="cel-form" data-t="ref" ${tab === "ref" ? "" : "hidden"}><div class="cel-lin"><span>Refeições</span>${stp("l-qtd", 1)}<span class="x">×</span><b>${brl(c.valorRefeicao)}</b></div></div>` : ""}
     <div class="cel-form" data-t="valor" ${tab === "valor" ? "" : "hidden"}><div class="pg-valor"><span>R$</span><input id="l-valor" inputmode="decimal" placeholder="0,00"></div></div>
+    <div class="cel-ex"><div class="cel-ex-bts"><button class="btn" data-a="cexAbrir">🥤 Bebida, sorvete ou doce</button><button class="btn" data-a="cexValor">＋ Adicionar valor</button></div>
+      <div id="cex-livre" class="cel-lin cex-livre" hidden><input id="w-bnome" placeholder="Nome (ex.: Marmita extra, Taxa...)"><div class="cel-rs">R$<input id="w-bval" inputmode="decimal" placeholder="0,00"></div><button class="btn ok" data-a="cexLivreOk">Adicionar</button></div>
+      <div id="cex-lista" class="cex-lista"></div></div>
     <input id="l-obs" class="cel-obs" placeholder="Observação (opcional)"></div>
     <div class="acoes cm-rodape"><button class="btn" data-a="fechar">Fechar</button><button class="btn ok" id="cel-ok" data-a="celOk" data-c="${cid}">Marcar</button></div>`);
-  atualizaCel();
+  desenharCex(); atualizaCel();
 }
+// ----- adicionais da marcação: bebida/sorvete/doce (pop-up com a lista) e "Adicionar valor" (nome e valor livres) -----
+let celEx = null, cexCat = "t", cexQ = "";
+const cexTotal = () => (celEx ? round2(soma(celEx.itens, (x) => x.preco * x.qtd)) : 0);
+const cexPartes = () => (celEx ? celEx.itens.map((x) => x.qtd + "x " + x.nome + " " + brl(x.preco) + (x.qtd > 1 ? " = " + brl(round2(x.qtd * x.preco)) : "")) : []);
+function cexAdd(nome, preco) { const it = celEx.itens.find((x) => x.nome === nome && x.preco === preco); if (it) it.qtd++; else celEx.itens.push({ nome, preco, qtd: 1 }); desenharCex(); atualizaCel(); }
+function desenharCex() {
+  const box = $("#cex-lista"); if (!box || !celEx) return;
+  box.innerHTML = celEx.itens.map((x, i) => `<div class="cex-it"><span class="cex-q"><button class="btn mini" data-a="cexMenos" data-i="${i}">−</button><b>${x.qtd}</b><button class="btn mini" data-a="cexMais" data-i="${i}">+</button></span><span class="cex-n">${esc(x.nome)}<small>${brl(x.preco)} cada</small></span><b class="cex-v">${brl(x.preco * x.qtd)}</b><button class="btn ruim mini" data-a="cexTira" data-i="${i}" title="Tirar">✕</button></div>`).join("");
+  if ($("#cex-pop")) desenharCexPop();
+}
+function abrirCexPop() {
+  let p = $("#cex-pop"); if (!p) { p = document.createElement("div"); p.id = "cex-pop"; p.className = "cex-pop-fundo"; document.body.appendChild(p); }
+  p.innerHTML = `<div class="cex-pop"><div class="dc-pop-cab"><b>🥤 Bebida, sorvete ou doce</b><button class="btn ac-x" data-a="cexFechar" title="Fechar (Esc)">✕</button></div>
+    <div class="dc-barra"><input id="cex-busca" type="search" placeholder="🔍 Buscar (Enter adiciona se só achar 1)" autocomplete="off" value="${esc(cexQ)}"><button class="btn ok" data-a="cexFechar">✓ Pronto</button></div><div class="dc-cats" id="cex-cats"></div><div id="cex-grade" class="cex-grade"></div><div class="cex-pe" id="cex-soma"></div></div>`;
+  desenharCexPop(); setTimeout(() => { const b = $("#cex-busca"); if (b) b.focus(); }, 30);
+}
+function desenharCexPop() {
+  const tudo = catalogo(), n = (c) => tudo.filter((x) => c === "t" || x.c === c).length, IC = Object.fromEntries(CATS_DC.map(([k, , ic]) => [k, ic]));
+  $("#cex-cats").innerHTML = [["t", "Todos", "✨"], ...CATS_DC].map(([k, nome, ic]) => `<button class="btn dc-cat ${cexCat === k ? "on" : ""}" data-a="cexCat" data-k="${k}"><i>${ic}</i>${nome}<small>${n(k)}</small></button>`).join("");
+  const lista = filtraDc(cexCat, cexQ), qtd = (x) => { const it = celEx.itens.find((y) => y.nome === x.nome && y.preco === x.preco); return it ? it.qtd : 0; };
+  const card = (x) => { const q = qtd(x); return `<div class="dc-it c-${x.c} ${q ? "tem" : ""}" role="button" tabindex="0" data-a="cexAdd" data-n="${esc(x.nome)}"><span class="dc-ic">${IC[x.c]}</span><span class="dc-nm">${esc(x.nome)}</span><b>${brl(x.preco)}</b>${q ? `<i>${q}</i>` : ""}</div>`; };
+  $("#cex-grade").innerHTML = lista.map(card).join("") || `<p class="dica">Nada encontrado. Feche e use "＋ Adicionar valor".</p>`;
+  const qt = soma(celEx.itens, (x) => x.qtd); $("#cex-soma").innerHTML = qt ? `<b>${qt} ${qt === 1 ? "item" : "itens"}</b> · ${brl(cexTotal())}` : `<span class="dica">Toque pra adicionar</span>`;
+}
+const fecharCexPop = () => { const p = $("#cex-pop"); if (p) p.remove(); cexQ = ""; };
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-a]"); if (e.target.id === "cex-pop") return fecharCexPop(); if (!t || !celEx) return; const d = t.dataset, a = d.a;
+  if (a === "cexAbrir") abrirCexPop();
+  else if (a === "cexFechar") fecharCexPop();
+  else if (a === "cexCat") { cexCat = d.k; desenharCexPop(); }
+  else if (a === "cexAdd") { const x = catalogo().find((y) => y.nome === d.n); if (x) cexAdd(x.nome, x.preco); }
+  else if (a === "cexValor") { const f = $("#cex-livre"); f.hidden = !f.hidden; if (!f.hidden) $("#w-bnome").focus(); }
+  else if (a === "cexLivreOk") { const nome = ($("#w-bnome").value || "").trim(), v = num("#w-bval"); if (!nome) return $("#w-bnome").focus(); if (!(v > 0)) return $("#w-bval").focus(); $("#w-bnome").value = ""; $("#w-bval").value = ""; $("#cex-livre").hidden = true; cexAdd(nome.slice(0, 60), round2(v)); }
+  else if (a === "cexMais" || a === "cexMenos") { const it = celEx.itens[+d.i]; if (!it) return; it.qtd += a === "cexMais" ? 1 : -1; if (it.qtd <= 0) celEx.itens.splice(+d.i, 1); desenharCex(); atualizaCel(); }
+  else if (a === "cexTira") { celEx.itens.splice(+d.i, 1); desenharCex(); atualizaCel(); }
+});
+document.addEventListener("input", (e) => { if (e.target.id === "cex-busca") { cexQ = e.target.value; desenharCexPop(); } });
+document.addEventListener("keydown", (e) => {
+  if (!$("#cex-pop")) { if (e.key === "Enter" && (e.target.id === "w-bval" || e.target.id === "w-bnome")) { e.preventDefault(); const b = $('[data-a="cexLivreOk"]'); if (b) b.click(); } return; }
+  if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); fecharCexPop(); }
+  else if (e.key === "Enter" && e.target.id === "cex-busca") { e.preventDefault(); const l = filtraDc(cexCat, cexQ); if (l.length === 1) { cexAdd(l[0].nome, l[0].preco); e.target.value = ""; cexQ = ""; desenharCexPop(); } }
+}, true);
 function totalCel() { // [valor, qtd de refeições, observação] da aba ativa
   const box = $(".cel-modal"); if (!box) return [0, 0, ""]; const c = clientes.find((x) => x.id === box.dataset.c), tab = celTab[c.id] || (c.modo === "refeicao" && c.valorRefeicao > 0 ? "ref" : "marm");
-  if (tab === "ref") { const q = num("#l-qtd") || 0; return [round2(q * c.valorRefeicao), q, ""]; }
-  if (tab === "valor") return [round2(num("#l-valor") || 0), 0, ""];
-  const W = totalWhats(), nomeB = ($("#w-bnome").value || "").trim() || "bebida", partes = [];
+  const X = cexTotal(), xp = cexPartes();
+  if (tab === "ref") { const q = num("#l-qtd") || 0; return [round2(q * c.valorRefeicao + X), q, xp.join(" + ")]; }
+  if (tab === "valor") return [round2((num("#l-valor") || 0) + X), 0, xp.join(" + ")];
+  const W = totalWhats(), partes = [];
   if (W.q > 0) partes.push(W.q + "x marmitex " + brl(W.p) + (W.q > 1 ? " = " + brl(round2(W.q * W.p)) : ""));
-  if (W.bq > 0) partes.push(W.bq + "x " + nomeB + " " + brl(W.bv) + (W.bq > 1 ? " = " + brl(round2(W.bq * W.bv)) : ""));
+  partes.push(...xp);
   if (W.t > 0) partes.push("entrega " + brl(W.t));
   return [W.valor, 0, partes.join(" + ") + (partes.length ? " (WhatsApp)" : "")];
 }
@@ -1052,6 +1099,7 @@ document.addEventListener("click", async (e) => {
   else if (a === "celOk") {
     const c = clientes.find((x) => x.id === d.c), dia = $("#l-dia").value || modalAtual.dia, [valor, qtd, obsAuto] = totalCel(), obsDig = ($("#l-obs").value || "").trim(), tab = celTab[c.id] || (c.modo === "refeicao" && c.valorRefeicao > 0 ? "ref" : "marm");
     if (!(valor > 0)) return alert("Coloque a quantidade ou o valor.");
+    if (celEx) celEx.itens = [];
     if (tab === "marm") { const W = totalWhats(); if (W.q > 0 && W.p > 0) localStorage.setItem("cxMarmPreco:" + c.id, String(W.p).replace(".", ",")); localStorage.setItem("cxTaxa", W.t > 0 ? String(W.t).replace(".", ",") : ""); }
     t.disabled = true;
     try { await api("POST", "/api/lancamentos", { clienteId: c.id, dia, qtd, valor, obs: [obsAuto, obsDig].filter(Boolean).join(" · ").slice(0, 120) }); } catch (err) { t.disabled = false; return; }
@@ -1124,7 +1172,6 @@ document.addEventListener("click", async (e) => {
     if (!(W.valor > 0)) return alert("Digite a quantidade de marmitex e o valor de cada uma (ou a bebida).");
     const partes = [];
     if (W.q > 0) partes.push(W.q + "x marmitex " + brl(W.p) + " = " + brl(round2(W.q * W.p)));
-    if (W.bq > 0) partes.push(W.bq + "x " + nomeB + " " + brl(W.bv) + (W.bq > 1 ? " = " + brl(round2(W.bq * W.bv)) : ""));
     if (W.t > 0) partes.push("entrega " + brl(W.t));
     const valor = W.valor, obs = partes.join(" + ") + " (WhatsApp)";
     if (W.q > 0 && W.p > 0) localStorage.setItem("cxMarmPreco:" + c.id, String(W.p).replace(".", ",")); localStorage.setItem("cxTaxa", W.t > 0 ? String(W.t).replace(".", ",") : "");
@@ -1386,8 +1433,8 @@ document.addEventListener("change", (e) => {
   else if (id === "per-de" || id === "per-ate") { per[id === "per-de" ? "de" : "ate"] = v; desenhar(); }
 });
 function totalWhats() { // pedido do WhatsApp: marmitex + bebida + entrega
-  const q = num("#w-qtd") || 0, p = num("#w-preco") || 0, t = num("#w-taxa") || 0, bv = num("#w-bval") || 0, bq = bv > 0 ? (num("#w-bqtd") || 1) : 0;
-  return { q, p, t, bv, bq, valor: round2(q * p + t + bq * bv) };
+  const q = num("#w-qtd") || 0, p = num("#w-preco") || 0, t = num("#w-taxa") || 0, bv = 0, bq = 0, x = $(".cel-modal") ? cexTotal() : 0;
+  return { q, p, t, bv, bq, valor: round2(q * p + t + x) };
 }
 function obsLinhas(obs) { // "2x marmitex R$17,00 + 1x refri R$6,00 + entrega R$5,00 (WhatsApp)" vira uma lista, uma linha por item
   if (!obs) return ""; const zap = /\(WhatsApp\)\s*$/.test(obs), ps = String(obs).replace(/\s*\(WhatsApp\)\s*$/, "").split(" + ").map((x) => x.trim()).filter(Boolean);
