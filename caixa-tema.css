@@ -365,3 +365,11 @@ body.tec-on .modal.lado > .caixa-modal:has(#ac-itens) { height: calc(100vh - var
 /* painel: a lista de itens NÃO tem rolagem própria (prendia a rodinha do mouse); quem rola é o painel todo */
 .modal.lado #ac-itens { max-height: none !important; overflow: visible !important; overscroll-behavior: auto !important; flex: none !important; }
 .modal.lado .ac-corpo { overflow-y: auto !important; overscroll-behavior: contain; }
+/* forma escolhida: SEMPRE a mesma cor (vermelho), em cima e em cada item (antes o item ficava preto e confundia) */
+.modal.lado .ac-item .ac-formas .btn.on { background: var(--vermelho) !important; border-color: var(--vermelho) !important; color: #fff !important; box-shadow: 0 3px 8px rgba(165,15,20,.25) !important; }
+.modal.lado .ac-item .ac-formas .btn.on .ic { color: #fff !important; }
+/* item que já tem forma: borda verde; sem forma: borda vermelha tracejada (dá pra ver o que falta) */
+.modal.lado .ac-item.on:has(.ac-formas .btn.on) { outline: 2px solid var(--verde, #15803d) !important; }
+.modal.lado .ac-item.on:not(:has(.ac-formas .btn.on)) { outline: 2px dashed #e3a6a6 !important; }
+/* Receber travado (falta escolher a forma): parece travado de verdade */
+.modal.lado #ac-ok:disabled { background: #d8d2c8 !important; border-color: #d8d2c8 !important; color: #fff !important; box-shadow: none !important; cursor: not-allowed; }

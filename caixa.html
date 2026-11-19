@@ -1847,8 +1847,8 @@ function atualizarAcerto() {
   // jeito simples: tudo marcado com a mesma forma -> a lista vira um resumo; "Dividir" abre item por item
   const todosOn = Object.values(A.itens).every((x) => x.on), formas = new Set([...Object.values(A.itens).filter((x) => x.on).map((x) => x.forma), ...dl.map((d) => d.forma)]);
   const simples = !A.dividir && todosOn && !dl.length && formas.size <= 1;
-  document.querySelectorAll(".ac-tile").forEach((b) => b.classList.toggle("on", !A.dividir && !sem && formas.size === 1 && formas.has(b.dataset.f))); // com bebida/doce também acende a forma escolhida
-  const nAb = soma(A.ps, (p) => p.itens.filter((c) => !c.pago).length), totAb = round2(soma(A.ps, (p) => soma(p.itens.filter((c) => !c.pago), valorIt)));
+  document.querySelectorAll(".ac-tile").forEach((b) => b.classList.toggle("on", !sem && formas.size === 1 && formas.has(b.dataset.f))); // acende quando tudo que vai ser pago está nessa forma (também com bebida/doce e no Dividir)
+  const nAb = soma(A.ps, (p) => p.itens.filter((c) => !c.pago).length) + soma(dl, (d) => d.qtd), totAb = round2(soma(A.ps, (p) => soma(p.itens.filter((c) => !c.pago), valorIt)));
   if ($("#ac-nit")) $("#ac-nit").textContent = nAb + (nAb === 1 ? " item" : " itens");
   // Dividir / 2 formas ficam em "Outras opções" (embaixo das formas), não no meio da lista
   if ($("#ac-mais-bts")) $("#ac-mais-bts").innerHTML = simples ? `<button class="btn ac-dividir" data-a="acDividir">✂ Dividir itens</button>${A.ps.length === 1 ? `<button class="btn ac-dividir ac-d2" data-a="d2Abrir">💵 + 💠 2 formas</button>` : ""}` : "";
