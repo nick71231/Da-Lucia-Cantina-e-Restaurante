@@ -109,7 +109,7 @@ const BEBIDAS = [
 const DOCES_TOTEM = [
   { nome: "Pingo de Leite", preco: 1.5 },
   { nome: "Bala de Goma", preco: 3.5 },
-  { nome: "Paçocão", preco: 3 },
+  { nome: "Paçocão", preco: 3.5 },
   { nome: "Pé de Moça", preco: 3.5 },
   { nome: "Twix", preco: 5 },
 ];
