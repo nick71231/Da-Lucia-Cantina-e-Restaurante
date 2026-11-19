@@ -39,6 +39,15 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   t((await req("PATCH", "/api/pedidos/" + a.j.id, { status: "pago", pagamento: "pix" })).s === 409, "pedido pago não paga de novo");
   t((await req("PATCH", "/api/pedidos/" + a.j.id, { status: "cancelado" })).s === 400, "estorno exige motivo");
   t((await req("PATCH", "/api/pedidos/" + a.j.id, { status: "cancelado", motivo: "cliente desistiu" })).s === 200, "estorno com motivo funciona");
+  // estornar (sem cancelar): o pedido pago volta pro "em aberto" e dá pra receber de novo
+  const e1 = await req("POST", "/api/pedidos", { uid: "u-est", nome: "Estorno", itens: [{ nome: "Marmitex", preco: 22, qtd: 1 }] });
+  await req("PATCH", "/api/pedidos/" + e1.j.id, { status: "pago", pagamento: "pix" });
+  t((await req("PATCH", "/api/pedidos/" + e1.j.id, { estornarTudo: true })).s === 400, "estornar tudo exige motivo");
+  const e2 = await req("PATCH", "/api/pedidos/" + e1.j.id, { estornarTudo: true, motivo: "passou no pix errado" });
+  t(e2.s === 200 && e2.j.status === "aguardando" && !e2.j.pagamento && e2.j.itens.every((c) => !c.pago) && e2.j.pagamentos.every((g) => g.estornado), "estornar: pedido pago volta pra em aberto (não cancela)");
+  t((await req("PATCH", "/api/pedidos/" + e1.j.id, { estornarTudo: true, motivo: "de novo" })).s === 409, "pedido em aberto sem pagamento: não estorna de novo");
+  const e3 = await req("PATCH", "/api/pedidos/" + e1.j.id, { status: "pago", pagamento: "cartao" });
+  t(e3.s === 200 && e3.j.status === "pago" && e3.j.pagamento === "cartao", "depois do estorno, recebe de novo na forma certa");
 
   console.log("\nBalança e comanda");
   const b1 = await req("POST", "/api/balanca", { comanda: 23, valor: 22.6, uid: "p1" });

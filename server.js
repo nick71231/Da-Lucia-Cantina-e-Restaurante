@@ -763,6 +763,18 @@ async function tratar(req, res) {
       if (ped.status === "pago") { ped.status = "aguardando"; delete ped.pagoEm; ped.pagamento = null; }
       await gravar(); return json(res, 200, ped);
     }
+    if (u.estornarTudo) {                                        // estorna TODOS os recebimentos: o pedido volta pro "em aberto" (não cancela)
+      const mot = String(u.motivo || "").trim(), vivos = (ped.pagamentos || []).filter((x) => !x.estornado);
+      if (ped.status === "cancelado" || ped.status === "conta") return json(res, 409, { erro: ped.status === "conta" ? "esse pedido está na conta: desfaça a conta antes de estornar" : "pedido cancelado" });
+      if (!vivos.length && ped.status !== "pago") return json(res, 409, { erro: "esse pedido não tem pagamento pra estornar" });
+      if (mot.length < 3) return json(res, 400, { erro: "informe o motivo do estorno" });
+      const est = { motivo: mot.slice(0, 200), quando: Date.now() };
+      vivos.forEach((x) => { x.estornado = est; });
+      if (!(ped.pagamentos || []).length) ped.estorno = est; // pedido antigo, pago sem a lista de recebimentos
+      ped.itens.forEach((c) => { delete c.pago; });
+      ped.status = "aguardando"; delete ped.pagoEm; ped.pagamento = null;
+      await gravar(); return json(res, 200, ped);
+    }
     const novo = String(u.status || "");
     if (!novo) return json(res, 400, { erro: "nada a alterar" });
     if (novo === ped.status && novo !== "conta") return json(res, 409, { erro: "o pedido já está " + novo });

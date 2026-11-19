@@ -726,8 +726,9 @@ function card(p) {
     : p.status === "aguardando"
     ? (gs.length ? `<p class="pg">Já recebido: ${gs.map(fmt).join(" + ")} - <b>falta ${brl(falta)}</b></p>${estornos}` : "") + `<div class="acoes"><button class="btn ok" data-a="receber" data-id="${p.id}">${gs.length ? "Receber o resto " + brl(falta) : "Receber " + brl(p.valor)}</button><button class="btn mais-op" data-a="menuPed" data-id="${p.id}" title="Mais opções">⋯</button></div>`
     : p.status === "conta" ? `<p class="pg">Na conta de <b>${esc((p.clienteIds && p.clienteIds.length ? p.clienteIds : [p.clienteId]).map(nomeCli).join(" + "))}</b>${pagsDe(p).length ? " - resto de <b>" + brl(valConta(p)) + "</b> (o resto já foi pago)" : ""} <button class="btn ruim" data-a="desfazConta" data-id="${p.id}">Desfazer</button></p>`
-    // pago numa forma só: 1 botão (estornar essa forma = cancelar o pedido). Em 2+ formas: dá pra estornar cada uma, ou tudo
-    : p.status === "pago" ? `<p class="pg">Pago: ${gs.map(fmt).join(" + ")} às ${hora(p.pagoEm || p.quando)}</p>${gs.length > 1 ? estornos + " " : ""}<button class="btn ruim mini" data-a="cancelar" data-id="${p.id}">${gs.length > 1 ? "Cancelar/estornar tudo" : "Cancelar/estornar"}</button>` : "";
+    // estornar = devolve o dinheiro e o pedido VOLTA PRO EM ABERTO (pra receber de novo do jeito certo). Cancelar é outra coisa.
+    // Em 2+ formas: dá pra estornar cada uma, ou tudo
+    : p.status === "pago" ? `<p class="pg">Pago: ${gs.map(fmt).join(" + ")} às ${hora(p.pagoEm || p.quando)}</p>${gs.length > 1 ? estornos + " " : ""}<button class="btn ruim mini" data-a="estornarPag" data-id="${p.id}" data-pag="*">↩️ ${gs.length > 1 ? "Estornar tudo" : "Estornar"} (volta pra em aberto)</button> <button class="btn ruim mini" data-a="cancelar" data-id="${p.id}">Cancelar pedido</button>` : "";
   const rec = p.status === "aguardando" && p.itens.some((c) => !c.pago);
   return `<article class="card st-${p.status}${par ? " parado" : ""}${rec ? " clicavel" : ""}${juntar.has(p.id) ? " marcado" : ""}"${rec ? ` data-rec="${p.id}"` : ""}><div class="topo"><b class="num">${curto(p)}</b>${p.numeroLocal && p.numeroLocal !== p.numero ? `<small>ticket ${p.numeroLocal}</small>` : ""}<span class="nome">${esc(p.nome || "Sem nome")}${ehMarm(p) ? ' <span class="mm-tag">marmitex</span>' : ""}${ehDel(p) ? ' <span class="mm-tag dl-tag">delivery</span>' : ""}</span>${juntar.has(p.id) ? `<span class="jt-badge">🔗 juntar</span>` : ""}${par ? `<span class="par-badge">⏰ há ${fmtMin(minP)}</span>` : ""}<span class="hora">${hora(p.quando)}</span><b class="valor">${brl(p.valor)}</b></div>
     ${ehDel(p) ? infoDel(p) : ""}<ul>${p.itens.map(linha).join("")}</ul>${rodape}</article>`;
@@ -1033,7 +1034,7 @@ function modalConta(k) { // pagamento da conta: resumo, pagamentos do mês e reg
     </div><div class="acoes cm-rodape"><button class="btn" data-a="fechar">Fechar</button><button class="btn" data-a="addPag" data-imp="1" data-k="${esc(k)}">🖨 Registrar e imprimir</button><button class="btn ok" data-a="addPag" data-k="${esc(k)}">✓ Registrar pagamento</button></div>`);
 }
 function pedirMotivo(id, pag) { // motivo do estorno digitado no teclado do sistema (nada de teclado do Android)
-  abrirModal(`<h2>Estornar pagamento</h2><p>Esse pedido já foi pago. Informe o motivo do estorno (fica registrado).</p>
+  abrirModal(`<h2>${pag ? "Estornar pagamento" : "Cancelar pedido pago"}</h2><p>${pag ? "O pedido <b>volta para Em aberto</b> para receber de novo." : "O pagamento é estornado e o pedido fica <b>cancelado</b>."} Informe o motivo (fica registrado).</p>
     <input id="mot" placeholder="Motivo do estorno" style="width:100%" maxlength="120">
     <div class="acoes"><button class="btn" data-a="fechar">Voltar</button><button class="btn ruim" data-a="estornar" data-id="${id}" data-pag="${pag || ""}">Confirmar estorno</button></div>`);
 }
@@ -1057,7 +1058,7 @@ function csvContas() {
 }
 document.addEventListener("click", async (e) => {
   const t = e.target.closest("[data-a]"); if (!t) return; const d = t.dataset, a = d.a;
-  if (a === "estornar") { const mot = ($("#mot").value || "").trim(); if (mot.length < 3) return alert("Digite o motivo do estorno."); $("#modal").hidden = true; patch(d.id, d.pag ? { estornarPagamento: d.pag, motivo: mot } : { status: "cancelado", motivo: mot }); }
+  if (a === "estornar") { const mot = ($("#mot").value || "").trim(); if (mot.length < 3) return alert("Digite o motivo do estorno."); $("#modal").hidden = true; patch(d.id, d.pag === "*" ? { estornarTudo: true, motivo: mot } : d.pag ? { estornarPagamento: d.pag, motivo: mot } : { status: "cancelado", motivo: mot }); }
   else if (a === "marcar") marcarNaConta(d.id);
   else if (a === "desfazConta") patch(d.id, { status: "aguardando" });
   else if (a === "pickCli") { $("#modal").hidden = true; escolha(clientes.find((x) => x.id === d.c)); }
