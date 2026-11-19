@@ -362,3 +362,6 @@ body.tec-on .modal.lado > .caixa-modal:has(#ac-itens) { height: calc(100vh - var
 .modal.lado .ac-junta-bar input { flex: 1 1 auto; min-width: 0 !important; height: 40px !important; margin: 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; font-size: .95rem !important; padding: 0 4px !important; }
 .modal.lado .ac-junta-bar .btn { min-height: 40px !important; padding: 4px 16px !important; margin: 0 !important; }
 .modal.lado .ac-extras { grid-template-columns: 1fr !important; }
+/* painel: a lista de itens NÃO tem rolagem própria (prendia a rodinha do mouse); quem rola é o painel todo */
+.modal.lado #ac-itens { max-height: none !important; overflow: visible !important; overscroll-behavior: auto !important; flex: none !important; }
+.modal.lado .ac-corpo { overflow-y: auto !important; overscroll-behavior: contain; }
