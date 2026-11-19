@@ -1022,7 +1022,7 @@ async function modalCelula(cid, dia) { // marcar na conta de um cliente num dia:
     <div class="cel-ja"><h4>Já marcado neste dia ${ls.length ? `<small>${brl(soma(ls, (l) => l.valor))}</small>` : ""}</h4>${ls.map(lancHtml).join("") || `<p class="cel-vazio">Nada marcado ainda.</p>`}</div>
     <h4>Marcar agora</h4><div class="ct-seg cel-tabs">${T.map(([k, n]) => `<button class="btn ${tab === k ? "on" : ""}" data-a="celTab" data-t="${k}">${n}</button>`).join("")}</div>
     <div class="cel-form" data-t="marm" ${tab === "marm" ? "" : "hidden"}>
-      <div class="cel-lin"><span>Marmitex</span>${stp("w-qtd", 1)}<span class="x">×</span><div class="cel-rs">R$<input id="w-preco" inputmode="decimal" value="${precoMarm(c)}"></div></div>
+      <div class="cel-lin"><span>Marmitex</span>${stp("w-qtd", 0)}<span class="x">×</span><div class="cel-rs">R$<input id="w-preco" inputmode="decimal" value="${precoMarm(c)}"></div></div>
       <div class="cel-lin"><span>Entrega</span><div class="cel-chips">${[["", "Sem entrega"], ["3,00", "R$ 3"], ["5,00", "R$ 5"]].map(([v, n]) => `<button class="btn ${taxa === v ? "on" : ""}" data-a="celTaxa" data-v="${v}">${n}</button>`).join("")}<div class="cel-rs">R$<input id="w-taxa" inputmode="decimal" placeholder="outro" value="${taxa}"></div></div></div>
       </div>
     ${ref ? `<div class="cel-form" data-t="ref" ${tab === "ref" ? "" : "hidden"}><div class="cel-lin"><span>Refeições</span>${stp("l-qtd", 1)}<span class="x">×</span><b>${brl(c.valorRefeicao)}</b></div></div>` : ""}
