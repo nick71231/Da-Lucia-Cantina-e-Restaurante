@@ -1084,7 +1084,7 @@ function csvContas() {
 document.addEventListener("click", async (e) => {
   const t = e.target.closest("[data-a]"); if (!t) return; const d = t.dataset, a = d.a;
   if (a === "estornar") { const mot = ($("#mot").value || "").trim(); if (mot.length < 3) return alert("Digite o motivo do estorno."); $("#modal").hidden = true; patch(d.id, d.pag === "*" ? { estornarTudo: true, motivo: mot } : d.pag ? { estornarPagamento: d.pag, motivo: mot } : { status: "cancelado", motivo: mot }); }
-  else if (a === "marcar") marcarNaConta(d.id);
+  else if (a === "marcar") { if (t.id === "ac-conta") marcarDoAcerto(); else marcarNaConta(d.id); }
   else if (a === "desfazConta") patch(d.id, { status: "aguardando" });
   else if (a === "pickCli") { $("#modal").hidden = true; escolha(clientes.find((x) => x.id === d.c)); }
   else if (a === "criaPick") { const nome = $("#nc-nome").value.trim(); if (!nome) return; const c = await api("POST", "/api/clientes", { nome, empresa: $("#nc-emp").value }); clientes.push(c); $("#modal").hidden = true; escolha(c); }
@@ -1394,6 +1394,14 @@ const ehMarm0 = (c) => /^marmita$/i.test(c.nome) && !(c.preco > 0);
 const precoMarmDe = (cid) => { const cl = clientes.find((x) => x.id === cid); return cl && cl.valorRefeicao > 0 ? cl.valorRefeicao : (divisao && divisao.precoMarm) || 0; };
 const valorNaConta = (c, cid) => (ehMarm0(c) && precoMarmDe(cid) > 0 ? round2(precoMarmDe(cid) * (c.qtd || 1)) : valorIt(c));
 const faltaPrecoMarm = (ab, D) => ab.some((c) => ehMarm0(c) && !((clientes.find((x) => x.id === D.atrib[c.iid]) || {}).valorRefeicao > 0));
+const comDoAcerto = () => acerto && acerto.ps.length === 1 && acerto.ps[0].tipo === "balanca" && acerto.ps[0].numero <= 9999 ? acerto.ps[0] : null;
+// "Marcar na conta" de dentro do Receber: se acrescentou bebida/doce, lança na comanda primeiro e depois marca tudo na conta
+async function marcarDoAcerto() {
+  const A = acerto; if (!A) return; const p = A.ps[0], dl = Object.values(A.doces).filter((x) => x.qtd > 0);
+  if (dl.length) { const com = comDoAcerto(); if (!com) return alert("Bebida/doce acrescentado aqui só dá pra marcar na conta em comanda. Receba ou tire o item.");
+    $("#ac-conta").disabled = true; const r = await lancarDocesNaComanda(dl, com); if (!r) { $("#ac-conta").disabled = false; return; } A.doces = {}; }
+  marcarNaConta(p.id);
+}
 function marcarNaConta(id) { // 1º escolhe a pessoa; depois dá pra trocar a pessoa de cada item (ex.: um prato pra cada funcionário)
   const p = pedidos.find((x) => x.id === id); if (!p || !p.itens.some((c) => !c.pago)) return alert("Não tem nenhum item em aberto nesse pedido.");
   escolherCliente((cli) => { divisao = { id, atrib: {}, pickando: false }; p.itens.filter((c) => !c.pago).forEach((c) => { divisao.atrib[c.iid] = cli.id; }); modalDivisao(); });
@@ -1800,7 +1808,7 @@ function atualizarAcerto() {
   if (A.duas) return desenharDuas();
   $("#ac-titulo").textContent = tituloAcerto();
   if ($("#ac-sub")) $("#ac-sub").textContent = subAcerto();
-  if ($("#ac-conta")) $("#ac-conta").hidden = !(A.ps.length === 1 && !Object.keys(A.doces).length); // conta: 1 pedido e sem bebida/doce acrescentado agora (esses ainda não foram lançados)
+  if ($("#ac-conta")) $("#ac-conta").hidden = !(A.ps.length === 1 && (!Object.values(A.doces).some((x) => x.qtd > 0) || comDoAcerto())); // conta: 1 pedido; com bebida/doce só se for comanda (o doce entra nela antes de marcar)
   const bts =(chave, forma, dis) => `<span class="ac-formas">${FORMAS_PAG.map((k) => `<button class="btn mini ${forma === k ? "on" : ""}" data-a="acForma" data-i="${esc(chave)}" data-f="${k}" ${dis ? "disabled" : ""}>${FIC[k]} ${FORMAS[k]}</button>`).join("")}</span>`;
   let h = "", total = 0, aberto = 0, sem = 0, nsel = 0; const tot = {}, conta = (v, f) => { total += v; nsel++; if (f) tot[f] = (tot[f] || 0) + v; else sem++; };
   A.ps.forEach((p) => {
