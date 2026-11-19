@@ -230,6 +230,7 @@ body.tec-on .caixa-modal:has(#lista-cli) { max-height: calc(100vh - var(--tec-h,
 .ent-boys { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
 .eb { background: #fff; border: 2px solid #ece4d9; border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; } .eb.sem { border-color: #f0b46a; background: #fff8e8; }
 .eb.eb-on { border-color: #c0392b; box-shadow: 0 0 0 3px #f6d5cf; } .eb-ver { min-height: 40px; font-weight: 700; } .eb-ver.on { background: #c0392b; color: #fff; }
+.comp-bar { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 3900; display: flex; align-items: center; gap: 12px; background: #fff; border: 2px solid #1a7f3c; border-radius: 16px; padding: 10px 14px 10px 18px; box-shadow: 0 12px 30px rgba(0,0,0,.25); font-weight: 700; font-size: 1.05rem; max-width: calc(100vw - 32px); flex-wrap: wrap; } .comp-bar[hidden] { display: none; } .comp-bar .btn { min-height: 44px; }
 .eb-faixa { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #fff4e0; border: 2px solid #f0b46a; border-radius: 12px; padding: 10px 14px; margin: 10px 0; font-size: 1.05rem; } .eb-faixa .btn { margin-left: auto; }
 .eb-top { display: flex; align-items: center; gap: 8px; } .eb-top b { font-size: 1.15rem; } .eb-top span { color: #8a7468; font-size: .85rem; } .eb-top .btn { margin-left: auto; min-height: 36px; padding: 2px 10px; }
 .eb-l { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; } .eb-l span { color: #6b5a50; } .eb-l b { font-size: 1.05rem; white-space: nowrap; }
@@ -1472,8 +1473,8 @@ async function logoImp(src) { // logo do admin do totem; se não tiver, a da pas
 }
 
 // ----- cabeçalho: LOGO NO CANTO SUPERIOR ESQUERDO + nome do restaurante do lado -----
-function cabecalhoESC(img, dots) {
-  const H = 130, cv = document.createElement("canvas"); cv.width = dots; cv.height = H;
+function cabecalhoESC(img, dots, tel) { // tel: 3ª linha (telefone), só no comprovante do cliente
+  const H = tel ? 150 : 130, cv = document.createElement("canvas"); cv.width = dots; cv.height = H;
   const g = cv.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, dots, H);
   let x = 0;
   if (img) { // logo encostada na esquerda, ocupando a altura toda
@@ -1484,9 +1485,10 @@ function cabecalhoESC(img, dots) {
   g.fillStyle = "#000"; g.textBaseline = "middle";
   const fonte = (s) => (g.font = `bold ${s}px Georgia, "Times New Roman", serif`);
   fonte(fs); while (g.measureText("DA L\u00daCIA").width > larg && fs > 16) fonte((fs -= 2));
-  g.fillText("DA L\u00daCIA", x, H * 0.4);
+  g.fillText("DA L\u00daCIA", x, H * (tel ? 0.3 : 0.4));
   let fs2 = Math.round(fs * 0.5); g.font = `${fs2}px Arial, sans-serif`; while (g.measureText("Cantina & Restaurante").width > larg && fs2 > 10) g.font = `${--fs2}px Arial, sans-serif`;
-  g.fillText("Cantina & Restaurante", x, H * 0.73);
+  g.fillText("Cantina & Restaurante", x, H * (tel ? 0.6 : 0.73));
+  if (tel) g.fillText(tel, x, H * 0.85);
   // preto e branco: a logo com pontilhado (pra cores claras não sumirem), o texto com corte simples
   const px = g.getImageData(0, 0, dots, H).data, cinza = new Float32Array(dots * H);
   for (let i = 0; i < cinza.length; i++) cinza[i] = 0.299 * px[i * 4] + 0.587 * px[i * 4 + 1] + 0.114 * px[i * 4 + 2];
@@ -1517,8 +1519,8 @@ function quebraL(t, w) {
   });
   if (l) out.push(l); return out.length ? out : [""];
 }
-function escposDoc(L, k, img) {
-  const W = k.cols, by = [0x1B, 0x40, 0x1B, 0x74, 0, ...cabecalhoESC(img, k.dots)];
+function escposDoc(L, k, img, tel) {
+  const W = k.cols, by = [0x1B, 0x40, 0x1B, 0x74, 0, ...cabecalhoESC(img, k.dots, tel)];
   const linha = (txt, o = {}) => { by.push(0x1B, 0x61, { l: 0, c: 1, r: 2 }[o.a || "l"], 0x1B, 0x45, o.b ? 1 : 0, 0x1B, 0x2D, o.u ? 1 : 0, 0x1D, 0x21, o.s === "alta" ? 0x01 : 0); for (const ch of semAc(txt)) by.push(ch.charCodeAt(0)); by.push(0x0A); };
   L.forEach((o) => {
     if (o.hr) return linha("-".repeat(W));
@@ -1533,6 +1535,51 @@ function escposDoc(L, k, img) {
   by.push(0x1B, 0x45, 0, 0x1B, 0x2D, 0, 0x1D, 0x21, 0, 0x1B, 0x64, k.avanco); if (k.corte) by.push(0x1D, 0x56, 0x42, 0x00); // avança e corta
   return by;
 }
+
+// ----- comprovante pro cliente depois de receber (logo + nome + telefone, itens, total, como pagou) -----
+const TEL_LOJA = "(12) 99120-6380";
+const rotComp = (p) => p.tipo === "delivery" ? "Delivery " + nDel(p) : p.tipo === "balanca" ? (p.numero > 10000 ? "Marmitex M" + (p.numero - 10000) : "Comanda " + p.numero) : "Pedido #" + String(p.numero).padStart(4, "0");
+const kgBR = (g) => (g / 1000).toFixed(3).replace(".", ",") + " kg";
+const nomeComp = (c) => /^prato por quilo/i.test(c.nome) ? "Self-service" + (c.peso ? " " + kgBR(c.peso) : "") : (c.qtd || 1) + "x " + String(c.nome).replace(/\s*\(R\$\s?[\d.,]+\)\s*$/, "").replace(/\s*-\s*R\$\s?[\d.,]+$/, "");
+function comprovanteL(peds, novos) { // novos: ids dos recebimentos feitos agora (só eles entram no papel)
+  const agora = new Date(), L = [{ hr: 1 }];
+  peds.forEach((p, i) => { L.push({ e: rotComp(p), d: i ? "" : agora.toLocaleDateString("pt-BR").slice(0, 5) + " " + hora(agora) }); if (p.nome) L.push({ t: p.nome }); });
+  L.push({ hr: 1 });
+  const pags = peds.flatMap((p) => (p.pagamentos || []).filter((g) => novos.has(g.id) && !g.estornado).map((g) => ({ ...g, p })));
+  pags.forEach((g) => g.itens.forEach((iid) => { const c = g.p.itens.find((x) => x.iid === iid); if (!c) return;
+    L.push({ e: nomeComp(c), d: brl(valorIt(c)).replace("R$", "").trim() });
+    const det = (c.grupos || []).flatMap((x) => x.itens || []).filter(Boolean); if (det.length) L.push({ det: "+ " + det.join(", ") });
+    if (c.obs) L.push({ det: "Obs: " + c.obs }); }));
+  const tot = round2(soma(pags, (g) => g.valor));
+  L.push({ hr: 1 }, { e: "TOTAL", d: brl(tot), b: 1, s: "alta" });
+  const porForma = {}; pags.forEach((g) => (porForma[g.forma] = round2((porForma[g.forma] || 0) + g.valor)));
+  Object.entries(porForma).forEach(([f, v]) => L.push({ e: FORMAS[f] || f, d: brl(v).replace("R$", "").trim() }));
+  const din = pags.find((g) => g.forma === "dinheiro" && g.recebido > g.valor); if (din) L.push({ det: "Recebido " + brl(din.recebido) + " - troco " + brl(din.troco || round2(din.recebido - porForma.dinheiro)) });
+  L.push({ hr: 1 }, { t: "Comida boa, feita com carinho.", a: "c" }, { t: "Volte sempre!", a: "c" });
+  return { L, tot };
+}
+async function imprimirComprovante(ids, antes, dias) { // antes: ids dos recebimentos que já existiam (o resto foi feito agora)
+  avisoImp("🖨 Imprimindo comprovante...", "");
+  try {
+    const todos = [];
+    for (const d of dias) todos.push(...(await (await aut("/api/pedidos?dia=" + d)).json()));
+    const peds = ids.map((id) => todos.find((x) => x.id === id)).filter(Boolean);
+    const novos = new Set(peds.flatMap((p) => (p.pagamentos || []).map((g) => g.id)).filter((id) => !antes.has(id))), { L, tot } = comprovanteL(peds, novos);
+    if (!(tot > 0)) return avisoImp("✕ Não achei o pagamento pra imprimir", "erro");
+    const k = await cfgImp(), img = await logoImp(k.logo), x = await mandarImp(escposDoc(L, k, img, TEL_LOJA));
+    avisoImp(x.ok ? "✓ Comprovante impresso" : "✕ Não imprimiu: " + x.erro, x.ok ? "ok" : "erro");
+  } catch (e) { avisoImp("✕ Não imprimiu o comprovante", "erro"); }
+}
+// depois de receber: barra embaixo "Imprimir comprovante?" (não trava o caixa: some sozinha em 15 s)
+function oferecerComprovante(ps, antes) {
+  const ids = ps.map((p) => p.id), dias = [...new Set(ps.map((p) => p.dia || dia))];
+  let el = $("#comp-bar"); if (!el) { el = document.createElement("div"); el.id = "comp-bar"; el.className = "comp-bar"; document.body.appendChild(el); }
+  el.innerHTML = `<span>✓ Pagamento recebido. Imprimir comprovante?</span><button class="btn ok" id="comp-sim">🖨 Imprimir</button><button class="btn" id="comp-nao">Não</button>`;
+  el.hidden = false; clearTimeout(el._t); el._t = setTimeout(() => (el.hidden = true), 15000);
+  $("#comp-nao").onclick = () => (el.hidden = true);
+  $("#comp-sim").onclick = () => { el.hidden = true; imprimirComprovante(ids, antes, dias); };
+}
+const idsPags = (ps) => new Set(ps.flatMap((p) => (p.pagamentos || []).map((g) => g.id)));
 
 // ----- envio pro servidor, que manda pra impressora de rede (porta 9100) -----
 const bytesB64 = (by) => { let s = ""; for (let i = 0; i < by.length; i += 8192) s += String.fromCharCode.apply(null, by.slice(i, i + 8192)); return btoa(s); };
@@ -1802,8 +1849,9 @@ function d2Rodape() {
 document.addEventListener("input", (e) => { if (e.target.id === "d2-v1" && acerto && acerto.duas) { acerto.duas.v1 = e.target.value; d2Rodape(); } else if (e.target.id === "ac-rec" && acerto && acerto.duas) d2Rodape(); });
 async function receberDuas() {
   const D = acerto.duas, { p, v1, v2 } = d2Conta(), rec = parseFloat(String($("#ac-rec") ? $("#ac-rec").value : "").replace(",", ".")); $("#ac-ok").disabled = true;
+  const antes = idsPags([p]);
   const ok = await patch(p.id, { acertarValores: { partes: [{ forma: D.f1, valor: v1 }, { forma: D.f2, valor: v2 }], recebido: isNaN(rec) ? undefined : rec } });
-  if (ok) return aposVenda();
+  if (ok) { aposVenda(); return oferecerComprovante([p], antes); }
   d2Rodape();
 }
 async function receberAcerto() {
@@ -1823,12 +1871,12 @@ async function receberAcerto() {
       r.itens.forEach((x, k) => g.lista.push({ iid: x.iid, forma: dl[k].forma, v: dl[k].preco * dl[k].qtd }));
     } else { novo = await criarPedidoDoces(dl, A.ps[0]); if (!novo) return atualizarAcerto(); grupos.push({ p: novo, lista: novo.itens.map((x, k) => ({ iid: x.iid, forma: dl[k].forma, v: dl[k].preco * dl[k].qtd })) }); }
   }
-  let falhou = false;
+  let falhou = false; const antes = idsPags(grupos.map((g) => g.p));
   for (const g of grupos) {
     const din = round2(soma(g.lista.filter((x) => x.forma === "dinheiro"), (x) => x.v)), recebido = grupos.length === 1 ? (isNaN(rec) ? undefined : rec) : (din > 0 ? din : undefined);
     if (!(await patch(g.p.id, { acertar: g.lista.map((x) => ({ iid: x.iid, forma: x.forma })), recebido }))) { falhou = true; break; }
   }
-  if (!falhou) return aposVenda();
+  if (!falhou) { aposVenda(); return oferecerComprovante(grupos.map((g) => g.p), antes); }
   await esperaCarregar(); abrirAcerto([...A.ps.map((p) => p.id), ...(novo ? [novo.id] : [])]); // sobrou algo sem receber: reabre só com o que falta
 }
 async function desenharPainel() {
