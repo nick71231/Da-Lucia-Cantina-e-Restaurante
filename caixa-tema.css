@@ -247,3 +247,30 @@ body.tec-on .modal.lado > .caixa-modal:has(#ac-itens) { height: calc(100vh - var
 .modal.lado .ac-tile, .modal.lado .ac-dividir { white-space: normal !important; text-align: center; }
 .modal.lado .ac-extras input { min-width: 0 !important; }
 @media (max-width: 600px) { .modal.lado .ac-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } .modal.lado .ac-extras input { flex-basis: 100%; } }
+/* painel do Receber mais compacto (cabe tudo sem rolar) */
+.modal.lado .ac-cab { padding: 12px 18px 8px !important; }
+.modal.lado .ac-cab h2 { font-size: 1.3rem !important; }
+.modal.lado .ac-cab small { font-size: .78rem !important; margin-top: 1px !important; }
+.modal.lado .ac-x { min-height: 38px !important; min-width: 38px !important; border-radius: 10px !important; font-size: .95rem !important; }
+.modal.lado #ac-itens { padding: 8px 18px 2px !important; }
+.modal.lado .ac-li { padding: 6px 2px !important; font-size: .9rem !important; }
+.modal.lado .ac-dividir { min-height: 38px !important; margin-top: 6px !important; padding: 6px 10px !important; font-size: .86rem !important; border-radius: 10px !important; }
+.modal.lado .ac-head { padding: 2px 18px 10px !important; }
+.modal.lado .ac-extras { gap: 6px !important; margin-top: 4px !important; }
+.modal.lado .ac-extras .btn { min-height: 36px !important; padding: 4px 10px !important; font-size: .82rem !important; border-radius: 10px !important; }
+.modal.lado .ac-extras input { height: 36px !important; min-height: 0 !important; margin: 0 !important; padding: 4px 10px !important; font-size: .85rem !important; }
+.modal.lado .ac-pag1 { margin-top: 10px !important; } .modal.lado .ac-pag1 > span { font-size: .7rem !important; margin-bottom: 6px !important; }
+.modal.lado .ac-tiles { gap: 6px !important; }
+.modal.lado .ac-tile { min-height: 50px !important; padding: 5px 6px !important; font-size: .86rem !important; gap: 0 !important; }
+.modal.lado .ac-tile .ic, .modal.lado .ac-tile i .ic { width: 17px !important; height: 17px !important; }
+.modal.lado .ac-f { font-size: .62rem !important; }
+.modal.lado .ac-rodape { padding: 8px 18px 0 !important; }
+.modal.lado .ac-tot small, .modal.lado .ac-aberto small { font-size: .62rem !important; }
+.modal.lado .ac-tot b { font-size: 1.4rem !important; } .modal.lado .ac-aberto b { font-size: .95rem !important; }
+.modal.lado .ac-chip { font-size: .72rem !important; padding: 2px 8px !important; }
+.modal.lado .ac-din { margin-top: 6px !important; padding: 6px 10px !important; font-size: .88rem !important; } .modal.lado .ac-din input { height: 34px !important; width: 120px !important; } .modal.lado .ac-rapido .btn { min-height: 34px !important; font-size: .8rem !important; padding: 4px 10px !important; }
+.modal.lado .ac-imp { margin-top: 4px !important; font-size: .78rem !important; } .modal.lado .ac-imp input { width: 16px !important; height: 16px !important; }
+.modal.lado .caixa-modal .acoes { padding: 8px 18px 12px !important; gap: 10px !important; }
+.modal.lado .caixa-modal .acoes .btn { min-height: 44px !important; font-size: .95rem !important; border-radius: 12px !important; }
+.modal.lado #ac-ok { font-size: 1rem !important; }
+.modal.lado .ac-item { padding: 8px 10px !important; margin-bottom: 6px !important; }
