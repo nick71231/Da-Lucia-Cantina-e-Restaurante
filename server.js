@@ -579,7 +579,9 @@ async function tratar(req, res) {
     if (ip && !IP_PRIVADO.test(ip)) return json(res, 400, { erro: "IP inválido (use o IP da impressora na sua rede, ex.: 192.168.1.60)" });
     if (!Number.isInteger(porta) || porta < 1 || porta > 65535) return json(res, 400, { erro: "porta inválida" });
     if (!Number.isInteger(cols) || cols < 24 || cols > 64) return json(res, 400, { erro: "largura do papel inválida" });
-    impCaixa = { ip, porta, cols, avanco: Number.isInteger(avanco) && avanco >= 0 && avanco <= 12 ? avanco : 4, corte: b.corte !== false };
+    const txt = (v, n) => String(v || "").replace(/[\u0000-\u001f]/g, " ").trim().slice(0, n), lj = b.loja && typeof b.loja === "object" ? b.loja : (impCaixa.loja || {});
+    const loja = { razao: txt(lj.razao, 60), cnpj: txt(lj.cnpj, 24), endereco: txt(lj.endereco, 80), cidade: txt(lj.cidade, 50), tel: txt(lj.tel, 40), extra: txt(lj.extra, 60) }; // dados do restaurante no comprovante
+    impCaixa = { ip, porta, cols, avanco: Number.isInteger(avanco) && avanco >= 0 && avanco <= 12 ? avanco : 4, corte: b.corte !== false, loja };
     await gravarArquivo(ARQ_IMPCX, impCaixa); return json(res, 200, impCaixa);
   }
   if (p === "/api/login" && req.method === "POST") {

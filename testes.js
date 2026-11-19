@@ -77,6 +77,13 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   }
   t((await req("POST", "/api/lancamentos", { clienteId: cli.j.id, dia: hoje, qtd: 2, valor: 48 })).s === 200, "lançamento válido");
   t((await req("POST", "/api/lancamentos", { clienteId: "inexistente", dia: hoje, valor: 10 })).s === 400, "lançamento p/ cliente inexistente é recusado");
+  { // dados do restaurante no comprovante (ficam junto da impressora do caixa)
+    const lj = { razao: "Lucia ME", cnpj: "12.345.678/0001-90", endereco: "Rua A, 10 - Centro", cidade: "Cachoeira Paulista - SP", tel: "(12) 9999-0000", extra: "@dalucia" };
+    const pu = await req("PUT", "/api/impressora-caixa", { ip: "", porta: 9100, cols: 48, avanco: 4, corte: true, loja: lj });
+    t(pu.s === 200 && JSON.stringify((await req("GET", "/api/impressora-caixa")).j.loja) === JSON.stringify(lj), "dados do restaurante (CNPJ, endereço) salvos pro comprovante");
+    await req("PUT", "/api/impressora-caixa", { ip: "", porta: 9100, cols: 48 });
+    t((await req("GET", "/api/impressora-caixa")).j.loja.cnpj === lj.cnpj, "salvar a impressora sem os dados não apaga o CNPJ");
+  }
   t((await req("POST", "/api/pagamentos", { chave: "c:" + cli.j.id, mes: hoje.slice(0, 7), valor: 100, forma: "pix", data: hoje })).s === 200, "pagamento antecipado");
   t((await req("POST", "/api/pagamentos", { chave: "c:fantasma", mes: hoje.slice(0, 7), valor: 5, forma: "pix" })).s === 400, "pagamento p/ conta inexistente é recusado");
   const ped = await req("POST", "/api/pedidos", { uid: "u5", itens: [{ nome: "Marmitex", preco: 24, qtd: 1 }] });

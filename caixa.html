@@ -1507,7 +1507,7 @@ async function cfgImp() { // impressora do CAIXA (fica no servidor, separada da 
   try { const r = await aut("/api/impressora-caixa"); if (r.ok) k = (await r.json()) || {}; } catch (e) {}
   try { const d = ((await (await fetch("/api/config", { cache: "no-store" })).json()) || {}).dados || {}; if (d.logoPequena) { try { logo = JSON.parse(d.logoPequena); } catch (e) { logo = d.logoPequena; } } } catch (e) {}
   const cols = Math.max(24, Math.min(64, parseInt(k.cols) || 48));
-  return { ip: k.ip || "", porta: k.porta || 9100, cols, dots: cols >= 42 ? 576 : 384, avanco: k.avanco !== undefined ? Math.max(0, Math.min(12, +k.avanco || 0)) : 4, corte: k.corte !== false, logo };
+  return { ip: k.ip || "", porta: k.porta || 9100, cols, dots: cols >= 42 ? 576 : 384, avanco: k.avanco !== undefined ? Math.max(0, Math.min(12, +k.avanco || 0)) : 4, corte: k.corte !== false, logo, loja: k.loja || {} };
 }
 const carregarImg = (src) => new Promise((ok) => { if (!src) return ok(null); const i = new Image(); i.onload = () => ok(i.width ? i : null); i.onerror = () => ok(null); i.src = src; });
 let cacheLogo = { src: null, img: null };
@@ -1586,8 +1586,14 @@ const TEL_LOJA = "(12) 99120-6380";
 const rotComp = (p) => p.tipo === "delivery" ? "Delivery " + nDel(p) : p.tipo === "balanca" ? (p.numero > 10000 ? "Marmitex M" + (p.numero - 10000) : "Comanda " + p.numero) : "Pedido #" + String(p.numero).padStart(4, "0");
 const kgBR = (g) => (g / 1000).toFixed(3).replace(".", ",") + " kg";
 const nomeComp = (c) => /^prato por quilo/i.test(c.nome) ? "Self-service" + (c.peso ? " " + kgBR(c.peso) : "") : (c.qtd || 1) + "x " + String(c.nome).replace(/\s*\(R\$\s?[\d.,]+\)\s*$/, "").replace(/\s*-\s*R\$\s?[\d.,]+$/, "");
-function comprovanteL(peds, novos, pagsProntos, quando) { // novos: ids dos recebimentos feitos agora (só eles entram no papel); pagsProntos: reimpressão
-  const agora = new Date(quando || Date.now()), L = [{ hr: 1 }];
+function lojaL(lj) { // linhas do restaurante (centralizadas) no topo do comprovante
+  lj = lj || {}; const L = [];
+  if (lj.razao) L.push({ t: lj.razao, a: "c" }); if (lj.cnpj) L.push({ t: "CNPJ: " + lj.cnpj, a: "c" });
+  if (lj.endereco) L.push({ t: lj.endereco, a: "c" }); if (lj.cidade) L.push({ t: lj.cidade, a: "c" }); if (lj.extra) L.push({ t: lj.extra, a: "c" });
+  return L;
+}
+function comprovanteL(peds, novos, pagsProntos, quando, lj) { // novos: ids dos recebimentos feitos agora (só eles entram no papel); pagsProntos: reimpressão
+  const agora = new Date(quando || Date.now()), L = [...lojaL(lj), { hr: 1 }, { t: "COMPROVANTE DE PAGAMENTO", a: "c", b: 1 }, { hr: 1 }];
   peds.forEach((p, i) => { L.push({ e: rotComp(p), d: i ? "" : agora.toLocaleDateString("pt-BR").slice(0, 5) + " " + hora(agora) }); if (p.nome) L.push({ t: p.nome }); });
   L.push({ hr: 1 });
   const pags = pagsProntos || peds.flatMap((p) => (p.pagamentos || []).filter((g) => novos.has(g.id) && !g.estornado).map((g) => ({ ...g, p })));
@@ -1600,7 +1606,7 @@ function comprovanteL(peds, novos, pagsProntos, quando) { // novos: ids dos rece
   const porForma = {}; pags.forEach((g) => (porForma[g.forma] = round2((porForma[g.forma] || 0) + g.valor)));
   Object.entries(porForma).forEach(([f, v]) => L.push({ e: FORMAS[f] || f, d: brl(v).replace("R$", "").trim() }));
   const din = pags.find((g) => g.forma === "dinheiro" && g.recebido > g.valor); if (din) L.push({ det: "Recebido " + brl(din.recebido) + " - troco " + brl(din.troco || round2(din.recebido - porForma.dinheiro)) });
-  L.push({ hr: 1 }, { t: "Comida boa, feita com carinho.", a: "c" }, { t: "Volte sempre!", a: "c" });
+  L.push({ hr: 1 }, { t: "Comida boa, feita com carinho.", a: "c" }, { t: "Volte sempre!", a: "c" }, { t: "Não é documento fiscal", a: "c" });
   return { L, tot };
 }
 async function imprimirComprovante(ids, antes, dias) { // antes: ids dos recebimentos que já existiam (o resto foi feito agora)
@@ -1609,9 +1615,9 @@ async function imprimirComprovante(ids, antes, dias) { // antes: ids dos recebim
     const todos = [];
     for (const d of dias) todos.push(...(await (await aut("/api/pedidos?dia=" + d)).json()));
     const peds = ids.map((id) => todos.find((x) => x.id === id)).filter(Boolean);
-    const novos = new Set(peds.flatMap((p) => (p.pagamentos || []).map((g) => g.id)).filter((id) => !antes.has(id))), { L, tot } = comprovanteL(peds, novos);
+    const k = await cfgImp(), novos = new Set(peds.flatMap((p) => (p.pagamentos || []).map((g) => g.id)).filter((id) => !antes.has(id))), { L, tot } = comprovanteL(peds, novos, null, null, k.loja);
     if (!(tot > 0)) return avisoImp("✕ Não achei o pagamento pra imprimir", "erro");
-    const k = await cfgImp(), img = await logoImp(k.logo), x = await mandarImp(escposDoc(L, k, img, TEL_LOJA, 1));
+    const img = await logoImp(k.logo), x = await mandarImp(escposDoc(L, k, img, k.loja.tel || TEL_LOJA, 1));
     avisoImp(x.ok ? "✓ Comprovante impresso" : "✕ Não imprimiu: " + x.erro, x.ok ? "ok" : "erro");
   } catch (e) { avisoImp("✕ Não imprimiu o comprovante", "erro"); }
 }
@@ -1628,10 +1634,9 @@ function oferecerComprovante(ps, antes) {
 async function reimprimirComprovante(p) {
   const pags = p.pagamentos && p.pagamentos.length ? p.pagamentos.filter((g) => !g.estornado).map((g) => ({ ...g, p }))
     : [{ forma: p.pagamento, valor: p.valor, itens: p.itens.map((c) => c.iid), p }];
-  const { L, tot } = comprovanteL([p], null, pags, p.pagoEm || p.quando);
-  if (!(tot > 0)) return avisoImp("✕ Não achei o pagamento pra imprimir", "erro");
   avisoImp("🖨 Imprimindo comprovante...", "");
-  try { const k = await cfgImp(), img = await logoImp(k.logo), x = await mandarImp(escposDoc(L, k, img, TEL_LOJA, 1)); avisoImp(x.ok ? "✓ Comprovante impresso" : "✕ Não imprimiu: " + x.erro, x.ok ? "ok" : "erro"); }
+  try { const k = await cfgImp(), { L, tot } = comprovanteL([p], null, pags, p.pagoEm || p.quando, k.loja); if (!(tot > 0)) return avisoImp("✕ Não achei o pagamento pra imprimir", "erro");
+    const img = await logoImp(k.logo), x = await mandarImp(escposDoc(L, k, img, k.loja.tel || TEL_LOJA, 1)); avisoImp(x.ok ? "✓ Comprovante impresso" : "✕ Não imprimiu: " + x.erro, x.ok ? "ok" : "erro"); }
   catch (e) { avisoImp("✕ Não imprimiu o comprovante", "erro"); }
 }
 const idsPags = (ps) => new Set(ps.flatMap((p) => (p.pagamentos || []).map((g) => g.id)));
@@ -1671,6 +1676,8 @@ async function modalImpCaixa() {
     <h4>Papel</h4><select id="icx-cols" style="width:100%">${op(48, "80 mm (48 colunas)", k.cols)}${op(42, "80 mm, fonte maior (42 colunas)", k.cols)}${op(32, "58 mm (32 colunas)", k.cols)}</select>
     <h4>Linhas em branco antes do corte</h4><input id="icx-av" type="number" min="0" max="12" value="${k.avanco}" style="width:100%">
     <p style="margin-top:10px"><label><input type="checkbox" id="icx-corte" ${k.corte ? "checked" : ""}> Cortar o papel no final</label></p>
+    <h4 style="margin-top:16px">Dados do restaurante no comprovante</h4><p class="det-obs" style="margin:0 0 6px">Saem no topo do comprovante de pagamento (o que ficar vazio não aparece).</p>
+    ${[["razao", "Razão social (ex.: Lucia Helena da Silva ME)", 60], ["cnpj", "CNPJ (ex.: 00.000.000/0001-00)", 24], ["endereco", "Endereço (ex.: Rua X, 123 - Centro)", 80], ["cidade", "Cidade (ex.: Cachoeira Paulista - SP)", 50], ["tel", "Telefone / WhatsApp", 40], ["extra", "Outra linha (ex.: Instagram @dalucia)", 60]].map(([c, ph, n]) => `<input id="icx-lj-${c}" maxlength="${n}" placeholder="${esc(ph)}" value="${esc((k.loja || {})[c] || (c === "tel" ? TEL_LOJA : c === "cidade" ? "Cachoeira Paulista - SP" : ""))}" style="width:100%;margin-bottom:6px">`).join("")}
     <div id="icx-st" style="margin:12px 0 6px;padding:12px 14px;border-radius:14px;font-weight:600;background:#f3ede6;color:#8a6f60">${k.ip ? "Toque em “Testar conexão” pra conferir." : "Ainda sem IP. Digite o IP e salve."}</div>
     <p class="det-obs">Dica: deixe o IP da impressora fixo no roteador (reserva de DHCP) pra ele não mudar sozinho. O computador do servidor e a impressora precisam estar na mesma rede.</p></div>
     <div class="acoes cm-rodape"><button class="btn" data-a="fechar">Fechar</button><button class="btn" data-a="impCxTeste">🔌 Testar conexão</button><button class="btn" data-a="impCxPagina">🧾 Imprimir teste</button><button class="btn ok" data-a="impCxSalvar">Salvar</button></div>`);
@@ -1679,7 +1686,7 @@ async function salvarImpCaixa() { // grava no servidor; devolve true se deu cert
   const ip = $("#icx-ip").value.trim();
   if (ip && !ipOk(ip)) { statusImpCx("✕ Esse IP parece incorreto. Use o formato 192.168.1.60.", "erro"); return false; }
   try {
-    const r = await aut("/api/impressora-caixa", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ip, porta: parseInt($("#icx-porta").value) || 9100, cols: parseInt($("#icx-cols").value) || 48, avanco: parseInt($("#icx-av").value) || 0, corte: $("#icx-corte").checked }) });
+    const r = await aut("/api/impressora-caixa", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ip, porta: parseInt($("#icx-porta").value) || 9100, cols: parseInt($("#icx-cols").value) || 48, avanco: parseInt($("#icx-av").value) || 0, corte: $("#icx-corte").checked, loja: Object.fromEntries(["razao", "cnpj", "endereco", "cidade", "tel", "extra"].map((c) => [c, ($("#icx-lj-" + c) || {}).value || ""])) }) });
     const j = await r.json().catch(() => ({})); if (!r.ok) { statusImpCx("✕ " + esc(j.erro || "O servidor recusou."), "erro"); return false; }
     return true;
   } catch (e) { statusImpCx("✕ Sem conexão com o servidor.", "erro"); return false; }
