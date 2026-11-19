@@ -806,7 +806,7 @@ document.addEventListener("click", async (e) => {
   const a = e.target.dataset.a, id = e.target.dataset.id; if (!a) return;
   if (a === "csv") return csv();
   if (a === "receber") return abrirAcerto(id);
-  if (a === "fechar") { if (acerto && $("#ac-itens") && Object.keys(acerto.doces).length && !confirm("Descartar os doces adicionados?")) return; acerto = null; $("#modal").hidden = true; if (divisao && divisao.pickando) { divisao.pickando = false; return modalDivisao(); } divisao = null; return; }
+  if (a === "fechar") { if (acerto && $("#ac-itens") && Object.values(acerto.doces).some((x) => x.qtd > 0)) return guardarDoces(); acerto = null; $("#modal").hidden = true; if (divisao && divisao.pickando) { divisao.pickando = false; return modalDivisao(); } divisao = null; return; }
   if (a === "cancelar") {
     const ped = pedidos.find((x) => x.id === id); let motivo;
     if (ped && (ped.status === "pago" || pagsDe(ped).length)) { pedirMotivo(id); return; }
@@ -1896,6 +1896,15 @@ async function lancarDocesNaComanda(dl, com) { // doces entram DENTRO da comanda
   await esperaCarregar(); const fresco = pedidos.find((x) => x.id === com.id), novos = fresco ? fresco.itens.filter((x) => !antes.has(x.iid)) : [];
   if (novos.length !== dl.length) { alert("Os doces foram lançados na comanda, mas não consegui conferir. O pagamento vai reabrir com tudo que está em aberto."); return "reabrir"; }
   return { itens: novos };
+}
+// saiu do Receber sem pagar, mas acrescentou bebida/sorvete/doce: fica lançado (antes sumia ao fechar)
+async function guardarDoces() {
+  const A = acerto; if (!A || A.guardando) return; A.guardando = true;
+  const dl = Object.values(A.doces).filter((x) => x.qtd > 0), com = A.ps.find((p) => p.tipo === "balanca" && p.numero <= 9999);
+  const ok = com ? await lancarDocesNaComanda(dl, com) : await criarPedidoDoces(dl, A.ps[0]);
+  if (!ok) { A.guardando = false; return; } // deu erro (já avisou): o painel continua aberto, nada se perde
+  acerto = null; $("#modal").hidden = true; ultimoHtml = ""; desenhar();
+  avisoImp("✓ " + soma(dl, (d) => d.qtd) + " item(ns) lançado(s) " + (com ? "na comanda " + com.numero : "em aberto (\"" + ((ok && ok.nome) || "Balcão") + "\")"), "ok");
 }
 function aposVenda() { // volta pro campo de busca já pronto pra digitar a próxima comanda
   juntar.clear(); acerto = null; $("#modal").hidden = true; aba = "aberto"; const b = $("#busca"); b.value = ""; ultimoHtml = ""; desenhar(); setTimeout(() => b.focus(), 60);
