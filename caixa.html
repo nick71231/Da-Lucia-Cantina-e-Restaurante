@@ -1802,10 +1802,11 @@ function abrirAcerto(ids) { // escolhe quais itens acertar e a forma de pagament
     <div class="ac-corpo">
     <section class="ac-sec ac-sec-itens"><div class="ac-sec-t" id="ac-itens-t">Itens <small id="ac-nit"></small></div><div id="ac-itens"></div></section>
     <div class="ac-head">
+    <div class="ac-junta-bar"><span class="ac-junta-ic">🔗</span><input id="ac-junta" placeholder="Juntar outra comanda (nº ou nome)" title="Juntar outra comanda: nº ou nome"><button class="btn mini" data-a="acJunta">Juntar</button></div>
     <section class="ac-sec ac-pag1"><div class="ac-sec-t">Como vai pagar?</div><div class="ac-tiles">${FORMAS_PAG.map((k, i) => `<button class="btn ac-tile" data-a="acSet" data-f="${k}"><i>${FIC[k]}</i>${FORMAS[k]}<small class="ac-f">F${i + 1}</small></button>`).join("")}<button class="btn ac-tile ac-conta" id="ac-conta" data-a="marcar" data-id="${esc(ps[0].id)}" hidden><i>📒</i>Marcar na conta</button></div></section>
     <section class="ac-sec ac-mais"><div class="ac-sec-t">Outras opções</div>
     <div id="ac-mais-bts" class="ac-mais-bts"></div>
-    <div class="ac-extras"><button class="btn mini" id="dc-abre" data-a="dcAbrir">➕ Bebida, sorvete ou doce</button><span class="ac-junta"><input id="ac-junta" placeholder="Juntar nº" title="Juntar outra comanda: nº ou nome"><button class="btn mini" data-a="acJunta">Juntar</button></span></div>
+    <div class="ac-extras"><button class="btn mini" id="dc-abre" data-a="dcAbrir">➕ Bebida, sorvete ou doce</button></div>
     <div id="dc-fundo" class="dc-fundo" data-a="dcFechar" hidden></div><div id="ac-picker" class="dc-pop" hidden></div></section></div>
     </div>
     <div class="ac-rodape"><div id="ac-resumo"></div>
@@ -1817,7 +1818,7 @@ function abrirAcerto(ids) { // escolhe quais itens acertar e a forma de pagament
 }
 function atualizarAcerto() {
   const A = acerto; if (!A || !$("#ac-itens")) return;
-  document.querySelectorAll(".ac-pag1, .ac-mais, #ac-itens-t").forEach((el) => (el.style.display = A.duas ? "none" : ""));
+  document.querySelectorAll(".ac-pag1, .ac-mais, .ac-junta-bar, #ac-itens-t").forEach((el) => (el.style.display = A.duas ? "none" : ""));
   if (A.duas) return desenharDuas();
   $("#ac-titulo").textContent = tituloAcerto();
   if ($("#ac-sub")) $("#ac-sub").textContent = subAcerto();
