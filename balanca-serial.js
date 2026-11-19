@@ -5,7 +5,7 @@
 // números ("PESO 0,456 kg  R$ 12,34"). A janela "Diagnóstico" (toque no selo da balança) mostra o que chegou cru.
 (function () {
   const N = window.BalancaNativa; if (!N) return;
-  const CFG_PADRAO = { baud: 9600, bits: 8, par: "N", stop: 1, pedido: "05", intervalo: 300, usar: "auto" }; // pedido "05" = ENQ
+  const CFG_PADRAO = { baud: 9600, bits: 8, par: "N", stop: 1, pedido: "05", intervalo: 400, usar: "auto" }; // pedido "05" = ENQ
   const ler = () => { try { return { ...CFG_PADRAO, ...JSON.parse(localStorage.getItem("balSerial") || "{}") }; } catch (e) { return { ...CFG_PADRAO }; } };
   const salvar = (c) => { try { localStorage.setItem("balSerial", JSON.stringify(c)); } catch (e) {} };
   let C = ler(), est = { estado: "desconectada", detalhe: "" }, buf = [], log = [], ultimo = null, iguais = 0, trava = null, preenchi = null, tPed = 0, ultChegou = 0;
@@ -47,6 +47,7 @@
       const r = entender(q, txt);
       log.unshift({ t: new Date().toLocaleTimeString("pt-BR"), hex: q.map((b) => b.toString(16).padStart(2, "0")).join(" "), txt, r }); log = log.slice(0, 30);
       if (r) aplicar(r);
+      esperando = 0; // a balança respondeu: pode pedir de novo
       if (diagAberto) desenharDiag();
     }
     pinta();
@@ -71,7 +72,7 @@
   // põe o peso/valor na tela da balança quando o prato está parado
   let avisouKg = 0;
   function aplicar(r) {
-    const kg = r.peso, igual = ultimo && ultimo.peso === kg && ultimo.total === r.total;
+    const kg = r.peso, igual = ultimo && (ultimo.peso === kg || (kg != null && ultimo.peso != null && Math.abs(ultimo.peso - kg) <= 0.002)) && (ultimo.total === r.total || (!(r.total > 0) && !(ultimo.total > 0)));
     iguais = igual ? iguais + 1 : 0; ultimo = r;
     if (kg != null && kg < 0.005) { trava = null; preenchi = null; return; } // prato saiu da balança (zero ou negativo, com tara): libera a próxima
     if (kg != null && kg > 40) return; // leitura absurda (mais do que a balança aguenta): ignora
@@ -99,7 +100,14 @@
   }
   // pede o peso de tempos em tempos (modo sob demanda)
   // (se a balança não responde há 10 s, pede só a cada 3 s: cada pedido trava a página um instante dentro do app)
-  setInterval(() => { const calada = Date.now() - ultChegou > 10000, iv = calada ? 3000 : Math.min(C.intervalo || 300, 300); if (est.estado === "conectada" && C.pedido && Date.now() - tPed >= iv) { tPed = Date.now(); N.enviar(C.pedido); } }, 100);
+  // (19/11: pedir a cada 300 ms sem esperar a resposta deixava o tablet lerdo e as respostas chegavam picotadas: o valor não ia pra tela)
+  let esperando = 0;
+  setInterval(() => {
+    const agora = Date.now(), calada = agora - ultChegou > 10000, iv = calada ? 3000 : Math.max(300, C.intervalo || 400);
+    if (est.estado !== "conectada" || !C.pedido || agora - tPed < iv) return;
+    if (esperando && agora - esperando < 1000) return; // ainda esperando a resposta do pedido anterior
+    tPed = agora; esperando = agora; N.enviar(C.pedido);
+  }, 150);
   setInterval(pinta, 1000);
   try { est = JSON.parse(N.estado()); } catch (e) {}
   if (est.estado !== "conectada") { if (C.baud !== 9600 || C.par !== "N" || C.bits !== 8 || C.stop !== 1) N.configurar(C.baud, C.bits, C.par, C.stop); else N.conectar(); }
