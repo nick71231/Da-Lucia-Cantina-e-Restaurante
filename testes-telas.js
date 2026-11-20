@@ -49,7 +49,7 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
     await clica(w, '[data-a="ctQuinz"][data-q="1"]'); const q1 = texto(w, "#lista");
     { const qc = texto(w, ".q-cards"); t(q1.includes("420,00") && /refei\S*\s*34(?!\d)/i.test(qc) && !q1.includes("77,00") && !/do m\S+s todo|Pago no m\S+s|A pagar \(m/.test(q1), "conta: 1ª quinzena mostra só o consumo do dia 1 ao 15, com os almoços (nada do mês todo)"); }
     await clica(w, '[data-a="ctVisao"][data-v="planilha"]'); const cels = [...w.document.querySelectorAll("td.cel")].map((x) => x.textContent.trim()).filter(Boolean);
-    t(cels.sort().join() === "30,4" && w.document.querySelectorAll("td.dia").length <= 8, "planilha da Caramuru: só os dias da quinzena e a célula mostra a quantidade de almoços");
+    t(cels.sort().join() === "30,4" && w.document.querySelectorAll("tr:not(.tot-fim) > td.dia").length <= 8 && /TOTAL GERAL/.test(texto(w, ".grade")), "planilha da Caramuru: só os dias da quinzena e a célula mostra a quantidade de almoços");
     await clica(w, '[data-a="ctQuinz"][data-q="2"]'); t(texto(w, "#lista").includes("77,00") && !texto(w, "#lista").includes("120,00"), "2ª quinzena mostra só do dia 16 ao fim");
     await clica(w, '[data-a="voltaLista"]'); await clica(w, '[data-aba="aberto"]');
   }

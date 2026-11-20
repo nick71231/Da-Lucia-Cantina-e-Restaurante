@@ -391,3 +391,8 @@ body.tec-on .modal.lado > .caixa-modal:has(#ac-itens) { height: calc(100vh - var
 @media (max-width: 600px) { .cel-ex-bts { grid-template-columns: 1fr; } }
 .cex-pop .dc-pop-cab { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 1.15rem; }
 .cex-livre[hidden] { display: none !important; }
+/* planilha da conta: última linha com o TOTAL de cada pessoa e o total geral */
+.grade tr.tot-fim td { background: #fbf3e6 !important; border-top: 2px solid #d9c7a8 !important; font-weight: 700; text-align: center; white-space: nowrap; }
+.grade tr.tot-fim td small { display: block; font-weight: 600; font-size: .75rem; color: #8a6f60; }
+.grade tr.tot-fim td b { color: var(--vermelho, #a50f14); }
+.grade tr.tot-fim td.dia, .grade tr.tot-fim td.dia2 { font-weight: 800; letter-spacing: .04em; color: #2b1710; }
