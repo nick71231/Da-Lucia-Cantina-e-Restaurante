@@ -32,7 +32,7 @@ const CATEGORIAS = [
       "Strogonoff de Carne", "Filé de Frango Grelhado", "Rocambole de Carne Moída", "Bife à Milanesa",
       "Filé de Tilápia", "Almôndegas", "Sem Carne", "Linguiça Fina", "Filé de Frango à Milanesa",
       "Fricassê de Frango", "Sobrecoxa Recheada", "Frango Assado", "Carne Moída Refogada",
-      "Costela com Mandioca", "Posta de Tilápia", "Bife de Fígado", "Linguiça Toscana",
+      "Costela com Mandioca", "Posta de Tilápia com Espinho", "Bife de Fígado", "Linguiça Toscana",
       "Carne Moída com Chuchu", "Linguiça Tropeiro", "Sobrecoxa Assada", "Cação Frito",
       "Peito de Boi com Mandioca", "Carne com Mandioca", "Lombo Assado", "Dobradinha",
       "Polpetone de Queijo", "Costela Bovina", "Bife Acebolado", "Frango Recheado", "Pernil em Cubos",
