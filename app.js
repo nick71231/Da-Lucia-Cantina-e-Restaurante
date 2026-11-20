@@ -512,6 +512,7 @@ function addBebida(nome, tp) { // também serve pros doces (tp = "doce")
 function fotoBebida(nome) {
   const n = String(nome).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const zero = /zero|sem acucar|diet|light/.test(n), grande = /600|pet|garrafa/.test(n), lata = /lata|350/.test(n);
+  if (/limoneto/.test(n)) return "h2oh-limoneto";
   if (/h2o/.test(n)) return "h2oh-limao";
   if (/guaran/.test(n)) return grande ? (zero ? "guarana-600-zero" : "guarana-600") : (zero ? "guarana-zero-lata" : "guarana-lata");
   if (/sprite/.test(n)) return zero ? "sprite-zero-lata" : "sprite-lata";
