@@ -329,7 +329,10 @@ const soma = (a, f) => a.reduce((s, x) => s + f(x), 0), r2 = (n) => Math.round(n
 const ler = (k, p) => { try { const v = localStorage.getItem(k); return v === null ? p : JSON.parse(v); } catch (e) { return p; } };
 const salvar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 const novoUid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
-const cfg = () => ({ precoKg: 0, usarPeso: false, alerta: 150, som: true, mostrarStats: false, mostrarResumo: false, alertaParada: 40, undoSeg: 9, volume: "medio", abaInicial: "comandas", teclas: "normal", ...ler("balancaCfg", {}) });
+const fimDeSemana = () => [0, 6].includes(new Date().getDay());
+const cfg = () => { const c = { precoKg: 0, precoKgAuto: true, precoKgSemana: 64.9, precoKgFds: 73.9, usarPeso: false, alerta: 150, som: true, mostrarStats: false, mostrarResumo: false, alertaParada: 40, undoSeg: 9, volume: "medio", abaInicial: "comandas", teclas: "normal", ...ler("balancaCfg", {}) };
+  if (c.precoKgAuto !== false) c.precoKg = fimDeSemana() ? c.precoKgFds : c.precoKgSemana; // automático: o preço do dia
+  return c; };
 const JSONH = { "Content-Type": "application/json" };
 let pedidosT = [], todosP = []; // pedidos do totem que estão esperando no caixa (pra pôr numa comanda)
 let campo = "comanda", comanda = "", cents = "", peso = "", pedidosB = [], uidLanc = null, enviando = false, aba = cfg().abaInicial === "bebidas" ? "bebidas" : "comandas", catAtual = "Todas", bebidas = BEBIDAS.slice(), ultimoReg = null, tUndo, fechadasAberto = false, offline = false;
@@ -610,7 +613,10 @@ function abrirCfg() {
   $("#modal").innerHTML = `<div class="caixa-modal cfg"><h2>⚙ Ajustes da balança</h2><div class="cm-corpo">
     <div class="cfg-sec">Pesagem</div>
     <label class="cfg-row"><span>Registrar também o peso (g)</span><input type="checkbox" id="c-peso" ${chk(c.usarPeso)}></label>
-    <div class="cfg-row"><span>Preço por kg (R$)<small>Se preencher, dá pra lançar só o peso e o valor sai calculado</small></span><input id="c-kg" inputmode="decimal" placeholder="0,00" value="${c.precoKg ? String(c.precoKg).replace(".", ",") : ""}"></div>
+    <label class="cfg-row"><span>Preço do kg automático pelo dia<small>Hoje: ${brl(c.precoKg)} (${fimDeSemana() ? "fim de semana" : "dia de semana"})</small></span><input type="checkbox" id="c-kgauto" ${chk(c.precoKgAuto !== false)}></label>
+    <div class="cfg-row"><span>Kg de segunda a sexta (R$)</span><input id="c-kgsem" inputmode="decimal" value="${String(c.precoKgSemana).replace(".", ",")}"></div>
+    <div class="cfg-row"><span>Kg no sábado e domingo (R$)</span><input id="c-kgfds" inputmode="decimal" value="${String(c.precoKgFds).replace(".", ",")}"></div>
+    <div class="cfg-row"><span>Preço fixo do kg (R$)<small>Só vale com o automático desligado</small></span><input id="c-kg" inputmode="decimal" placeholder="0,00" value="${ler("balancaCfg", {}).precoKg ? String(ler("balancaCfg", {}).precoKg).replace(".", ",") : ""}"></div>
     <div class="cfg-row"><span>Avisar quando um prato passar de (R$)</span><input id="c-alerta" inputmode="decimal" value="${String(c.alerta).replace(".", ",")}"></div>
     <div class="cfg-sec">Comandas</div>
     <div class="cfg-row"><span>Destacar comanda parada há mais de (min)<small>0 desliga o aviso</small></span><input id="c-parada" inputmode="numeric" value="${c.alertaParada}"></div>
@@ -639,7 +645,7 @@ document.addEventListener("click", (e) => {
   }
   if (d.k !== undefined || t.id === "limpar") return; // números e Limpar já foram tratados no toque (pointerdown), lá embaixo
   if (t.id === "reg") return acao();
-  if (t.id === "som") { const c = cfg(); salvar("balancaCfg", { ...c, som: !c.som }); return tela(); }
+  if (t.id === "som") { const c = cfg(); salvar("balancaCfg", { ...ler("balancaCfg", {}), som: !c.som }); return tela(); }
   if (t.id === "admBtn") { location.href = "index.html?admin=1"; return; }
   if (t.id === "cfgBtn") return abrirCfg();
   if (d.nm) return abrirNome(d.nm);
@@ -658,7 +664,7 @@ document.addEventListener("click", (e) => {
   if (d.a === "fechar") $("#modal").hidden = true;
   if (d.a === "salvarCfg") {
     const num = (id, p) => { const v = parseFloat($(id).value.replace(",", ".")); return v >= 0 ? v : p; };
-    salvar("balancaCfg", { ...cfg(), usarPeso: $("#c-peso").checked, precoKg: num("#c-kg", 0), alerta: num("#c-alerta", 150) || 150, som: $("#c-som").checked, alertaParada: Math.round(num("#c-parada", 40)), undoSeg: +$("#c-undo").value, abaInicial: $("#c-aba").value, mostrarStats: $("#c-stats").checked, mostrarResumo: $("#c-resumo").checked, teclas: $("#c-teclas").value, volume: $("#c-vol").value });
+    salvar("balancaCfg", { ...ler("balancaCfg", {}), usarPeso: $("#c-peso").checked, precoKg: num("#c-kg", 0), precoKgAuto: $("#c-kgauto").checked, precoKgSemana: num("#c-kgsem", 64.9) || 64.9, precoKgFds: num("#c-kgfds", 73.9) || 73.9, alerta: num("#c-alerta", 150) || 150, som: $("#c-som").checked, alertaParada: Math.round(num("#c-parada", 40)), undoSeg: +$("#c-undo").value, abaInicial: $("#c-aba").value, mostrarStats: $("#c-stats").checked, mostrarResumo: $("#c-resumo").checked, teclas: $("#c-teclas").value, volume: $("#c-vol").value });
     $("#modal").hidden = true; campo = "comanda"; peso = ""; toast("Salvo!"); tela(); estat(); bip(true);
   }
 });
