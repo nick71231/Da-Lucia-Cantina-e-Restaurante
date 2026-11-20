@@ -824,7 +824,8 @@ async function tratar(req, res) {
   if (!liberado) { res.writeHead(403); return res.end(); }
   fs.readFile(arq, (e, data) => {
     if (e) { res.writeHead(404); return res.end("Nao encontrado"); }
-    res.writeHead(200, { "Content-Type": tipos[path.extname(arq).toLowerCase()] || "application/octet-stream" }); res.end(data);
+    const ext2 = path.extname(arq).toLowerCase(); // html/js/css: o tablet sempre confere se tem versão nova (antes o app guardava o arquivo velho e a mudança não aparecia)
+    res.writeHead(200, { "Content-Type": tipos[ext2] || "application/octet-stream", ...([".html", ".js", ".css", ".json"].includes(ext2) ? { "Cache-Control": "no-cache" } : {}) }); res.end(data);
   });
 }
 http.createServer((req, res) => tratar(req, res).catch((e) => {
