@@ -402,3 +402,8 @@ button:active:not(:disabled) { transform: scale(.96); }
 /* fonte bonita da faixa "Toque" (fica no próprio sistema: funciona sem internet) */
 @font-face { font-family: "Playfair Display"; src: url("img/fontes/playfair-700.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
 .descanso .toque { font: 700 clamp(1.6rem, 3vw, 2.5rem) / 1.2 "Playfair Display", Georgia, serif !important; font-style: normal !important; letter-spacing: .03em !important; color: #6e0b10 !important; background: #fff !important; }
+/* tela sempre do tamanho do aparelho (deitado ou em pé): a coluna principal não cresce mais que a tela (antes o admin em pé ficava largo e cortado, parecendo zoom) */
+body { grid-template-columns: minmax(0, 1fr) minmax(260px, 28%); }
+body.sem-carrinho { grid-template-columns: minmax(0, 1fr); }
+#principal { min-width: 0; max-width: 100vw; }
+html, body { overflow-x: hidden; }
