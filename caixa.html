@@ -832,6 +832,7 @@ const chaveCli = (c) => (c.empresa ? "e:" + c.empresa : "c:" + c.id); // quem pa
 // cada ação de "gravar" leva um código (uid). Clique duplo ou tentar de novo depois de uma falha mandam o MESMO código,
 // e o servidor faz só 1 vez. Se a anterior deu certo, a próxima igual é uma ação nova (ex.: duas retiradas iguais de propósito).
 const tentativasApi = new Map();
+const tel1 = (t) => String(t || "").split(/[\/,;]|\se\s/)[0].trim(); // 1º telefone do cadastro (pode ter vários, separados por /)
 const api = async (m, url, body) => {
   let corpoEnv = body;
   if (m === "POST" && body && typeof body === "object" && !Array.isArray(body) && !body.uid) {
@@ -1114,7 +1115,7 @@ document.addEventListener("click", async (e) => {
 function modalConta(k) { // pagamento da conta: resumo, pagamentos do mês e registrar (forma em botões grandes)
   modalAtual = { t: "p", k };
   const r = resumoEnt(k), emp = k.startsWith("e:") ? k.slice(2) : "", ind = emp ? null : r.cs[0], ref = ind && ind.modo === "refeicao" && ind.valorRefeicao > 0, unitPad = ind && ind.valorRefeicao > 0 ? String(ind.valorRefeicao).replace(".", ",") : (localStorage.getItem("cxUnit:" + k) || "");
-  const forma = localStorage.getItem("cxPagForma") || "pix", tel = (ind ? ind.telefone : (r.cs.find((c) => c.telefone) || {}).telefone) || "", cls = r.saldo > 0.009 ? "dev" : "ok";
+  const forma = localStorage.getItem("cxPagForma") || "pix", tel = tel1(ind ? ind.telefone : (r.cs.find((c) => c.telefone) || {}).telefone), cls = r.saldo > 0.009 ? "dev" : "ok";
   abrirModal(`<div class="cm-corpo pg-modal"><h2>${esc(emp || (ind ? ind.nome : "Conta"))}<small>${emp ? "Empresa (paga pelos funcionários)" : (ind && ind.pagamento === "depois") ? "Paga depois" : "Paga antecipado"} · ${nomeMes(mes)}</small></h2>
     <div class="pg-stats"><div><small>Anterior</small><b>${brl(r.ant)}</b></div><div><small>Consumo</small><b>${brl(r.totalMes)}</b></div><div class="ok"><small>Pago</small><b>${brl(r.pago)}</b></div><div class="${cls}"><small>${r.saldo < -0.009 ? "Crédito" : "A pagar"}</small><b>${brl(Math.abs(r.saldo))}</b></div></div>
     ${emp ? `<p class="pg-func">${r.cs.filter((c) => resumoCli(c).total).map((c) => `<span class="ac-chip">${esc(c.nome)} ${brl(resumoCli(c).total)}</span>`).join("") || "Nenhum consumo no mês."}</p>` : ""}
@@ -1202,7 +1203,7 @@ document.addEventListener("click", async (e) => {
   else if (a === "pgForma") { $("#p-forma").value = d.f; localStorage.setItem("cxPagForma", d.f); document.querySelectorAll(".pg-formas .ac-tile").forEach((b) => b.classList.toggle("on", b.dataset.f === d.f)); }
   else if (a === "pgSaldo") { $("#p-valor").value = d.v; }
   else if (a === "cobrarZap") {
-    const r = resumoEnt(d.k), emp = d.k.startsWith("e:"), ind = emp ? null : r.cs[0], nome = emp ? d.k.slice(2) : ind.nome, tel = String((ind ? ind.telefone : (r.cs.find((c) => c.telefone) || {}).telefone) || "").replace(/\D/g, "");
+    const r = resumoEnt(d.k), emp = d.k.startsWith("e:"), ind = emp ? null : r.cs[0], nome = emp ? d.k.slice(2) : ind.nome, tel = tel1(ind ? ind.telefone : (r.cs.find((c) => c.telefone) || {}).telefone).replace(/\D/g, "");
     if (!tel) return alert("Esse cliente não tem telefone no cadastro.");
     const txt = `Olá, ${nome}! Aqui é do restaurante Da Lúcia 😊\nResumo da sua conta de ${nomeMes(mes).toLowerCase()}:\n${r.ant ? "• Saldo anterior: " + brl(r.ant) + "\n" : ""}• Consumo do mês: ${brl(r.totalMes)}${r.qtd ? " (" + r.qtd + " refeições)" : ""}\n• Pago: ${brl(r.pago)}\n${r.saldo > 0.009 ? "• *A pagar: " + brl(r.saldo) + "*" : r.saldo < -0.009 ? "• Crédito: " + brl(-r.saldo) : "• Tudo pago! ✅"}\nQualquer dúvida é só chamar. Obrigado!`;
     window.open("https://wa.me/" + (tel.length <= 11 ? "55" : "") + tel + "?text=" + encodeURIComponent(txt), "_blank");
@@ -2144,7 +2145,7 @@ function textoExtrato(k) { // texto simples: serve pra imprimir ou mandar por Wh
   return L.join("\n");
 }
 function modalExtrato(k) {
-  modalAtual = { t: "p", k }; const txt = textoExtrato(k), r = resumoEnt(k), fone = (r.cs.length === 1 && r.cs[0].telefone ? r.cs[0].telefone : "").replace(/\D/g, "");
+  modalAtual = { t: "p", k }; const txt = textoExtrato(k), r = resumoEnt(k), fone = tel1(r.cs.length === 1 && r.cs[0].telefone ? r.cs[0].telefone : "").replace(/\D/g, "");
   const num = fone ? (fone.startsWith("55") ? fone : "55" + fone) : "";
   abrirModal(`<h2>Extrato</h2><pre class="extrato">${esc(txt)}</pre>
     <div class="acoes" style="flex-wrap:wrap"><button class="btn" data-a="voltaConta" data-k="${esc(k)}">Voltar</button><button class="btn" data-a="imprimirExtrato">🖨 Imprimir 2 vias</button>
@@ -2287,7 +2288,8 @@ function desenharClientes() {
   const F = [["todos", "Todos", ativos.length], ["emp", "Empresas", emps.length], ["marm", "Marmita", ativos.filter(ehMarmCli).length], ["avulso", "Avulsos (fiado)", ativos.filter(ehAvulso).length], ["deve", "Devendo", 0], ["arq", "Arquivados", arq.length]];
   const devendo = (c) => { const s = contaDoCli(c); return s != null && s > 0.009; }; F[4][2] = ativos.filter((c) => !c.empresa && devendo(c)).length + emps.filter((e) => devendo(ativos.find((c) => c.empresa === e))).length;
   const saldoPill = (c) => { const s = contaDoCli(c); if (s == null || (Math.abs(s) < 0.009)) return ""; return s > 0 ? `<span class="st-pill dev">deve ${brl(s)}</span>` : `<span class="st-pill ok">crédito ${brl(-s)}</span>`; };
-  const zap = (t) => { const n = String(t || "").replace(/\D/g, ""); return n ? `<a class="btn mini cl-zap" href="https://wa.me/${n.length <= 11 ? "55" + n : n}" target="_blank" rel="noopener" title="Abrir WhatsApp">📲 ${esc(t)}</a>` : `<span class="cl-semtel">sem telefone</span>`; };
+  const zap1 = (t) => { const n = String(t || "").replace(/\D/g, ""); return n ? `<a class="btn mini cl-zap" href="https://wa.me/${n.length <= 11 ? "55" + n : n}" target="_blank" rel="noopener" title="Abrir WhatsApp">📲 ${esc(t.trim())}</a>` : ""; };
+  const zap = (t) => { const ts = String(t || "").split(/[\/,;]|\se\s/).filter((x) => x.replace(/\D/g, "")); return ts.length ? ts.map(zap1).join("") : `<span class="cl-semtel">sem telefone</span>`; }; // um botão por telefone
   const tipo = (c) => `<span class="st-pill">${c.modo === "refeicao" ? "🍽 Refeição " + brl(c.valorRefeicao) : "R$ Valor livre"}</span>${c.empresa ? "" : `<span class="st-pill">${c.pagamento === "depois" ? "Paga depois" : "Antecipado"}</span>`}`;
   const linha = (c, dentroEmp) => `<div class="cl-it" data-nome="${esc(c.nome + " " + (c.empresa || "") + " " + (c.telefone || "") + " " + String(c.telefone || "").replace(/\D/g, ""))}"><span class="cli-av">${esc((c.nome || "?").trim().charAt(0).toUpperCase())}</span>
     <div class="cl-info"><b>${esc(c.nome)}</b><div class="cl-tags">${tipo(c)}${!dentroEmp && c.empresa ? `<span class="st-pill env">🏢 ${esc(c.empresa)}</span>` : ""}${dentroEmp ? "" : saldoPill(c)}</div></div>
@@ -2321,7 +2323,7 @@ function modalCliente(id, empPad) {
     <div class="cf">Como marca<input type="hidden" id="c-modo" value="${e.modo === "refeicao" ? "refeicao" : "valor"}"><div class="ct-seg cf-seg" data-campo="c-modo"><button class="btn ${e.modo !== "refeicao" ? "on" : ""}" data-a="cfSeg" data-v="valor">R$ Valor livre</button><button class="btn ${e.modo === "refeicao" ? "on" : ""}" data-a="cfSeg" data-v="refeicao">🍽 Por refeição</button></div></div>
     <label class="cf" id="cf-preco" ${e.modo === "refeicao" ? "" : "hidden"}>Valor de cada refeição<input id="c-preco" inputmode="decimal" placeholder="Ex.: 22,00" value="${e.valorRefeicao ? String(e.valorRefeicao).replace(".", ",") : ""}"></label>
     <div class="cf" id="cf-pag" ${e.empresa ? "hidden" : ""}>Pagamento<input type="hidden" id="c-pag" value="${e.pagamento === "depois" ? "depois" : "antecipado"}"><div class="ct-seg cf-seg" data-campo="c-pag"><button class="btn ${e.pagamento !== "depois" ? "on" : ""}" data-a="cfSeg" data-v="antecipado">Paga antecipado</button><button class="btn ${e.pagamento === "depois" ? "on" : ""}" data-a="cfSeg" data-v="depois">Paga depois (fiado)</button></div></div>
-    <label class="cf">Telefone / WhatsApp<input id="c-tel" inputmode="tel" value="${esc(e.telefone || "")}" placeholder="(12) 99999-9999"></label>
+    <label class="cf">Telefone / WhatsApp <small>(mais de um? separe com / — pedido de qualquer um cai nesta conta)</small><input id="c-tel" inputmode="tel" value="${esc(e.telefone || "")}" placeholder="(12) 99999-9999 / (12) 98888-8888"></label>
     <label class="cf">Endereço de entrega <small>(o robô do WhatsApp usa na marmita, sem perguntar toda vez)</small><input id="c-end" value="${esc(e.endereco || "")}" placeholder="Ex.: Rua das Flores, 25, Centro, apto 3" maxlength="200"></label>
     ${id ? `<button class="btn cf-arq" data-a="cliJuntar" data-c="${id}">🔀 Cadastro repetido? Juntar com outro cliente</button><button class="btn ruim cf-arq" data-a="cliArq" data-c="${id}">🗃 Arquivar cliente</button>` : ""}</div>
     <div class="acoes cm-rodape"><button class="btn" data-a="fechar">Cancelar</button><button class="btn ok" data-a="cliSalvar" data-c="${id || ""}">${id ? "Salvar" : "Adicionar cliente"}</button></div>`);

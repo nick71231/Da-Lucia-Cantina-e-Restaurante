@@ -100,6 +100,10 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   t((await req("PATCH", "/api/pedidos/" + ped.j.id, { status: "conta", clienteId: cli2.j.id })).j.status === "conta", "marcar pedido na conta de um cliente");
   const ct = (await req("GET", "/api/contas?mes=" + hoje.slice(0, 7))).j;
   t(ct.lancamentos.length === 2, "contas do mês mostram os 2 lançamentos");
+  { // cliente com 2 telefones no cadastro (separados por /): os dois acham a conta
+    const c2t = await req("POST", "/api/clientes", { nome: "ZE DOIS FONES", telefone: "(12) 99111-2222 / (12) 98333-4444" });
+    t(c2t.s === 200 && c2t.j.telefone.includes("/"), "cadastro aceita 2 telefones separados por /");
+  }
   { // tirar UM item da conta (a pessoa cancelou ou não foi)
     const pt = await req("POST", "/api/pedidos", { uid: "u5t", itens: [{ nome: "Marmitex", preco: 24, qtd: 1 }, { nome: "Coca Lata", preco: 6, qtd: 2 }] });
     await req("PATCH", "/api/pedidos/" + pt.j.id, { status: "conta", clienteId: cli2.j.id });

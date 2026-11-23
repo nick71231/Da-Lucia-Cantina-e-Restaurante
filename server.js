@@ -236,10 +236,12 @@ function pedidoDoSite(s) { // converte o pedido do site pro formato do caixa (o 
 // cliente da conta pra um pedido de marmita: pelo telefone; senão pelo nome sem "marmita/mta" ("Polyana - MARMITA" = "POLYANA MARMITA")
 const semAcS = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const nomeBase = (s) => semAcS(s).replace(/[^a-z ]/g, " ").split(/\s+/).filter((w) => w && !/^(marmitas?|marmit|mta)$/.test(w)).join(" ");
+// um cliente pode ter VÁRIOS telefones no cadastro, separados por / , ; ou " e " (dona 23/11: pedia de 2 números e caía em 2 contas)
+const telsCli = (t) => String(t || "").split(/[\/,;]|\se\s/).map((x) => x.replace(/\D/g, "").slice(-8)).filter((x) => x.length === 8);
 const brl2 = (v) => "R$" + Number(v || 0).toFixed(2).replace(".", ",");
 function clienteDoPedido(p) {
   const ativos = db.clientes.filter((c) => c.ativo !== false), fim = (t) => String(t || "").replace(/\D/g, "").slice(-8), tel = fim(p.telefone);
-  if (tel.length === 8) { const c = ativos.find((x) => fim(x.telefone) === tel); if (c) return c; }
+  if (tel.length === 8) { const c = ativos.find((x) => telsCli(x.telefone).includes(tel)); if (c) return c; }
   const nb = nomeBase(p.nome); if (!nb) return null;
   let l = ativos.filter((c) => nomeBase(c.nome) === nb); if (l.length === 1) return l[0];
   const pri = nb.split(" ")[0]; l = ativos.filter((c) => /marmit|mta/.test(semAcS(c.nome)) && nomeBase(c.nome).split(" ")[0] === pri); // só o 1º nome, entre os clientes de marmita
@@ -247,7 +249,7 @@ function clienteDoPedido(p) {
 }
 function contaDoPedido(p) { // cliente com conta pra um pedido "na conta": telefone; senão o nome do cliente (ou da empresa) dentro do nome do pedido. Tem que dar 1 só.
   const ativos = db.clientes.filter((c) => c.ativo !== false), fim = (t) => String(t || "").replace(/\D/g, "").slice(-8), tel = fim(p.telefone);
-  if (tel.length === 8) { const l = ativos.filter((x) => fim(x.telefone) === tel); if (l.length === 1) return l[0]; }
+  if (tel.length === 8) { const l = ativos.filter((x) => telsCli(x.telefone).includes(tel)); if (l.length === 1) return l[0]; }
   const np = " " + nomeBase(p.nome) + " ", tem = (s) => { const b = nomeBase(s); return b.length >= 3 && np.includes(" " + b + " "); };
   // pelo nome: só nome com 2 palavras ou mais ("JOSE ROBERTO"), ou cliente de empresa. Nome de 1 palavra ("MARIA") casaria com outra Maria qualquer.
   let l = ativos.filter((c) => tem(c.nome) && (nomeBase(c.nome).includes(" ") || c.empresa)); if (l.length === 1) return l[0];
