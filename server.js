@@ -300,7 +300,10 @@ function textoWhats(p, loja = {}, agora = Date.now()) {
   const cidade = S(loja.cidade_entrega).replace(/\s*[,-]\s*[A-Z]{2}$/, ""); // "Cachoeira Paulista, SP" -> "Cachoeira Paulista"
   const taxa = p.itens.filter((c) => c.tipo === "taxa").reduce((x, c) => x + c.preco * c.qtd, 0);
   const SEP = "-".repeat(30); // tracinhos separando as partes da mensagem
-  const L = ["Da Lúcia por aqui! 😄🍽️", "Seu pedido já está em produção — feito com muito carinho e sabor! 👩‍🍳🔥", "", `*Pedido nº ${p.numero}*`, SEP, "*DETALHES DO PEDIDO*"];
+  // começo e fim da mensagem: editáveis no painel do site (Configurações > Mensagens do WhatsApp); vazio = o texto de sempre
+  const topo = String(loja.msg_confirma_topo || "").trim() || "Da Lúcia por aqui! 😄🍽️\nSeu pedido já está em produção — feito com muito carinho e sabor! 👩‍🍳🔥";
+  const fimTxt = String(loja.msg_confirma_fim || "").trim() || "Obrigado pela preferência, se precisar de algo é só chamar! 😉";
+  const L = [...topo.split(/\r?\n/), "", `*Pedido nº ${p.numero}*`, SEP, "*DETALHES DO PEDIDO*"];
   const M = (v) => S(v).toLocaleUpperCase("pt-BR");
   p.itens.filter((c) => c.tipo !== "taxa").forEach((c, i) => { // um bloco por produto: nome, quantidade, valor e cada etapa com o que foi escolhido
     L.push(i ? SEP : "", `Produto: ${M(c.nome)}`, `Quantidade: ${c.qtd}`); if (c.preco > 0) L.push(`Valor: ${rs(c.preco * c.qtd)}`);
@@ -322,7 +325,7 @@ function textoWhats(p, loja = {}, agora = Date.now()) {
   // Pix: a loja não tem como ver sozinha que o dinheiro caiu, então a marmitex só entra em produção com o comprovante
   // (o caixa já marca como recebido no Pix sozinho; o comprovante é o que confirma de verdade)
   if (p.pagPrevisto === "pix") L.push("⚠ *Pagamento no Pix:* pra gente começar a preparar sua marmitex, mande o *comprovante do Pix* aqui nesta conversa 🙏", "");
-  L.push("Obrigado pela preferência, se precisar de algo é só chamar! 😉");
+  L.push(fimTxt);
   return L.join("\n");
 }
 function avisarWhats(p, loja) {
