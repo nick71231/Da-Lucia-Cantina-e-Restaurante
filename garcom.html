@@ -270,9 +270,13 @@ function desenhar(reset) {
   el.scrollTop = reset ? 0 : scroll;
 }
 let ultimoHtml = "", ultimaBarra = "";
+// últimas comandas que ESTE celular atendeu hoje (aparecem primeiro, pra achar rápido no almoço)
+const recentes = () => { const r = ler("garcomRecentes", {}); return r.dia === hoje() && Array.isArray(r.nums) ? r.nums : []; };
+const lembrarRecente = (n) => salvar("garcomRecentes", { dia: hoje(), nums: [n, ...recentes().filter((x) => x !== n)].slice(0, 6) });
 function htmlComandas() {
   const todas = abertas(), f = todas.filter((p) => !filtro || (String(p.numero).startsWith(filtro) || (p.numero > 10000 && String(p.numero - 10000).startsWith(filtro))));
-  const h = `<div class="cont">${filtro ? f.length + " de " : ""}${todas.length} comanda${todas.length === 1 ? "" : "s"} aberta${todas.length === 1 ? "" : "s"}</div>` + (f.length
+  const rec = filtro ? [] : recentes().map((n) => todas.find((p) => p.numero === n)).filter(Boolean);
+  const h = (rec.length ? `<div class="cont">👆 Você atendeu por último</div><div class="grade-c" style="margin-bottom:14px">${rec.map((p) => `<button class="cmd" data-cmd="${p.numero}"><span class="n">${numTxt(p.numero)}</span><span class="nm">${p.nome ? esc(p.nome) : "&nbsp;"}</span><span class="rd"><span>${tempo(minutos(p))}</span><b>${brl(p.valor)}</b></span></button>`).join("")}</div>` : "") + `<div class="cont">${filtro ? f.length + " de " : ""}${todas.length} comanda${todas.length === 1 ? "" : "s"} aberta${todas.length === 1 ? "" : "s"}</div>` + (f.length
     ? `<div class="grade-c">${f.map((p) => { const m = minutos(p); return `<button class="cmd ${m >= 40 ? "parada" : ""}" data-cmd="${p.numero}"><span class="n">${numTxt(p.numero)}</span><span class="nm">${p.nome ? esc(p.nome) : "&nbsp;"}</span><span class="rd"><span>${tempo(m)}</span><b>${brl(p.valor)}</b></span></button>`; }).join("")}</div>`
     : `<p class="vazio">${filtro ? "Nenhuma comanda aberta com esse número." : "Nenhuma comanda aberta no momento."}</p>`);
   const c = $("#cmds"); if (c && c.innerHTML !== h && c._h !== h) { c._h = h; c.innerHTML = h; }
@@ -395,7 +399,7 @@ bola.addEventListener("contextmenu", (e) => e.preventDefault());
 document.addEventListener("click", (e) => {
   const t = e.target.closest("button"); if (!t) return; const d = t.dataset;
   if (travado || (toqueRuim && (d.b !== undefined || d.rm !== undefined || d.cmd))) { e.preventDefault(); return; } // no bolso não lança nada
-  if (d.cmd) { atual = +d.cmd; catAtual = "Todas"; otim = {}; sessao = 0; return desenhar(true); }
+  if (d.cmd) { atual = +d.cmd; lembrarRecente(atual); catAtual = "Todas"; otim = {}; sessao = 0; return desenhar(true); }
   if (t.id === "voltar" || t.id === "pronto") return sairDaComanda();
   if (d.cat) { catAtual = d.cat; return desenhar(false); }
   if (d.b !== undefined) { if (TRAVA && rajada()) { travar(); return toast("Muitos toques seguidos: tela travada"); } t.classList.remove("ok"); void t.offsetWidth; t.classList.add("ok"); return lancar(+d.b); }

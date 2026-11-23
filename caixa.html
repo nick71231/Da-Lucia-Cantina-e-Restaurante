@@ -794,7 +794,7 @@ function fechamento() {
   const linhaR = (ic, t, v, sub, cls) => `<div class="fx-li ${cls || ""}"><span class="fx-ic">${ic}</span><div><b>${t}</b>${sub ? `<small>${sub}</small>` : ""}</div><strong>${v}</strong></div>`;
   return `<div class="fx-hero"><div class="fx-total"><small>Total recebido ${qd}</small><b>${brl(totV + totC)}</b><span>vendas ${brl(totV)}${totC ? " + contas " + brl(totC) : ""}</span>
       <div class="fx-acoes"><button class="btn" data-a="zapResumo" title="Abre o WhatsApp com o resumo e também deixa ele copiado">📲 Enviar resumo</button><button class="btn" data-a="csv">⬇ CSV</button><button class="btn" data-a="backup">💾 Backup</button></div></div>
-    <div class="ct-stats fx-mini"><div class="ok"><small>Pedidos pagos</small><b>${pagos}</b><span>ticket médio ${brl(pagos ? totV / pagos : 0)}</span></div><div class="${ab.length ? "dev" : ""}"><small>Em aberto</small><b>${ab.length}</b><span>${brl(vAb)} a receber</span></div>
+    <div class="ct-stats fx-mini"><div class="ok"><small>Pedidos pagos</small><b>${pagos}</b><span>ticket médio ${brl(pagos ? soma(P.filter((p) => p.status === "pago"), (p) => p.valor) / pagos : 0)}</span></div><div class="${ab.length ? "dev" : ""}"><small>Em aberto</small><b>${ab.length}</b><span>${brl(vAb)} a receber</span></div>
       <div><small>Na conta</small><b>${brl(soma(conta, valConta))}</b><span>${conta.length} pedido(s)</span></div><div class="${canc || est.length ? "dev" : ""}"><small>Cancelados</small><b>${canc}</b><span>${est.length ? est.length + " estorno(s) · " + brl(soma(est, (x) => x.valor)) : "nenhum estorno"}</span></div></div></div>
     <div class="fx-cols"><div class="gv-box"><h4>Por forma de pagamento</h4>${formas.map((x) => `<div class="fx-fp"><span class="fx-ic">${FIC[x.f] || "💰"}</span><div class="fx-fp-n"><b>${FORMAS[x.f]}</b><small>${x.n} recebimento(s)</small></div><div class="fx-bar"><i style="width:${(x.v / mx) * 100}%"></i></div><strong>${brl(x.v)}</strong><em>${pct(x.v, totV)}</em></div>`).join("") || `<p class="cel-vazio">Nenhum recebimento ${qd}.</p>`}</div>
       <div class="gv-box"><h4>Dinheiro e contas</h4>
@@ -1356,7 +1356,8 @@ function cardsBoys(r) {
   const sem = ents.filter((p) => !p.entregador);
   return `<div class="eb-cab"><b>Por motoboy</b><button class="btn" data-a="boyEdit">✎ ${nomes.length ? "Motoboys" : "Cadastrar motoboys"}</button></div>
     ${nomes.length ? "" : `<div class="vazio-box">Cadastre os motoboys do dia (ex.: João, Pedro) e marque em cada entrega quem levou.</div>`}
-    <div class="ent-boys">${nomes.filter((n) => !entBoy || entBoy === n).map((n) => card(n, ents.filter((p) => p.entregador === n))).join("")}${sem.length && nomes.length && (!entBoy || entBoy === "__sem") ? card("", sem, true) : ""}</div>`; // motoboy selecionado: SÓ o card dele (dona 23/11: leu o R$ 30 do Juninho achando que era do Kevin)
+    <div class="ent-boys">${nomes.filter((n) => (!entBoy || entBoy === n) && ents.some((p) => p.entregador === n)).map((n) => card(n, ents.filter((p) => p.entregador === n))).join("")}${sem.length && nomes.length && (!entBoy || entBoy === "__sem") ? card("", sem, true) : ""}</div>
+    ${(() => { const zero = entBoy ? [] : nomes.filter((n) => !ents.some((p) => p.entregador === n)); return zero.length ? `<p style="margin:6px 2px 0;color:var(--mu,#8a7f76);font-size:13px">🛵 Sem entregas hoje: ${zero.map((n) => `${esc(n)}${dia === hojeISO() ? ` <button class="btn mini" data-a="boyVale" data-k="${esc(n)}" title="Vale / adiantamento (gasolina)">⛽ vale</button>` : ""}`).join(" · ")}</p>` : ""; })()}`; // motoboy sem entrega no dia: só o nome (o card vazio ocupava espaço) // motoboy selecionado: SÓ o card dele (dona 23/11: leu o R$ 30 do Juninho achando que era do Kevin)
 }
 const escolheBoy = (p) => (p.entrega || "entrega") !== "entrega" || p.status === "cancelado" ? "" :
   `<div class="eb-esc">${(boys || []).map((n) => `<button class="btn ${p.entregador === n ? "on" : ""}" data-a="boySet" data-id="${esc(p.id)}" data-k="${esc(n)}">${esc(n)}</button>`).join("")}${p.entregador && !(boys || []).includes(p.entregador) ? `<button class="btn on" data-a="boySet" data-id="${esc(p.id)}" data-k="${esc(p.entregador)}">${esc(p.entregador)}</button>` : ""}</div>`;
@@ -1366,7 +1367,8 @@ function desenharEntregas() {
   if (!gaveta && !gavEnt) { gavEnt = true; aut("/api/gaveta").then((x) => x.json()).then((g) => { gaveta = g; ultimoHtml = ""; if (aba === "entregas") desenhar(); }).catch(() => {}).finally(() => setTimeout(() => (gavEnt = false), 30000)); } // pra saber quais retiradas foram vale
   const r = resumoEntregas(), nE = r.ds.filter((p) => p.status !== "cancelado" && (p.entrega || "entrega") === "entrega").length, nR = r.ds.filter((p) => p.status !== "cancelado" && p.entrega === "retirada").length;
   const seg = [["entrega", "Entregas", nE], ["retirada", "Retiradas", nR], ["todos", "Todos", nE + nR]].map(([k, n, q]) => `<button class="btn ${entFil === k ? "on" : ""}" data-a="entFil" data-k="${k}">${n} <small>${q}</small></button>`).join("");
-  const fp = (p) => { const f = formaEnt(p); return f === "dinheiro" ? `Dinheiro${p.trocoPara ? ` <small>troco p/ ${brl(p.trocoPara)} → levar ${brl(trocoEnt(p))}</small>` : " <small>sem troco</small>"}` : f === "cartao" ? (p.cartaoTipo === "refeicao" ? "Cartão refeição" : "Cartão " + (p.cartaoTipo === "debito" ? "débito" : p.cartaoTipo === "credito" ? "crédito" : "")) + " (maquininha)" : f === "pix" ? "Pix" : esc(f || "-"); };
+  const fp = (p) => { const gs = pagsDe(p).filter((g) => g.valor > 0 && g.forma !== "marmita" && grupoForma(g.forma) !== formaEnt(p)); return fp0(p) + (gs.length ? ` <small style="color:#a50f14;font-weight:700">⚠ recebido: ${pagsDe(p).map((g) => (FORMAS[g.forma] || g.forma) + " " + brl(g.valor)).join(" + ")}</small>` : ""); }; // pagou diferente do que escolheu no site
+  const fp0 = (p) => { const f = formaEnt(p); return f === "dinheiro" ? `Dinheiro${p.trocoPara ? ` <small>troco p/ ${brl(p.trocoPara)} → levar ${brl(trocoEnt(p))}</small>` : " <small>sem troco</small>"}` : f === "cartao" ? (p.cartaoTipo === "refeicao" ? "Cartão refeição" : "Cartão " + (p.cartaoTipo === "debito" ? "débito" : p.cartaoTipo === "credito" ? "crédito" : "")) + " (maquininha)" : f === "pix" ? "Pix" : esc(f || "-"); };
   const chave = (p) => { const e = p.endereco || {}; return semAcento([nDel(p), `d${p.numero}`, p.numero, p.nome, p.telefone, e.rua, e.numero, e.bairro, e.complemento, p.entregador, formaEnt(p)].filter(Boolean).join(" ")); };
   const doBoy = (p) => !entBoy || entFil === "retirada" || (entBoy === "__sem" ? (p.entrega || "entrega") === "entrega" && !p.entregador : p.entregador === entBoy);
   const vis = r.sel.filter(doBoy);
@@ -1873,6 +1875,7 @@ async function checarFiado() {
   let C; try { const r = await aut("/api/contas?mes=" + hojeISO().slice(0, 7)); if (!r.ok) return; C = await r.json(); } catch (e) { return; }
   avisarFechamento(C);
   const L = fiadosAtrasados(C); let el = $("#aviso-fiado");
+  seloAvisos(L, Number(hojeISO().slice(8, 10)) >= 25 ? contasDoFechamento(C) : []);
   if (!L.length || Date.now() < fiadoOculto) { if (el) el.remove(); return; } // ✕ esconde por 1 h
   if (!el) { el = document.createElement("button"); el.id = "aviso-fiado"; el.type = "button"; el.dataset.a = "verFiado"; el.style.cssText = "position:fixed;left:calc(var(--lat, 0px) + 16px);bottom:16px;z-index:900;max-width:min(420px,calc(100vw - 32px));text-align:left;border:0;border-radius:16px;padding:12px 16px;background:#fde0e0;color:#a50f14;font:700 .95rem system-ui;box-shadow:0 10px 28px rgba(0,0,0,.25);cursor:pointer"; document.body.appendChild(el); }
   el.innerHTML = `<span data-x="1" title="Esconder por 1 hora" style="float:right;margin:-4px -6px 0 12px;padding:2px 8px;border-radius:8px;background:#fff8">✕</span>⏰ ${L.length === 1 ? "1 fiado" : L.length + " fiados"} sem pagar há 5 dias ou mais · ${brl(L.reduce((t, x) => t + x.saldo, 0))}<br><small style="font-weight:500">${L.slice(0, 3).map((x) => esc(x.c.nome)).join(", ")}${L.length > 3 ? " e mais " + (L.length - 3) : ""} · toque para ver</small>`;
@@ -1880,6 +1883,18 @@ async function checarFiado() {
   if (!el._some) el._some = setTimeout(() => { fiadoOculto = Date.now() + 3600e3; const x = $("#aviso-fiado"); if (x) x.remove(); }, 5000); // fica 5 s na tela e some (volta daqui 1 h)
 }
 let fiadoOculto = 0;
+// selo fixo no topo (pente fino 23/11): o aviso flutuante some em 5 s e cobria a tela; o selo fica sempre ali, pequeno, e abre a lista
+function seloAvisos(fiados, fecha) {
+  const hd = $(".hd-dir"); if (!hd) return; let s = $("#selo-avisos");
+  if (!fiados.length && !fecha.length) { if (s) s.remove(); return; }
+  if (!s) { s = document.createElement("span"); s.id = "selo-avisos"; s.style.cssText = "display:inline-flex;gap:6px;align-items:center"; hd.insertBefore(s, hd.firstChild); }
+  const bt = (a, bg, cor, txt, tit) => `<button type="button" class="btn mini" data-a="${a}" title="${tit}" style="background:${bg}!important;color:${cor}!important;border-color:transparent!important;font-weight:700;white-space:nowrap;width:auto!important;min-width:0!important;height:auto!important;padding:8px 12px!important;font-size:13px!important;line-height:1.1!important;display:inline-flex!important;align-items:center;gap:4px">${txt}</button>`;
+  const h = (fiados.length ? bt("seloFiado", "#fde0e0", "#a50f14", "⏰ " + fiados.length + (fiados.length === 1 ? " fiado" : " fiados"), "Fiados sem pagar há 5 dias ou mais: " + brl(fiados.reduce((t, x) => t + x.saldo, 0))) : "")
+    + (fecha.length ? bt("seloFecha", "#fff1cc", "#7a4a00", "📅 " + fecha.length + (fecha.length === 1 ? " conta" : " contas"), "Fechamento do mês: contas com saldo que ainda não receberam o extrato") : "");
+  if (s.innerHTML !== h) s.innerHTML = h;
+}
+document.addEventListener("click", (e) => { const b = e.target.closest && e.target.closest("[data-a=seloFiado],[data-a=seloFecha]"); if (!b) return;
+  if (b.dataset.a === "seloFiado") { cliFiltro = "deve"; aba = "clientes"; } else aba = "contas"; desenhar(); window.scrollTo(0, 0); });
 // CONTA MENSAL e EMPRESAS (dona 23/11): do dia 25 até o fim do mês, aviso "o fechamento do mês está chegando" com quem tem saldo
 // e ainda não recebeu o extrato (o "Marcar como enviado" da conta tira da lista). Mesmo jeito do aviso de fiado: 5 s na tela, volta em 1 h.
 function contasDoFechamento(C) {

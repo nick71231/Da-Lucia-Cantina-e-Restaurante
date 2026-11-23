@@ -4,7 +4,7 @@ title Servidor Da Lucia (nao feche esta janela)
 cd /d "%~dp0"
 if not exist logs mkdir logs
 REM Cópia extra do backup diário (pendrive, outro disco ou pasta da nuvem). Tire o REM e ajuste o caminho:
-REM set BACKUP_EXTRA=D:\Backups-Da-Lucia
+set "BACKUP_EXTRA=C:\Users\daluc\OneDrive\Backup Sistema Da Lucia"
 :inicio
 echo [%date% %time%] Iniciando o servidor...
 echo [%date% %time%] Iniciando o servidor... >> logs\servidor.log

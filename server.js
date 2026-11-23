@@ -173,7 +173,7 @@ function backup() { // uma cópia por dia (guarda as últimas 30)
     const dir = path.join(DIR_DADOS, "backups"), dia = hoje(); fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, "pedidos-" + dia + ".json"), JSON.stringify(db)); fs.writeFileSync(path.join(dir, "config-" + dia + ".json"), JSON.stringify(cfg));
     if (process.env.BACKUP_EXTRA) { // cópia extra (pendrive, pasta do Drive/OneDrive...)
-      try { fs.mkdirSync(process.env.BACKUP_EXTRA, { recursive: true }); ["pedidos-", "config-"].forEach((pre) => fs.copyFileSync(path.join(dir, pre + dia + ".json"), path.join(process.env.BACKUP_EXTRA, pre + dia + ".json"))); }
+      try { const ex = process.env.BACKUP_EXTRA; fs.mkdirSync(ex, { recursive: true }); ["pedidos-", "config-"].forEach((pre) => { fs.copyFileSync(path.join(dir, pre + dia + ".json"), path.join(ex, pre + dia + ".json")); fs.readdirSync(ex).filter((a) => a.startsWith(pre) && a.endsWith(".json")).sort().slice(0, -30).forEach((a) => fs.unlinkSync(path.join(ex, a))); }); } // na nuvem também só os últimos 30 dias (não lota o OneDrive)
       catch (e) { console.error("cópia extra do backup falhou:", e.message); }
     }
     ["pedidos-", "config-"].forEach((pre) => fs.readdirSync(dir).filter((a) => a.startsWith(pre)).sort().slice(0, -30).forEach((a) => fs.unlinkSync(path.join(dir, a))));
@@ -491,6 +491,37 @@ async function enviarGestao() {
   } catch (e) { const m = e.name === "TimeoutError" ? "o site não respondeu" : e.message; if (!delEstado.gestao || delEstado.gestao.erro !== m) console.error("gestão pro site: " + m); delEstado.gestao = { quando: Date.now(), erro: m }; }
   finally { enviandoGestao = false; }
 }
+// ----- FECHAMENTO DO DIA NO WHATSAPP (dona 23/11): todo dia a partir das 15h, 1 vez, pro número da dona (o robô do WhatsApp envia) -----
+// Número e hora em dados\resumo-zap.json ({ "tel": "12991076412", "hora": 15 }); "tel": "" desliga. Dia sem movimento não manda.
+const ARQ_RZ = path.join(DIR_DADOS, "resumo-zap.json");
+let rz = { tel: process.env.DADOS_DIR ? "" : "12991076412", hora: 15, ultimo: "" }; try { rz = { ...rz, ...JSON.parse(fs.readFileSync(ARQ_RZ, "utf8")) }; } catch (e) {}
+function textoFechamento(dia) {
+  const R = resumoGestao(dia), soma = (o) => cents(Object.values(o).reduce((s, v) => s + v, 0)), b = (v) => rs(v);
+  const sal = soma(R.recebido.salao), del = soma(R.recebido.delivery), tot = cents(sal + del), fo = {};
+  [R.recebido.salao, R.recebido.delivery].forEach((o) => Object.entries(o).forEach(([k, v]) => (fo[k] = cents((fo[k] || 0) + v))));
+  const NF = { dinheiro: "💵 Dinheiro", pix: "💠 Pix", debito: "💳 Débito", credito: "💳 Crédito", refeicao: "🍽️ Refeição", cartao: "💳 Cartão" };
+  const abertos = db.pedidos.filter((p) => p.dia === dia && p.status === "aguardando" && (p.itens || []).length), vAb = cents(abertos.reduce((s, p) => s + p.valor - pagsDe(p).reduce((t, g) => t + g.valor, 0), 0));
+  const contas = soma(R.contasRecebidas), g = R.gaveta || {}, dow = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"][new Date(dia + "T12:00:00").getDay()];
+  const L = [`📊 *Fechamento Da Lúcia — ${dia.slice(8)}/${dia.slice(5, 7)} (${dow})*`, "", `💰 *Total recebido: ${b(tot + contas)}*`];
+  Object.entries(fo).sort((x, y) => y[1] - x[1]).forEach(([k, v]) => L.push(`   ${NF[k] || k}: ${b(v)}`));
+  L.push("", `🍽️ Salão: ${R.pedidos.salao} pedidos · ${b(sal)}`, `🛵 Delivery: ${R.pedidos.delivery} pedidos · ${b(del)}${R.taxasEntrega ? ` (taxas ${b(R.taxasEntrega)})` : ""}`);
+  if (R.naConta) L.push(`📒 Marcado na conta: ${b(R.naConta)}`);
+  if (contas) L.push(`📥 Contas recebidas: ${b(contas)}`);
+  if (g.motoboys) L.push(`🛵 Pago aos motoboys: ${b(g.motoboys)}`);
+  if (g.sangrias) L.push(`➖ Retiradas da gaveta: ${b(g.sangrias)}`);
+  if (R.cancelados) L.push(`❌ Cancelados: ${R.cancelados}`);
+  if (abertos.length) L.push("", `⚠️ *Ficou em aberto hoje: ${abertos.length} · ${b(vAb)}*`);
+  L.push("", g.fechamento ? `💵 Gaveta fechada: contado ${b(g.fechamento.contado)} · ${Math.abs(g.fechamento.diferenca || 0) < 0.01 ? "bateu ✅" : (g.fechamento.diferenca > 0 ? "sobrou " : "faltou ") + b(Math.abs(g.fechamento.diferenca)) + " ⚠️"}`
+    : g.esperado != null ? `💵 Gaveta: deve ter ${b(g.esperado)} (ainda não foi fechada)` : "💵 Gaveta não foi aberta hoje");
+  return { texto: L.join("\n"), movimento: tot + contas + R.pedidos.salao + R.pedidos.delivery > 0 };
+}
+async function mandarFechamento() {
+  const dia = hoje(); if (!rz.tel || rz.ultimo === dia || new Date().getHours() < (Number(rz.hora) || 15)) return;
+  const { texto, movimento } = textoFechamento(dia); rz.ultimo = dia;
+  if (movimento) { filaWhats.push({ id: "fechamento-" + dia, tel: String(rz.tel).replace(/\D/g, ""), texto, quando: Date.now() }); filaWhats = filaWhats.slice(-200); await gravarArquivo(ARQ_WHATS, filaWhats).catch(() => {}); console.log("fechamento do dia na fila do WhatsApp (" + rz.tel + ")"); }
+  await gravarArquivo(ARQ_RZ, rz).catch(() => {});
+}
+setInterval(() => mandarFechamento().catch((e) => console.error("fechamento no WhatsApp: " + e.message)), 60e3); setTimeout(() => mandarFechamento().catch(() => {}), 5000);
 function addDiasG(d, n) { const x = new Date(d + "T12:00:00"); x.setDate(x.getDate() + n); return x.toLocaleDateString("en-CA"); }
 if (delEstado.ativo) { setInterval(enviarGestao, Number(process.env.GESTAO_INTERVALO_MS) || 10 * 60e3); setTimeout(enviarGestao, 15000); }
 
@@ -541,6 +572,10 @@ async function tratar(req, res) {
       .map((x) => ({ id: x.id, dia: x.dia, tipo: x.tipo || "totem", numero: x.numero, nome: x.nome || "", valor: cents(x.valor - pagsDe(x).reduce((s, g) => s + g.valor, 0)) }))
       .filter((x) => x.valor > 0).sort((a, b) => a.dia.localeCompare(b.dia));
     return json(res, 200, out);
+  }
+  if (p === "/api/fechamento-zap" && req.method === "GET") { // texto do fechamento do dia que vai pro WhatsApp da dona (pra conferir)
+    const d = String(url.searchParams.get("dia") || hoje()); if (!/^\d{4}-\d\d-\d\d$/.test(d)) return json(res, 400, { erro: "dia inválido" });
+    return json(res, 200, { ...textoFechamento(d), tel: rz.tel, hora: rz.hora, ultimo: rz.ultimo });
   }
   if (p === "/api/clientes" && req.method === "GET") return json(res, 200, db.clientes);
   if (p === "/api/clientes" && req.method === "POST") {

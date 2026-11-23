@@ -349,6 +349,8 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
     await dorme(1200); const antes = (gestaoSite[hoje] || {}).naConta || 0;
     await reqEm(sd.base, "PATCH", "/api/pedidos/" + cm.id, { status: "conta", clienteId: c2.id }, tkD); await dorme(1500);
     const depois = (gestaoSite[hoje] || {}).naConta || 0;
+    const fz = (await reqEm(sd.base, "GET", "/api/fechamento-zap?dia=" + hoje, undefined, tkD)).j;
+    t(fz.movimento === true && /Fechamento Da Lúcia/.test(fz.texto) && /Total recebido: R\$ [\d.]+,\d\d/.test(fz.texto) && /Marcado na conta: R\$/.test(fz.texto) && /Gaveta/.test(fz.texto) && fz.tel === "", "fechamento do dia pro WhatsApp: total, formas, conta e gaveta (nos testes o envio fica desligado)");
     t(Math.abs(depois - antes - 33) < 0.01, "Gestão: comanda de R$ 33 marcada na conta soma R$ 33 no 'vendido na conta' (antes somava 66): " + antes + " -> " + depois);
   }
   { // juntar cadastro repetido: lançamentos passam pro outro e o repetido some
