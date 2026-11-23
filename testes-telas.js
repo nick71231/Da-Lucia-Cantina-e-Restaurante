@@ -125,6 +125,14 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
   await clica(bw, "#reg"); await dorme(400);
   const c42 = (await api("GET", "/api/pedidos?dia=" + hojeISO, undefined, bl)).find((p) => p.tipo === "balanca" && p.numero === 42);
   t(c42 && c42.valor === 18.5, "um toque só lança R$ 18,50 na comanda 42");
+  { // dona 23/11 (2ª vez): abriu o nome SEM valor, a balança do cabo pôs o valor enquanto digitava -> salvar o nome NÃO pode apagar o valor
+    for (const k of ["4", "3"]) await toca(bw, `[data-k="${k}"]`);
+    bw.eval('cents = ""; peso = ""; tela();'); await clica(bw, "#so-nome");
+    bw.eval('cents = "2210"; tn.texto = "Carla";'); // valor chegou da balança com o teclado do nome aberto
+    const bSalva = [...bw.document.querySelectorAll("#tn .tn-b")].find((b) => /Salvar o nome/.test(b.textContent)); bSalva.click(); await dorme(800);
+    const c43 = (await api("GET", "/api/pedidos?dia=" + hojeISO, undefined, bl)).find((p) => p.tipo === "balanca" && p.numero === 43);
+    t(c43 && c43.nome === "Carla" && c43.valor === 22.1, "valor que chegou com o teclado do nome aberto é lançado junto com o nome (não some)");
+  }
   // no app Android o confirm() do navegador não aparece e responde "não" sozinho: o ✕ tem que usar a janela da própria página
   bw.confirm = () => false;
   const extra = (await api("POST", "/api/balanca", { comanda: 41, valor: 7, uid: "s-apagar" }, bl)); await bw.carregar(true); await dorme(300);

@@ -535,7 +535,9 @@ async function reservarNome(n, nome) { // nome numa comanda, sem nenhum prato (o
   try {
     const r = await aut("/api/balanca", { method: "POST", headers: JSONH, body: JSON.stringify({ comanda: n, cliente: nome, soNome: true }) }), j = await r.json().catch(() => ({}));
     if (!r.ok) { bip(false); toast(j.erro || "Não salvou o nome."); return false; }
-    $("#nome-cmd").value = ""; comanda = cents = peso = ""; campo = "comanda"; uidLanc = null; bip(true); toast("Comanda " + n + " reservada para " + nome + "."); await carregar(true); tela(); return true;
+    $("#nome-cmd").value = ""; bip(true); toast("Nome " + nome + " salvo na comanda " + n + ".");
+    if (!(valorAtual() > 0)) { comanda = cents = peso = ""; campo = "comanda"; uidLanc = null; } // tem valor na tela: NÃO apaga (continua pronto pra lançar)
+    await carregar(true); tela(); return true;
   } catch (e) { bip(false); toast("Sem conexão: o nome NÃO foi salvo. Tente de novo."); return false; }
 }
 
@@ -563,9 +565,12 @@ function teclaTN(c) { // 1ª letra de cada palavra sai maiúscula (⇧ trava tud
 function abrirNomeCampo() { // toque no campo de nome do painel
   const n = parseInt(comanda || "0", 10), ab = n ? abertas().find((p) => p.numero === n) : null, ini = $("#nome-cmd").value || (ab && ab.nome) || "";
   const v = valorAtual(), botoes = [{ rot: "✓ Usar no próximo lançamento", fn: (t) => { $("#nome-cmd").value = t; return true; } }];
-  // já tem valor digitado: lança o prato JUNTO com o nome (antes "salvar sem prato" limpava o valor digitado e ele "sumia")
-  if (n > 0 && v > 0) botoes.push({ rot: "✓ Lançar " + brl(v) + " na comanda " + n + " com esse nome", cls: "ok", fn: (t) => { if (!t) { toast("Digite o nome."); return false; } $("#nome-cmd").value = t; setTimeout(registrar, 0); return true; } });
-  else if (n > 0) botoes.push({ rot: "💾 Salvar na comanda " + n + " (sem prato)", cls: "ok", fn: (t) => (t ? reservarNome(n, t) : (toast("Digite o nome."), false)) });
+  // já tem valor na tela: lança o prato JUNTO com o nome (antes "salvar sem prato" limpava o valor e ele "sumia").
+  // A decisão é na HORA DO TOQUE (dona 23/11, de novo: a balança do cabo põe o valor enquanto o teclado do nome está aberto;
+  // o botão "sem prato" apagava esse valor). Se o prato saiu nesse meio-tempo, lança o valor que estava na tela quando abriu.
+  const lancaCom = (t) => { if (!t) { toast("Digite o nome."); return false; } $("#nome-cmd").value = t; if (!(valorAtual() > 0) && v > 0) cents = String(Math.round(v * 100)); setTimeout(registrar, 0); return true; };
+  if (n > 0 && v > 0) botoes.push({ rot: "✓ Lançar " + brl(v) + " na comanda " + n + " com esse nome", cls: "ok", fn: lancaCom });
+  else if (n > 0) botoes.push({ rot: "💾 Salvar o nome na comanda " + n, cls: "ok", fn: (t) => (!t ? (toast("Digite o nome."), false) : valorAtual() > 0 ? lancaCom(t) : reservarNome(n, t)) }); // apareceu valor enquanto digitava: lança junto
   abrirTN("Nome do cliente" + (n ? " - comanda " + n : ""), ini, botoes);
 }
 document.addEventListener("click", async (e) => {
