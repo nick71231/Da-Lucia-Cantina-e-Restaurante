@@ -119,7 +119,23 @@ function rodar(arq, f) {
   const fim = (err) => { if (err) console.error("ERRO ao gravar " + path.basename(arq) + ":", err.message); lote.forEach((x) => (err ? x.falha(err) : x.ok())); f.rodando = false; if (f.esperando.length) rodar(arq, f); };
   fs.writeFile(tmp, f.dados, (e) => (e ? fim(e) : fs.rename(tmp, arq, fim)));
 }
-const gravar = () => gravarArquivo(ARQ, db);
+// versão dos dados: muda a cada gravação. A balança manda a versão que já tem e, se nada mudou, não baixa tudo de novo
+const VERSAO_INICIO = Date.now().toString(36); let versaoN = 0;
+const versaoDb = () => VERSAO_INICIO + "-" + versaoN;
+const gravar = () => { versaoN++; return gravarArquivo(ARQ, db); };
+// pedidos do dia no formato enxuto da balança: comandas abertas completas; fechadas só com o resumo (o dia inteiro pesava ~250 KB a cada 4 s e o tablet travava no almoço)
+function pedidosBalanca(dia) {
+  const out = [];
+  for (const x of db.pedidos) {
+    if (x.dia !== dia) continue;
+    if (x.tipo === "balanca") {
+      if (x.status === "aguardando") out.push(x);
+      else if (x.status === "pago" || x.status === "conta") out.push({ id: x.id, tipo: x.tipo, dia: x.dia, numero: x.numero, nome: x.nome, quando: x.quando, valor: x.valor, status: x.status, itens: (x.itens || []).map((c) => ({ tipo: c.tipo, origem: c.origem, peso: c.peso })) });
+    } else if (x.status === "aguardando") out.push(x); // pedidos do totem esperando no caixa (pra pôr numa comanda)
+    else if (x.movido) out.push({ id: x.id, tipo: x.tipo, numero: x.numero, status: x.status, movido: x.movido, itens: [] }); // pra saber se o lançamento veio de um pedido do totem
+  }
+  return out;
+}
 // ---------- senhas e sessões (3 níveis: balança < caixa < admin) ----------
 const ARQ_IMPCX = path.join(DIR_DADOS, "impressora-caixa.json"); // impressora do caixa (separada da do totem)
 let impCaixa = {}; try { impCaixa = JSON.parse(fs.readFileSync(ARQ_IMPCX, "utf8")) || {}; } catch (e) {}
@@ -465,6 +481,11 @@ async function tratar(req, res) {
   }
   if (p === "/api/pedidos" && req.method === "GET") {
     const dia = url.searchParams.get("dia"), tipo = url.searchParams.get("tipo"), st = url.searchParams.get("status");
+    if (url.searchParams.get("para") === "balanca" && dia) { // ?para=balanca&v=<versão que o tablet já tem>: 204 = nada mudou
+      const v = versaoDb(); res.setHeader("X-Versao", v); res.setHeader("Access-Control-Expose-Headers", "X-Versao");
+      if (url.searchParams.get("v") === v) { res.writeHead(204); return res.end(); }
+      return json(res, 200, pedidosBalanca(dia));
+    }
     // ?tipo=balanca&status=aguardando: só as comandas abertas (o celular do garçom baixa bem menos que o dia inteiro)
     return json(res, 200, db.pedidos.filter((x) => (!dia || x.dia === dia) && (!tipo || (x.tipo || "totem") === tipo) && (!st || x.status === st)));
   }

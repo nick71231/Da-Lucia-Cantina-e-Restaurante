@@ -101,13 +101,20 @@
   // pede o peso de tempos em tempos (modo sob demanda)
   // (se a balança não responde há 10 s, pede só a cada 3 s: cada pedido trava a página um instante dentro do app)
   // (19/11: pedir a cada 300 ms sem esperar a resposta deixava o tablet lerdo e as respostas chegavam picotadas: o valor não ia pra tela)
-  let esperando = 0;
+  // (23/11: no app 1.0 o N.enviar espera o cabo (até 0,5 s) com a página PARADA. Quando o cabo demora, a tela congelava várias
+  //  vezes por segundo e a balança ficava "lagada". Agora mede quanto travou: se travou, espera mais antes de pedir de novo.)
+  let esperando = 0, folga = 0;
   setInterval(() => {
     const agora = Date.now(), calada = agora - ultChegou > 10000, iv = calada ? 3000 : Math.max(300, C.intervalo || 400);
-    if (est.estado !== "conectada" || !C.pedido || agora - tPed < iv) return;
+    if (est.estado !== "conectada" || !C.pedido || agora - tPed < iv + folga) return;
     if (esperando && agora - esperando < 1000) return; // ainda esperando a resposta do pedido anterior
+    if (typeof ultTecla !== "undefined" && agora - ultTecla < 1500 && !calada) return; // tocando no teclado: não pede agora (o toque fica liso)
     tPed = agora; esperando = agora; N.enviar(C.pedido);
+    const travou = Date.now() - agora; // o app novo devolve na hora (0 ms); o antigo pode prender a página
+    folga = travou > 80 ? Math.min(5000, Math.max(folga * 2, 1500)) : Math.max(0, folga - 250);
+    if (travou > 80) lentos.unshift(new Date().toLocaleTimeString("pt-BR") + " · pedido travou " + travou + " ms"), (lentos.length = Math.min(lentos.length, 10));
   }, 150);
+  const lentos = [];
   setInterval(pinta, 1000);
   try { est = JSON.parse(N.estado()); } catch (e) {}
   if (est.estado !== "conectada") { if (C.baud !== 9600 || C.par !== "N" || C.bits !== 8 || C.stop !== 1) N.configurar(C.baud, C.bits, C.par, C.stop); else N.conectar(); }
@@ -136,6 +143,7 @@
       </div>
       <div style="display:flex;gap:8px;margin:10px 0"><button id="bd-pedir" style="flex:1;border:0;background:#a30d12;color:#fff;border-radius:8px;padding:10px;font-weight:700">Pedir peso agora</button><button id="bd-recon" style="flex:1;border:0;background:#f3e8d8;border-radius:8px;padding:10px;font-weight:700">Reconectar</button></div>
       <div style="font:12px ui-monospace,monospace;background:#f7f1e8;border-radius:8px;padding:8px;max-height:40vh;overflow:auto">${log.length ? log.map((l) => `<div style="border-bottom:1px solid #e6d9c7;padding:4px 0">${l.t} <b>${l.txt.replace(/[<>&]/g, "")}</b> → ${l.r ? (l.r.peso != null ? fmtKg(l.r.peso) : "") + (l.r.total ? " R$" + l.r.total : "") : "?"}<br><span style="color:#857066">${l.hex}</span></div>`).join("") : "Nada chegou da balança ainda."}</div>
+      ${lentos.length ? `<p style="font-size:12px;color:#a35b00;margin:8px 0 0">⚠ O cabo demorou pra aceitar o pedido (a tela trava um instante): ${lentos.slice(0, 3).join(" · ")}</p>` : ""}
       <p style="font-size:12px;color:#857066;margin:8px 0 0">Servidor: ${location.host} · IP do tablet: ${N.ip()} · <a href="#" id="bd-serv">trocar servidor</a></p></div>`;
     const novo = () => { const f = fundo.querySelector("#bd-fmt").value; C = { ...C, baud: +fundo.querySelector("#bd-baud").value, bits: +f[0], par: f[1], stop: +f[2], pedido: fundo.querySelector("#bd-ped").value, usar: fundo.querySelector("#bd-usar").value }; salvar(C); };
     fundo.querySelector("#bd-x").onclick = fechar;

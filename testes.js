@@ -60,6 +60,16 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   t(tot.j.status === "comanda", "pedido do totem entra na comanda");
   const cmd = (await req("GET", "/api/pedidos?dia=" + hoje)).j.find((p) => p.tipo === "balanca");
   t(cmd.valor === 50.6 && cmd.itens.length === 3, "comanda soma prato + bebida + marmitex (50,60)");
+  { // balança leve: só baixa de novo quando algo mudou (204 = nada mudou)
+    const pb = (v) => fetch(B + "/api/pedidos?dia=" + hoje + "&para=balanca" + (v ? "&v=" + encodeURIComponent(v) : ""), { headers: { Authorization: "Bearer " + TOKEN } });
+    const r1 = await pb(), v1 = r1.headers.get("X-Versao"), l1 = await r1.json();
+    const r2 = await pb(v1);
+    await req("POST", "/api/balanca", { comanda: 77, valor: 10, uid: "pv1" });
+    const r3 = await pb(v1), l3 = await r3.json();
+    t(r1.status === 200 && l1.some((p) => p.id === cmd.id && p.itens.length === 3) && r2.status === 204 && r3.status === 200 && r3.headers.get("X-Versao") !== v1 && l3.some((p) => p.numero === 77),
+      "balança só baixa a lista de novo quando algo mudou (204 sem mudança)");
+    const c77 = l3.find((p) => p.numero === 77); await req("PATCH", "/api/pedidos/" + c77.id, { removerItem: 0, removerIid: c77.itens[0].iid });
+  }
   t((await req("PATCH", "/api/pedidos/" + cmd.id, { removerItem: -1 })).s === 400, "remover posição inválida é recusado");
   await req("PATCH", "/api/pedidos/" + cmd.id, { removerItem: 2 });
   t((await req("GET", "/api/pedidos?dia=" + hoje)).j.find((p) => p.id === tot.j.id).status === "cancelado", "tirar a marmitex da comanda cancela o pedido do totem");

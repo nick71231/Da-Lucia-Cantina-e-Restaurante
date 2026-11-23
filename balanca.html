@@ -597,13 +597,17 @@ async function carregarBebidas() { // respeita o que o admin do totem ligou/desl
     bebidas = comSorvetes([...BEBIDAS, ...extras].filter((x, i, a) => a.findIndex((y) => y.nome === x.nome) === i && !rem.includes("bebida:" + x.nome) && !off.includes("bebida:" + x.nome)));
   } catch (e) {}
 }
-let carregando = false, deNovo = false, ultResp = "";
+let carregando = false, deNovo = false, ultResp = "", versao = "", versaoDia = "", tCheio = 0;
 async function carregar(forcar) {
   // o tablet baixa os pedidos do dia a cada 4 s: não empilha pedidos, não atrapalha quem está digitando e só refaz a tela se algo mudou
   if (carregando) { if (forcar === true) deNovo = true; return; } // terminou de lançar enquanto baixava: baixa de novo logo em seguida
   if (forcar !== true && Date.now() - ultTecla < 2000) return;
   carregando = true;
-  try { const r = await aut("/api/pedidos?dia=" + hoje(), { limite: 8000 }); if (!r.ok) throw 0; const txt = await r.text(); if (txt === ultResp && !offline) { carregando = false; if (deNovo) { deNovo = false; setTimeout(() => carregar(true), 0); } return; } ultResp = txt; todosP = JSON.parse(txt); pedidosB = todosP.filter((p) => p.tipo === "balanca");
+  // só baixa a lista quando algo mudou no servidor (204 = igual); a cada 30 s baixa inteira de qualquer jeito, por garantia
+  const dia = hoje(), cheio = dia !== versaoDia || Date.now() - tCheio > 30000;
+  try { const r = await aut("/api/pedidos?dia=" + dia + "&para=balanca" + (versao && !cheio && !offline ? "&v=" + encodeURIComponent(versao) : ""), { limite: 8000 });
+    if (r.status === 204) { offline = false; carregando = false; if (deNovo) { deNovo = false; setTimeout(() => carregar(true), 0); } status(); return; }
+    if (!r.ok) throw 0; versao = r.headers.get("X-Versao") || ""; versaoDia = dia; tCheio = Date.now(); const txt = await r.text(); if (txt === ultResp && !offline) { carregando = false; if (deNovo) { deNovo = false; setTimeout(() => carregar(true), 0); } return; } ultResp = txt; todosP = JSON.parse(txt); pedidosB = todosP.filter((p) => p.tipo === "balanca");
     pedidosT = todosP.filter((p) => p.tipo !== "balanca" && p.status === "aguardando" && p.itens.length && !p.itens.some((c) => c.pago) && !(p.pagamentos || []).some((g) => !g.estornado)).sort((a, b) => b.quando - a.quando); offline = false; } catch (e) { offline = true; }
   carregando = false; if (deNovo) { deNovo = false; setTimeout(() => carregar(true), 0); }
   status(); estat(); listar(); const res = $("#resumo"); if (res) res.innerHTML = resumo(); atualizarAviso();
