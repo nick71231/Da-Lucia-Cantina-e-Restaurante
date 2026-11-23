@@ -361,6 +361,12 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   t((await delDe()).filter((x) => x.numero < 60).every((x) => x.status === "cancelado"), "cancelado no site depois de chegar pago: cancela no caixa e sai das vendas");
   { const ds = await delDe(), ct = (await reqEm(sd.base, "GET", "/api/contas", undefined, tkD)).j, d62 = ds.find((x) => x.numero === 62);
     t(d62 && d62.status === "cancelado" && !ct.lancamentos.some((l) => l.pedidoId === d62.id), "cancelado no site depois de ir sozinho pra conta: sai da conta do cliente (não fica cobrado)"); }
+  { // pente fino 23/11: REATIVADO no site (o painel voltou o pedido) -> volta pro caixa; o que tinha pago automático volta pras vendas
+    const antes = (await delDe()).filter((x) => x.numero < 60 && x.status === "cancelado"), pagoAuto = antes.find((x) => x.pagoAuto);
+    cancelarNoSite = false; await dorme(1600); const depois = await delDe();
+    t(antes.length > 0 && antes.every((a) => { const d = depois.find((x) => x.id === a.id); return d && d.status !== "cancelado"; }), "reativado no site: o pedido sai do 'cancelado' no caixa");
+    t(!pagoAuto || depois.find((x) => x.id === pagoAuto.id).status === "pago", "reativado no site com pagamento automático: volta como pago (entra nas vendas de novo)");
+    cancelarNoSite = true; await dorme(1600); }
   const sa = (await reqEm(sd.base, "GET", "/api/saude", undefined, "")).j;
   t(!!sa.delivery && sa.delivery.ligado && !sa.delivery.erro && !JSON.stringify(sa).includes("tk-teste"), "a saúde do servidor mostra a busca do delivery (sem mostrar a senha)");
   sd.srv.kill(); site.close();

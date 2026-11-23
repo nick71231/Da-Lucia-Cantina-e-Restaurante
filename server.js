@@ -348,10 +348,20 @@ async function sincronizarDelivery() {
     }
     // cancelado no site depois de vir pro caixa: cancela aqui também (o pago automático sai das vendas; o recebido à mão no caixa, não)
     // (inclui o que foi pra conta sozinho: cancelado no site, sai da conta do cliente também; antes continuava cobrado)
-    const abertos = db.pedidos.filter((x) => x.tipo === "delivery" && x.siteToken && (x.status === "aguardando" || ((x.pagoAuto || x.contaAuto) && (x.status === "pago" || x.status === "conta") && Date.now() - x.quando < 2 * 864e5))).slice(-100);
-    if (abertos.length) {
-      const { pedidos: sit = [] } = await delApi("situacao", { tokens: abertos.map((x) => x.siteToken) });
+    const abertos = db.pedidos.filter((x) => x.tipo === "delivery" && x.siteToken && (x.status === "aguardando" || ((x.pagoAuto || x.contaAuto) && (x.status === "pago" || x.status === "conta") && Date.now() - x.quando < 2 * 864e5))).slice(-70);
+    // REATIVADO no site (pente fino 23/11): o caixa cancelava quando o site cancelava, mas não voltava quando o pedido era
+    // reativado no painel (19/11: 4 pedidos entregues e pagos sumiram das vendas). Confere os cancelados pelo site dos últimos 3 dias.
+    const cancSite = db.pedidos.filter((x) => x.tipo === "delivery" && x.siteToken && x.status === "cancelado" && x.motivoCancelamento === "cancelado no site" && Date.now() - x.quando < 3 * 864e5).slice(-30); // o site aceita até 100 por vez (70 + 30)
+    if (abertos.length || cancSite.length) {
+      const { pedidos: sit = [] } = await delApi("situacao", { tokens: [...abertos, ...cancSite].map((x) => x.siteToken) });
       let mudou = false;
+      sit.filter((x) => x && x.status && x.status !== "cancelado").forEach((x) => {
+        const p = cancSite.find((y) => y.siteToken === x.token); if (!p) return;
+        delete p.motivoCancelamento; mudou = true;
+        if (p.pagoAuto && p.itens.length && p.itens.every((c) => c.pago) && pagsDe({ ...p, status: "pago" }).length) { p.status = "pago"; } // volta pras vendas com o pagamento automático que já tinha
+        else { p.status = "aguardando"; delete p.contaAuto; p.clienteId = null; delete p.clienteIds; if (p.pagamento === "conta") p.pagamento = null; } // o caixa recebe ou marca na conta de novo
+        console.log("delivery: D" + p.numero + " reativado no site -> voltou pro caixa (" + p.status + ")");
+      });
       sit.filter((x) => x && x.status === "cancelado").forEach((x) => {
         const p = abertos.find((y) => y.siteToken === x.token);
         if (p && (p.contaAuto ? p.status === "conta" : p.pagoAuto ? p.status === "pago" : !pagsDe(p).length && !p.itens.some((c) => c.pago))) {
