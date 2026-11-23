@@ -736,8 +736,19 @@ function desenhar() {
   const lista = pedidos.filter((p) => p.status === st && (!q || casaBusca(p, q))).sort((a, b) => b.quando - a.quando);
   juntar.forEach((id) => { const x = pedidos.find((y) => y.id === id); if (!x || x.status !== "aguardando") juntar.delete(id); });
   const marc = pedidos.filter((x) => juntar.has(x.id)), barra = aba === "aberto" && juntar.size ? `<div class="barra-junta"><span>${juntar.size} comanda(s) marcada(s) - ${brl(round2(soma(marc, (x) => x.valor - soma(pagsDe(x), (g) => g.valor))))}</span>${juntar.size > 1 ? `<button class="btn ok" data-a="juntaRec">Unificar e receber</button>` : `<small>Marque outra pra unificar</small>`}<button class="btn" data-a="juntaLimpa">Limpar</button></div>` : "";
-  pintar(barra + (aba === "aberto" ? htmlSugestoes() : "") + (lista.length ? `<div class="pedidos">${lista.map(card).join("")}</div>` : `<div class="vazio-box"><span>🧾</span>Nenhum pedido aqui.</div>`));
+  pintar(barra + (aba === "aberto" ? htmlPendencias() + htmlSugestoes() : "") + (lista.length ? `<div class="pedidos">${lista.map(card).join("")}</div>` : `<div class="vazio-box"><span>🧾</span>Nenhum pedido aqui.</div>`));
 }
+// PENDÊNCIAS (pente fino 23/11): comanda/pedido de DIA ANTERIOR que ficou em aberto. O "Em aberto" só lista o dia escolhido,
+// então elas sumiam da tela (havia comandas de 07/11 a 18/11 abertas). Aparecem aqui até alguém receber, marcar na conta ou cancelar.
+let pendencias = [], pendT = 0;
+async function carregarPendencias(forca) { if (!forca && Date.now() - pendT < 15e3) return; pendT = Date.now(); try { const r = await aut("/api/pendencias"); if (r.ok) { const v = await r.json(); if (JSON.stringify(v) !== JSON.stringify(pendencias)) { pendencias = v; ultimoHtml = ""; if (aba === "aberto") desenhar(); } } } catch (e) {} }
+function htmlPendencias() {
+  carregarPendencias(); const L = pendencias.filter((x) => x.dia !== dia); if (!L.length) return "";
+  const rotP = (x) => (x.tipo === "balanca" ? (x.numero > 10000 ? "Marmitex M" + (x.numero - 10000) : "Comanda " + x.numero) : x.tipo === "delivery" ? "Delivery " + x.numero : "Pedido #" + x.numero) + (x.nome ? " · " + esc(x.nome) : "");
+  return `<div class="vazio-box" style="text-align:left;background:#fde0e0;border:2px solid #e57373;color:#7a1010;margin-bottom:12px"><b>⚠ ${L.length} ${L.length === 1 ? "comanda ficou" : "comandas ficaram"} em aberto em dias anteriores · ${brl(round2(soma(L, (x) => x.valor)))}</b><br><small>Receba, marque na conta ou cancele cada uma (toque para abrir o dia dela).</small>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${L.map((x) => `<button class="btn mini" data-a="irPend" data-d="${esc(x.dia)}">${dataBR(x.dia).slice(0, 5)} · ${rotP(x)} · <b>${brl(x.valor)}</b></button>`).join("")}</div></div>`;
+}
+document.addEventListener("click", (e) => { const b = e.target.closest && e.target.closest('[data-a="irPend"]'); if (!b) return; dia = b.dataset.d; const di = $("#dia"); if (di) di.value = dia; aba = "aberto"; ultimoAguard = null; pendT = 0; carregar(); });
 const cxParado = () => { const v = localStorage.getItem("cxParado"); return v === null ? 20 : parseInt(v, 10) || 0; }; // minutos (0 = desligado)
 const ultAtivCx = (p) => Math.max(p.quando || 0, ...(p.itens || []).map((c) => c.hora || 0));
 const fmtMin = (m) => (m >= 60 ? Math.floor(m / 60) + "h" + String(m % 60).padStart(2, "0") : m + " min");
@@ -761,9 +772,19 @@ function card(p) {
 }
 const pct = (v, t) => (t > 0 ? Math.round((v / t) * 100) : 0) + "%";
 const compacto = (v) => (v >= 1000 ? (v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " mil" : Math.round(v).toLocaleString("pt-BR"));
+// RECEBIMENTOS do período pela DATA DO RECEBIMENTO (pente fino 23/11): igual à gaveta. Comanda de ontem recebida hoje entra
+// no fechamento de HOJE (antes entrava no dia do pedido e o Fechamento não batia com a gaveta). Vem do servidor; enquanto não
+// chega, usa os pedidos já carregados filtrando pela data de cada recebimento.
+const recCache = {};
+function recsPer(P, a, b) {
+  const k = a + "|" + b, c = recCache[k];
+  if (!c || Date.now() - c.t > 4000) { if (!c || !c.indo) { recCache[k] = { ...(c || {}), indo: true, t: (c && c.t) || 0 }; aut("/api/recebimentos?de=" + a + "&ate=" + b).then((r) => (r.ok ? r.json() : null)).then((v) => { const mudou = v && JSON.stringify(v) !== JSON.stringify((recCache[k] || {}).v); recCache[k] = { v: v || (recCache[k] || {}).v, t: Date.now(), indo: false }; if (mudou && (aba === "fechamento")) { ultimoHtml = ""; desenhar(); } }).catch(() => { recCache[k] = { ...(recCache[k] || {}), indo: false, t: Date.now() }; }); } }
+  if (recCache[k] && recCache[k].v) return recCache[k].v;
+  return P.flatMap((p) => pagsDe(p).map((g) => ({ ...g, dia: g.dia || p.dia }))).filter((g) => g.dia >= a && g.dia <= b);
+}
 function fechamento() {
   const P = pedsPer(), CP = contasPer(), [a, b] = intervalo(), unico = a === b;
-  const recs = P.flatMap(pagsDe), por = (f) => soma(recs.filter((g) => g.forma === f), (g) => g.valor), est = estornosDe(P), conta = P.filter((p) => p.status === "conta");
+  const recs = recsPer(P, a, b), por = (f) => soma(recs.filter((g) => g.forma === f), (g) => g.valor), est = estornosDe(P), conta = P.filter((p) => p.status === "conta");
   const totV = round2(soma(recs, (g) => g.valor)), totC = round2(soma(CP, (g) => g.valor)), refsC = round2(soma(CP, (g) => g.refeicoes || 0)), cDin = round2(soma(CP.filter((g) => g.forma === "dinheiro"), (g) => g.valor));
   const pagos = P.filter((p) => p.status === "pago").length, canc = P.filter((p) => p.status === "cancelado").length, ab = P.filter((p) => p.status === "aguardando"), vAb = round2(soma(ab, (p) => p.valor - soma(pagsDe(p), (g) => g.valor)));
   const qd = unico ? (a === hojeISO() ? "hoje" : "neste dia") : "no período";
@@ -2206,7 +2227,7 @@ if (sessionStorage.getItem("caixaToken")) iniciar();
 
 // ----- resumo do dia pronto pro WhatsApp + aviso de pedido parado -----
 function textoFechamento(g) {
-  const P = pedsPer(), CP = contasPer(), [a, b] = intervalo(), recs = P.flatMap(pagsDe), por = (f) => soma(recs.filter((x) => x.forma === f), (x) => x.valor), est = estornosDe(P), conta = P.filter((p) => p.status === "conta");
+  const P = pedsPer(), CP = contasPer(), [a, b] = intervalo(), recs = recsPer(P, a, b), por = (f) => soma(recs.filter((x) => x.forma === f), (x) => x.valor), est = estornosDe(P), conta = P.filter((p) => p.status === "conta");
   const totV = soma(recs, (x) => x.valor), totC = round2(soma(CP, (x) => x.valor)), refsC = round2(soma(CP, (x) => x.refeicoes || 0));
   const L = ["*Fechamento - Da Lúcia*", a === b ? "Data: " + dataBR(a) : "Período: " + dataBR(a) + " a " + dataBR(b), "", "Pedidos pagos: " + P.filter((p) => p.status === "pago").length, "Total recebido: " + brl(totV)];
   Object.keys(FORMAS).forEach((f) => { const n = recs.filter((x) => x.forma === f).length; if (n) L.push("  - " + FORMAS[f] + ": " + brl(por(f)) + " (" + n + ")"); });

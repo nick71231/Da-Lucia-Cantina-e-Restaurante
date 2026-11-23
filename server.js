@@ -514,6 +514,20 @@ async function tratar(req, res) {
     }
     db.pedidos.push(novo); await gravar(); return json(res, 200, novo);
   }
+  if (p === "/api/recebimentos" && req.method === "GET") { // dinheiro que ENTROU no período, pela data do RECEBIMENTO (igual à gaveta):
+    // comanda de ontem recebida hoje conta hoje. O Fechamento do caixa usa isto (antes somava pelo dia do pedido e não batia com a gaveta)
+    const de = String(url.searchParams.get("de") || ""), ate = String(url.searchParams.get("ate") || de);
+    if (!/^\d{4}-\d\d-\d\d$/.test(de) || !/^\d{4}-\d\d-\d\d$/.test(ate)) return json(res, 400, { erro: "período inválido" });
+    const out = [];
+    for (const x of db.pedidos) for (const g of pagsDe(x)) { const d = g.dia || x.dia; if (d >= de && d <= ate && g.valor > 0) out.push({ forma: g.forma, valor: g.valor, dia: d, quando: g.quando || x.quando, pedidoId: x.id, pedidoDia: x.dia, tipo: x.tipo || "totem", numero: x.numero }); }
+    return json(res, 200, out);
+  }
+  if (p === "/api/pendencias" && req.method === "GET") { // comandas/pedidos de DIAS ANTERIORES que ficaram em aberto (o caixa só lista o dia: sumiam da tela - pente fino 23/11)
+    const hj = hoje(), out = db.pedidos.filter((x) => x.status === "aguardando" && x.dia < hj && (x.itens || []).length)
+      .map((x) => ({ id: x.id, dia: x.dia, tipo: x.tipo || "totem", numero: x.numero, nome: x.nome || "", valor: cents(x.valor - pagsDe(x).reduce((s, g) => s + g.valor, 0)) }))
+      .filter((x) => x.valor > 0).sort((a, b) => a.dia.localeCompare(b.dia));
+    return json(res, 200, out);
+  }
   if (p === "/api/clientes" && req.method === "GET") return json(res, 200, db.clientes);
   if (p === "/api/clientes" && req.method === "POST") {
     const b = await corpo(req); if (!String(b.nome || "").trim()) return json(res, 400, { erro: "nome" });

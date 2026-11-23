@@ -100,6 +100,16 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   t((await req("PATCH", "/api/pedidos/" + ped.j.id, { status: "conta", clienteId: cli2.j.id })).j.status === "conta", "marcar pedido na conta de um cliente");
   const ct = (await req("GET", "/api/contas?mes=" + hoje.slice(0, 7))).j;
   t(ct.lancamentos.length === 2, "contas do mês mostram os 2 lançamentos");
+  { // pente fino 23/11: pedido de ONTEM em aberto aparece nas pendências; recebido hoje entra nos recebimentos de HOJE (igual à gaveta)
+    const ontem = new Date(Date.now() - 864e5).toLocaleDateString("en-CA");
+    const po = await req("POST", "/api/pedidos", { uid: "u-ontem", dia: ontem, itens: [{ nome: "Marmitex", preco: 30, qtd: 1 }] });
+    const pend = (await req("GET", "/api/pendencias")).j;
+    t(po.s === 200 && pend.some((x) => x.id === po.j.id && x.valor === 30 && x.dia === ontem), "pedido de ontem em aberto aparece nas pendências (R$ 30)");
+    t((await req("PATCH", "/api/pedidos/" + po.j.id, { status: "pago", pagamento: "pix" })).s === 200, "recebe hoje o pedido de ontem");
+    const rh = (await req("GET", "/api/recebimentos?de=" + hoje + "&ate=" + hoje)).j, ro = (await req("GET", "/api/recebimentos?de=" + ontem + "&ate=" + ontem)).j;
+    t(rh.some((g) => g.pedidoId === po.j.id && g.valor === 30 && g.forma === "pix") && !ro.some((g) => g.pedidoId === po.j.id), "recebido hoje conta no fechamento de HOJE (não no de ontem)");
+    t(!(await req("GET", "/api/pendencias")).j.some((x) => x.id === po.j.id), "depois de recebido some das pendências");
+  }
   { // cliente com 2 telefones no cadastro (separados por /): os dois acham a conta
     const c2t = await req("POST", "/api/clientes", { nome: "ZE DOIS FONES", telefone: "(12) 99111-2222 / (12) 98333-4444" });
     t(c2t.s === 200 && c2t.j.telefone.includes("/"), "cadastro aceita 2 telefones separados por /");
