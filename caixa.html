@@ -503,6 +503,7 @@ main #aviso-gav, #app > #aviso-gav { width: calc(100% - 56px); }
 /* gaveta */
 .gv-topo { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; } .gv-topo h3 { margin: 0 0 6px; font: 700 1.4rem Georgia, serif; }
 .gv-stats { grid-template-columns: repeat(6, 1fr); } .gv-stats > div.total { background: #2b1710; border-color: #2b1710; } .gv-stats > div.total small { color: #e8d6c6; } .gv-stats > div.total b { color: #fff; } .gv-stats > div.total::before { background: var(--laranja); }
+.gv-stats > div b { white-space: nowrap; font-size: clamp(17px, 1.55vw, 22px); } /* "+ R$ 1.228,35" numa linha só */
 .gv-stats .btn.mini { margin-top: 4px; padding: 3px 10px !important; background: #fff3da; border-color: #f5dcae; }
 @media (max-width: 1100px) { .gv-stats { grid-template-columns: repeat(3, 1fr); } }
 .gv-box { background: #fff; border: 1px solid var(--linha); border-radius: 20px; padding: 16px 18px; box-shadow: 0 1px 2px rgba(80,35,10,.04), 0 6px 16px rgba(120,50,10,.05); }
@@ -745,7 +746,7 @@ async function carregarPendencias(forca) { if (!forca && Date.now() - pendT < 15
 function htmlPendencias() {
   carregarPendencias(); const L = pendencias.filter((x) => x.dia !== dia); if (!L.length) return "";
   const rotP = (x) => (x.tipo === "balanca" ? (x.numero > 10000 ? "Marmitex M" + (x.numero - 10000) : "Comanda " + x.numero) : x.tipo === "delivery" ? "Delivery " + x.numero : "Pedido #" + x.numero) + (x.nome ? " · " + esc(x.nome) : "");
-  return `<div class="vazio-box" style="text-align:left;background:#fde0e0;border:2px solid #e57373;color:#7a1010;margin-bottom:12px"><b>⚠ ${L.length} ${L.length === 1 ? "comanda ficou" : "comandas ficaram"} em aberto em dias anteriores · ${brl(round2(soma(L, (x) => x.valor)))}</b><br><small>Receba, marque na conta ou cancele cada uma (toque para abrir o dia dela).</small>
+  return `<div class="pend-box" style="text-align:left;background:#fde0e0;border:1px solid #e57373;border-radius:14px;color:#7a1010;margin:0 0 14px;padding:12px 16px;font-size:14px;line-height:1.4"><b>⚠${L.length} ${L.length === 1 ? "comanda ficou" : "comandas ficaram"} em aberto em dias anteriores · ${brl(round2(soma(L, (x) => x.valor)))}</b><br><small>Receba, marque na conta ou cancele cada uma (toque para abrir o dia dela).</small>
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${L.map((x) => `<button class="btn mini" data-a="irPend" data-d="${esc(x.dia)}">${dataBR(x.dia).slice(0, 5)} · ${rotP(x)} · <b>${brl(x.valor)}</b></button>`).join("")}</div></div>`;
 }
 document.addEventListener("click", (e) => { const b = e.target.closest && e.target.closest('[data-a="irPend"]'); if (!b) return; dia = b.dataset.d; const di = $("#dia"); if (di) di.value = dia; aba = "aberto"; ultimoAguard = null; pendT = 0; carregar(); });
