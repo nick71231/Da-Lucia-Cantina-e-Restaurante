@@ -1194,7 +1194,7 @@ document.addEventListener("click", async (e) => {
     await recarregar(); modalCelula(c.id, dia);
   }
   else if (a === "addMarm") {
-    const c = clientes.find((x) => x.id === d.c), W = totalWhats(), dia = $("#l-dia").value || d.d, nomeB = ($("#w-bnome").value || "").trim() || "bebida";
+    const c = clientes.find((x) => x.id === d.c), W = totalWhats(), dia = $("#l-dia").value || d.d;
     if (W.q > 0 && !(W.p > 0)) return alert("Digite o valor de cada marmitex.");
     if (!(W.valor > 0)) return alert("Digite a quantidade de marmitex e o valor de cada uma (ou a bebida).");
     const partes = [];
@@ -1296,11 +1296,15 @@ function pintarPeriodo(h) { // a barra de datas fica quieta (não some enquanto 
 let entFil = "entrega", entBoy = ""; // entBoy: mostrando só as entregas desse motoboy ("__sem" = sem motoboy marcado)
 const formaEnt = (p) => (p.pagPrevisto === "cartao_entrega" ? "cartao" : p.pagPrevisto || p.pagamento || "");
 const taxaEnt = (p) => round2(soma(p.itens.filter((c) => c.tipo === "taxa"), (c) => c.preco * (c.qtd || 1)));
-const trocoEnt = (p) => (formaEnt(p) === "dinheiro" && p.trocoPara > p.valor ? round2(p.trocoPara - p.valor) : 0);
+// quanto de cada pedido foi em dinheiro / cartão / pix: pelo que está RECEBIDO no caixa (pente fino 23/11: se o cliente escolheu
+// dinheiro no site mas pagou no Pix e o caixa corrigiu, o motoboy NÃO traz esse dinheiro). Ainda sem receber: o que escolheu no site.
+const grupoForma = (f) => (["credito", "debito", "refeicao", "cartao"].includes(f) ? "cartao" : f);
+const valEnt = (p, f) => { const gs = pagsDe(p); return gs.length ? round2(soma(gs.filter((g) => grupoForma(g.forma) === f), (g) => g.valor)) : formaEnt(p) === f ? p.valor : 0; };
+const trocoEnt = (p) => (valEnt(p, "dinheiro") > 0 && p.trocoPara > p.valor ? round2(p.trocoPara - p.valor) : 0);
 function resumoEntregas() {
   const ds = pedidos.filter((p) => p.tipo === "delivery"), canc = ds.filter((p) => p.status === "cancelado");
   const sel = ds.filter((p) => p.status !== "cancelado" && (entFil === "todos" || (p.entrega || "entrega") === entFil)).sort((a, b) => a.quando - b.quando);
-  const por = (f) => round2(soma(sel.filter((p) => formaEnt(p) === f), (p) => p.valor));
+  const por = (f) => round2(soma(sel, (p) => valEnt(p, f)));
   return { ds, canc, sel, din: por("dinheiro"), car: por("cartao"), pix: por("pix"), troco: round2(soma(sel, trocoEnt)), taxas: round2(soma(sel, taxaEnt)), total: round2(soma(sel, (p) => p.valor)) };
 }
 // ----- motoboys: cada entrega marca quem levou; o card de cada um diz quanto ele traz em dinheiro e quanto passou na maquininha -----
@@ -1325,9 +1329,9 @@ const motivoDe = (x) => x.motivo || (((gaveta && gaveta.movimentos) || []).find(
 const ehVale = (x) => /^vale\b/i.test(motivoDe(x));
 const motivoVale = (x) => { const m = motivoDe(x).match(/\(([^)]*)\)\s*$/); return "Vale" + (m ? " (" + m[1] + ")" : ""); };
 function contaBoy(lista) { // dinheiro: o que o cliente paga + o troco que ele levou do caixa; cartão: o que tem que aparecer na maquininha dele
-  const so = (f) => lista.filter((p) => formaEnt(p) === f), sv = (a) => round2(soma(a, (p) => p.valor));
-  const din = sv(so("dinheiro")), troco = round2(soma(lista, trocoEnt));
-  return { n: lista.length, din, troco, traz: round2(din + troco), car: sv(so("cartao")), nCar: so("cartao").length, pix: sv(so("pix")), taxas: round2(soma(lista, taxaEnt)), total: sv(lista) };
+  const sv = (f) => round2(soma(lista, (p) => valEnt(p, f)));
+  const din = sv("dinheiro"), troco = round2(soma(lista, trocoEnt));
+  return { n: lista.length, din, troco, traz: round2(din + troco), car: sv("cartao"), nCar: lista.filter((p) => valEnt(p, "cartao") > 0).length, pix: sv("pix"), taxas: round2(soma(lista, taxaEnt)), total: round2(soma(lista, (p) => p.valor)) };
 }
 function cardsBoys(r) {
   const ents = r.ds.filter((p) => p.status !== "cancelado" && (p.entrega || "entrega") === "entrega");

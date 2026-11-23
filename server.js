@@ -359,7 +359,11 @@ async function sincronizarDelivery() {
         const p = cancSite.find((y) => y.siteToken === x.token); if (!p) return;
         delete p.motivoCancelamento; mudou = true;
         if (p.pagoAuto && p.itens.length && p.itens.every((c) => c.pago) && pagsDe({ ...p, status: "pago" }).length) { p.status = "pago"; } // volta pras vendas com o pagamento automático que já tinha
-        else { p.status = "aguardando"; delete p.contaAuto; p.clienteId = null; delete p.clienteIds; if (p.pagamento === "conta") p.pagamento = null; } // o caixa recebe ou marca na conta de novo
+        else {
+          p.status = "aguardando"; delete p.contaAuto; delete p.contaCliente; delete p.pagoAuto; delete p.pagoEm; p.clienteId = null; delete p.clienteIds; p.pagamento = null;
+          // pedido "na conta"/marmita do robô: o cancelamento tirou o lançamento da conta do cliente -> lança de novo, igual quando chegou (antes voltava sem cobrar)
+          if (p.pagPrevisto === "conta" && !db.lancamentos.some((l) => l.pedidoId === p.id)) pagarDoSite(p);
+        }
         console.log("delivery: D" + p.numero + " reativado no site -> voltou pro caixa (" + p.status + ")");
       });
       sit.filter((x) => x && x.status === "cancelado").forEach((x) => {

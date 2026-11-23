@@ -107,6 +107,14 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
   const c36 = (await api("GET", "/api/pedidos?dia=" + hojeISO, undefined, cx)).find((p) => p.tipo === "balanca" && p.numero === 36);
   t(c36.status === "aguardando" && c36.pagamentos.length === 1 && c36.itens.filter((c) => c.pago).length === 2, "acerto parcial: 2 itens pagos em dinheiro, 1 continua em aberto");
   const sem = await abre("/caixa.html"); t(!sem.document.querySelector("#gate").hidden, "sem login o caixa mostra a tela de senha"); sem.close();
+  { // motoboy (pente fino 23/11): o "tem que trazer em dinheiro" segue o que está RECEBIDO no caixa, não só o que o cliente escolheu no site
+    const ent = (n, v, pag, gs, extra) => ({ id: "d" + n, tipo: "delivery", numero: n, entrega: "entrega", entregador: "Kevin", valor: v, pagPrevisto: pag, status: gs.length ? "pago" : "aguardando", itens: [{ iid: "i" + n, preco: v - 5, qtd: 1 }, { iid: "t" + n, tipo: "taxa", preco: 5, qtd: 1 }], pagamentos: gs, ...extra });
+    const lista = [ent(1, 40, "dinheiro", [{ forma: "dinheiro", valor: 40 }]), ent(2, 50, "dinheiro", [{ forma: "dinheiro", valor: 50 }], { trocoPara: 100 }),
+      ent(3, 30, "dinheiro", [{ forma: "pix", valor: 30 }]), ent(4, 25, "cartao_entrega", [{ forma: "debito", valor: 25 }], { cartaoTipo: "debito" }), ent(5, 20, "dinheiro", [])];
+    const c = w.eval("contaBoy")(lista);
+    t(c.din === 110 && c.troco === 50 && c.traz === 160 && c.pix === 30 && c.car === 25 && c.nCar === 1 && c.taxas === 25 && c.total === 165,
+      "motoboy: traz 40 + 50 + 20 (ainda não recebido) + 50 de troco = 160; o que o cliente pagou no Pix não entra no dinheiro: " + JSON.stringify(c));
+  }
   w.close();
 
   console.log("\nBalança");

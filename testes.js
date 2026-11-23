@@ -366,6 +366,8 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
     cancelarNoSite = false; await dorme(1600); const depois = await delDe();
     t(antes.length > 0 && antes.every((a) => { const d = depois.find((x) => x.id === a.id); return d && d.status !== "cancelado"; }), "reativado no site: o pedido sai do 'cancelado' no caixa");
     t(!pagoAuto || depois.find((x) => x.id === pagoAuto.id).status === "pago", "reativado no site com pagamento automático: volta como pago (entra nas vendas de novo)");
+    const r62 = depois.find((x) => x.numero === 62), ctR = (await reqEm(sd.base, "GET", "/api/contas", undefined, tkD)).j;
+    t(r62 && r62.status === "conta" && ctR.lancamentos.filter((l) => l.pedidoId === r62.id && l.valor === 22).length === 1, "reativado no site um pedido 'na conta': volta PRA CONTA do cliente (antes voltava sem cobrar)");
     cancelarNoSite = true; await dorme(1600); }
   const sa = (await reqEm(sd.base, "GET", "/api/saude", undefined, "")).j;
   t(!!sa.delivery && sa.delivery.ligado && !sa.delivery.erro && !JSON.stringify(sa).includes("tk-teste"), "a saúde do servidor mostra a busca do delivery (sem mostrar a senha)");

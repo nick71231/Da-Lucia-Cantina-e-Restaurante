@@ -543,7 +543,7 @@ async function reservarNome(n, nome) { // nome numa comanda, sem nenhum prato (o
 
 // ===== teclado de letras na tela =====
 let tn = null;
-const TN_LINHAS = ["1234567890", "QWERTYUIOP", "ASDFGHJKL"], TN_ACENTOS = "ÁÃÂÉÊÍÓÕÔÚÇ";
+const TN_LINHAS = ["1234567890", "QWERTYUIOP", "ASDFGHJKL"];
 function abrirTN(titulo, texto, botoes) { tn = { titulo, texto: String(texto || "").slice(0, 40), caps: false, botoes, ocupado: false }; desenharTN(); }
 function fecharTN() { tn = null; const el = $("#tn"); el.hidden = true; el.innerHTML = ""; }
 function visTN() { const v = $("#tn .tn-vis"); if (v && tn) v.innerHTML = (tn.texto ? esc(tn.texto) : "<span>Toque nas letras para digitar</span>") + "<i></i>"; }

@@ -13,7 +13,6 @@ let tela = "descanso";                                     // menu | montar | su
 let montagem = null, ultimo = null, nomeCliente = "", tHold, tIdle, pinDigitado = "", abaAdmin = "cardapio", diaRel = null;
 const hoje = () => new Date().toLocaleDateString("en-CA");
 let removidos = new Set(ler("removidos", [])), bebidasExtras = ler("bebidasExtras", []), modoApagar = false, enviando = false, filtroAdmin = "", etapaAtual = null, prodAtual = null, ajusteAtual = "aparencia";
-const pinAtual = () => String(ler("pin", PIN_ADMIN));
 const bebidasLista = () => [...BEBIDAS, ...bebidasExtras].filter((b, i, a) => a.findIndex((x) => x.nome === b.nome) === i && !removidos.has("bebida:" + b.nome));
 const soBalanca = (b) => typeof SO_BALANCA !== "undefined" && SO_BALANCA.includes(b.nome); // ex.: Suco Pequeno: só a balança vende
 // SUCO: pergunta o sabor (lista SUCO_SABORES do dados.js; o que acabou o admin desliga em "Sabores do suco")
@@ -218,13 +217,6 @@ function perguntarPago(n) {
   m.innerHTML = `<div class="modal-caixa larga pp"><div class="pp-ic">${ic}</div><h2>Quer ${esc(nome)}?</h2><p class="pp-sub">É opcional e custa <b>+ ${brl(c.adicional)}</b> na marmitex</p>
     <div class="pp-bts"><button class="pp-nao" data-acao="pagoNao" data-n="${n}">Não, obrigado</button><button class="pp-sim" data-acao="pagoSim" data-n="${n}">Sim, quero<small>+ ${brl(c.adicional)}</small></button></div></div>`;
 }
-function perguntarObs() {
-  const m = $("#modal"); m.hidden = false;
-  m.innerHTML = `<div class="modal-caixa larga"><h2>Quer fazer alguma observação?</h2>
-    <p style="font-size:1.1em">Por exemplo: sem cebola, pouco sal...</p>
-    <button class="op-pag" data-acao="obsSim">✏️ Sim, escrever observação</button>
-    <button class="op-pag" data-acao="obsNao">✅ Não, adicionar ao carrinho</button></div>`;
-}
 function responderPago(n, quer) {
   const c = montagem.passos[n]; $("#modal").hidden = true;
   montagem.pagos[c.id] = quer;
@@ -335,7 +327,6 @@ document.addEventListener("click", async (e) => {
   if (a === "naComanda") return pedirNumeroComanda();
   if (a === "confirmarComanda") { const n = parseInt(($("#num-comanda").value || "").trim(), 10); if (!(n >= 1 && n <= 9999)) return toast("Digite o número da sua comanda."); $("#modal").hidden = true; return finalizar(n); }
   if (a === "fecharModal") { $("#modal").hidden = true; return; }
-  if (a === "obsSim" || a === "obsNao") { if (!montagem) return; $("#modal").hidden = true; if (a === "obsNao") return adicionar(); montagem.obsOk = true; montagem.i = montagem.passos.length; return render(); }
   if (a === "pagoSim" || a === "pagoNao") { if (montagem) responderPago(+d.n, a === "pagoSim"); return; }
   if (a === "pedirBebida") return addBebida(d.nome, d.tp);
   if (a === "semBebida") { tela = "menu"; return render(); }
@@ -901,17 +892,6 @@ document.addEventListener("change", (e) => {
   toast("Salvo!"); render();
 });
 
-function posicaoBloco() {
-  const l = etapasLista(), i = l.findIndex((c) => c.id === etapaAtual), c = l[i]; if (!c) return "";
-  return `<div class="bloco"><h3>Esta etapa</h3>
-    <p>Nome: <input data-inf="${c.id}|nome" value="${esc(c.nome)}"></p>
-    <p>Pergunta que o cliente vê: <input data-inf="${c.id}|pergunta" value="${esc(c.pergunta)}" style="width:min(440px,100%)"></p>
-    <p>Posição no pedido: <b>${i + 1}ª de ${l.length}</b>
-    <button data-acao="moverEtapa" data-id="${c.id}" data-dir="-1" ${i === 0 ? "disabled" : ""}>⬆ Subir</button>
-    <button data-acao="moverEtapa" data-id="${c.id}" data-dir="1" ${i === l.length - 1 ? "disabled" : ""}>⬇ Descer</button></p>
-    <p>Valor adicional (R$) quando o cliente escolhe algo desta etapa: <input data-ad="${c.id}" inputmode="decimal" placeholder="0,00" style="width:110px" value="${c.adicional ? c.adicional.toFixed(2).replace(".", ",") : ""}"></p>
-    <p><button data-acao="duplicarEtapa" data-id="${c.id}">Duplicar esta etapa</button> (copia os itens e os mínimos/máximos)</p></div>`;
-}
 function baixarBackup() {
   const dados = {};
   for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (!SEM_SYNC.includes(k)) dados[k] = localStorage.getItem(k); }
