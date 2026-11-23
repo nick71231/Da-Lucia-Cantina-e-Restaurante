@@ -1010,7 +1010,9 @@ async function modalCelula(cid, dia) { // marcar na conta de um cliente num dia:
   if (!modalAtual || modalAtual.cid !== cid || modalAtual.dia !== dia) return;
   const itensL = (l, p) => {
     const mine = l.itensIds ? p.itens.filter((x) => l.itensIds.includes(x.iid)) : p.itens.filter((x) => !x.pago), resto = p.itens.filter((x) => !mine.includes(x));
-    const li = (x, mudo, etq) => `<li${mudo ? ' class="mudo"' : ""}><b class="it-p">${brl(valorIt(x))}</b>${x.qtd}x ${esc(x.nome)}${(x.grupos || []).length ? ` <small>${esc((x.grupos || []).flatMap((g) => g.itens).join(", "))}</small>` : ""}${etq ? ` <span class="ac-chip">${etq}</span>` : ""}</li>`;
+    // "tirar": a pessoa cancelou ou não foi -> o item sai da conta e do pedido (só item da conta ainda não pago)
+    const tira = (x) => l.itensIds && !x.pago ? ` <button class="btn ruim mini" data-a="tirarIt" data-id="${l.id}" data-iid="${x.iid}" data-n="${esc(x.qtd + "x " + x.nome)}" title="Tirar este item da conta">✕ tirar</button>` : "";
+    const li = (x, mudo, etq) => `<li${mudo ? ' class="mudo"' : ""}><b class="it-p">${brl(valorIt(x))}</b>${x.qtd}x ${esc(x.nome)}${(x.grupos || []).length ? ` <small>${esc((x.grupos || []).flatMap((g) => g.itens).join(", "))}</small>` : ""}${etq ? ` <span class="ac-chip">${etq}</span>` : mudo ? "" : tira(x)}</li>`;
     return `<ul class="obs-l">${mine.map((x) => li(x)).join("")}${resto.map((x) => li(x, true, x.pago ? "✓ pago antes" : "outra pessoa")).join("")}</ul>`;
   };
   const lancHtml = (l) => { const p = l.pedidoId ? (peds[l.dia] || []).find((x) => x.id === l.pedidoId) : null;
@@ -1180,6 +1182,7 @@ document.addEventListener("click", async (e) => {
     await api("POST", "/api/lancamentos", { clienteId: c.id, dia, qtd: 0, valor, obs }); if (!dia.startsWith(mes)) mes = dia.slice(0, 7);
     await recarregar(); modalCelula(c.id, dia);
   }
+  else if (a === "tirarIt") { if (!confirm("Tirar da conta: " + d.n + "?\n\n(a pessoa cancelou ou não foi; o valor da conta diminui)")) return; await api("POST", "/api/lancamentos/" + d.id + "/tirar", { iid: d.iid }); await recarregar(); reabrirModal(); }
   else if (a === "delLanc") { if (!confirm("Apagar este lançamento da conta?")) return; await api("DELETE", "/api/lancamentos/" + d.id); await recarregar(); reabrirModal(); }
   else if (a === "delPag") { if (!confirm("Apagar este pagamento?")) return; await api("DELETE", "/api/pagamentos/" + d.id); await recarregar(); reabrirModal(); }
   else if (a === "addPag") {

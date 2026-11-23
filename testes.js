@@ -100,6 +100,20 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   t((await req("PATCH", "/api/pedidos/" + ped.j.id, { status: "conta", clienteId: cli2.j.id })).j.status === "conta", "marcar pedido na conta de um cliente");
   const ct = (await req("GET", "/api/contas?mes=" + hoje.slice(0, 7))).j;
   t(ct.lancamentos.length === 2, "contas do mês mostram os 2 lançamentos");
+  { // tirar UM item da conta (a pessoa cancelou ou não foi)
+    const pt = await req("POST", "/api/pedidos", { uid: "u5t", itens: [{ nome: "Marmitex", preco: 24, qtd: 1 }, { nome: "Coca Lata", preco: 6, qtd: 2 }] });
+    await req("PATCH", "/api/pedidos/" + pt.j.id, { status: "conta", clienteId: cli2.j.id });
+    const lt = () => req("GET", "/api/contas?mes=" + hoje.slice(0, 7)).then((r) => r.j.lancamentos.find((l) => l.pedidoId === pt.j.id));
+    const pedT = async () => (await req("GET", "/api/pedidos?dia=" + hoje)).j.find((x) => x.id === pt.j.id);
+    const l0 = await lt(), [iA, iB] = (await pedT()).itens.map((c) => c.iid);
+    t(l0 && l0.valor === 36, "pedido de R$36 foi pra conta");
+    const r1 = await req("POST", "/api/lancamentos/" + l0.id + "/tirar", { iid: iB });
+    const l1 = await lt(), p1 = await pedT();
+    t(r1.s === 200 && l1 && l1.valor === 24 && p1.valor === 24 && p1.itens.length === 1 && p1.status === "conta", "tirar a Coca da conta: conta e pedido ficam R$24");
+    t((await req("POST", "/api/lancamentos/" + l0.id + "/tirar", { iid: iB })).s === 409, "tirar de novo o mesmo item é recusado");
+    t((await req("POST", "/api/lancamentos/" + l0.id + "/tirar", { iid: iA })).s === 200 && !(await lt()) && (await pedT()).status === "cancelado", "tirou o último item: some da conta e o pedido fica cancelado");
+    t((await reqEm(B, "POST", "/api/lancamentos/" + l0.id + "/tirar", { iid: iA }, "")).s === 401, "tirar item da conta precisa de login");
+  }
 
   console.log("\nGaveta de dinheiro");
   t((await req("POST", "/api/gaveta", { acao: "movimento", tipo: "sangria", valor: 10, motivo: "gás" })).s === 409, "movimento sem abrir a gaveta é recusado");

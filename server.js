@@ -550,6 +550,30 @@ async function tratar(req, res) {
     if (!cli || !/^\d{4}-\d\d-\d\d$/.test(l.dia) || !(l.valor > 0 && l.valor <= 5000) || !(l.qtd >= 0 && l.qtd <= 99)) return json(res, 400, { erro: "dados inválidos (cliente, dia ou valor)" });
     db.lancamentos.push(l); await gravar(); return json(res, 200, l);
   }
+  const mt = p.match(/^\/api\/lancamentos\/([^/]+)\/tirar$/);
+  if (mt && req.method === "POST") {                            // tira UM item da conta (a pessoa cancelou ou não foi): sai da conta e do pedido
+    const b = await corpo(req), iid = String(b.iid || ""), l = db.lancamentos.find((x) => x.id === mt[1]);
+    if (!l) return json(res, 404, { erro: "esse lançamento já não está na conta" });
+    const ped = l.pedidoId && db.pedidos.find((x) => x.id === l.pedidoId);
+    if (!ped || !Array.isArray(l.itensIds)) return json(res, 409, { erro: "esse lançamento não tem itens separados: apague ele (✕) e marque de novo o valor certo" });
+    if (!l.itensIds.includes(iid)) return json(res, 409, { erro: "esse item já não está nesse lançamento" });
+    const c = ped.itens.find((x) => x.iid === iid);
+    if (c && c.pago) return json(res, 409, { erro: "esse item já foi pago" });
+    l.itensIds = l.itensIds.filter((x) => x !== iid);
+    if (c) {
+      ped.itens = ped.itens.filter((x) => x !== c);
+      (ped.tirados = ped.tirados || []).push({ ...c, tiradoEm: Date.now(), quem: req.papel }); // fica registrado o que saiu
+      if (ped.tipo === "balanca") recalcComanda(ped); else ped.valor = cents(ped.itens.reduce((t, x) => t + valorItem(x), 0));
+    }
+    const vivos = ped.itens.filter((x) => l.itensIds.includes(x.iid));
+    if (vivos.length) l.valor = cents(vivos.reduce((t, x) => t + valorItem(x), 0));
+    else db.lancamentos = db.lancamentos.filter((x) => x !== l); // tirou o último item: o lançamento some da conta
+    if (!db.lancamentos.some((x) => x.pedidoId === ped.id) && ped.status === "conta") { // não sobrou nada desse pedido na conta
+      if (!ped.itens.length) ped.status = "cancelado";
+      else { ped.status = "aguardando"; ped.clienteId = null; delete ped.clienteIds; ped.pagamento = null; delete ped.contaAuto; fecharSePago(ped); }
+    }
+    await gravar(); return json(res, 200, { ok: true, lancamento: vivos.length ? l : null });
+  }
   const ml = p.match(/^\/api\/lancamentos\/([^/]+)$/);
   if (ml && req.method === "DELETE") {
     const l = db.lancamentos.find((x) => x.id === ml[1]);
