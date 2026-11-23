@@ -15,11 +15,17 @@ const hoje = () => new Date().toLocaleDateString("en-CA");
 let removidos = new Set(ler("removidos", [])), bebidasExtras = ler("bebidasExtras", []), modoApagar = false, enviando = false, filtroAdmin = "", etapaAtual = null, prodAtual = null, ajusteAtual = "aparencia";
 const pinAtual = () => String(ler("pin", PIN_ADMIN));
 const bebidasLista = () => [...BEBIDAS, ...bebidasExtras].filter((b, i, a) => a.findIndex((x) => x.nome === b.nome) === i && !removidos.has("bebida:" + b.nome));
-const temBebida = () => bebidasLista().some((b) => !indisponiveis.has("bebida:" + b.nome));
+const soBalanca = (b) => typeof SO_BALANCA !== "undefined" && SO_BALANCA.includes(b.nome); // ex.: Suco Pequeno: só a balança vende
+// SUCO: pergunta o sabor (lista SUCO_SABORES do dados.js; o que acabou o admin desliga em "Sabores do suco")
+const ehSuco = (nome) => /^suco\b/i.test(String(nome || "").trim());
+const saboresTodos = () => (typeof SUCO_SABORES !== "undefined" ? SUCO_SABORES : []);
+const saboresHoje = () => saboresTodos().filter((s) => !indisponiveis.has("sabor:" + s));
+const bebidasCliente = () => bebidasLista().filter((b) => !soBalanca(b) && !(ehSuco(b.nome) && saboresTodos().length && !saboresHoje().length)); // o que o CLIENTE vê (suco some se acabaram todos os sabores)
+const temBebida = () => bebidasCliente().some((b) => !indisponiveis.has("bebida:" + b.nome));
 let docesExtras = ler("docesExtras", []);
 const docesLista = () => [...(typeof DOCES_TOTEM !== "undefined" ? DOCES_TOTEM : []), ...docesExtras].filter((b, i, a) => a.findIndex((x) => x.nome === b.nome) === i && !removidos.has("doce:" + b.nome));
 const temDoce = () => docesLista().some((b) => !indisponiveis.has("doce:" + b.nome));
-const avulsos = (tp) => (tp === "doce" ? docesLista() : bebidasLista()); // bebidas e doces: itens com preço próprio, fora da marmitex
+const avulsos = (tp) => (tp === "doce" ? docesLista() : bebidasCliente()); // bebidas e doces: itens com preço próprio, fora da marmitex
 
 const categorias = () => etapasLista().map((c) => ({ ...c, itens: [...new Set([...c.itens, ...(extras[c.id] || [])])].filter((n) => !removidos.has(c.id + ":" + n)) }));
 const ehSem = (n) => /^\s*sem\s/i.test(n); // "Sem Arroz", "Sem Salada"... sempre por último, pro cliente achar fácil
@@ -71,7 +77,7 @@ function htmlObs() { // tela de revisão: tudo que foi escolhido + observação 
 function htmlAvulsos(tp) { // tela de bebidas ou de doces: toca pra adicionar, +/− pra ajustar
   const D = tp === "doce", ic = D ? "🍬" : "🥤", un = D ? "doce" : "bebida", lista = avulsos(tp).filter((b) => !indisponiveis.has(tp + ":" + b.nome)), qb = carrinho.filter((c) => c.tipo === tp).reduce((s, c) => s + c.qtd, 0);
   return topo2(D ? "Quer um docinho?" : "Quer uma bebida?", "Toque pra adicionar. Toque de novo pra mais um" + (D ? "." : "a.")) + `<section class="t-corpo"><div class="t-bebs">${lista.map((b) => {
-    const q = (carrinho.find((c) => c.key === tp + "|" + b.nome) || {}).qtd || 0, f = D ? null : fotoBebida(b.nome);
+    const q = carrinho.filter((c) => c.key === tp + "|" + b.nome || c.key.startsWith(tp + "|" + b.nome + " - ")).reduce((s, c) => s + c.qtd, 0), f = D ? null : fotoBebida(b.nome); // suco: soma todos os sabores
     return `<div class="t-beb ${q ? "tem" : ""}"><button class="t-beb-bt" data-acao="pedirBebida" data-tp="${tp}" data-nome="${esc(b.nome)}">${f ? `<img class="foto-bebida" src="fotos/bebidas/${f}.jpg" alt="" onerror="this.outerHTML='<span>🥤</span>'">` : `<span>${ic}</span>`}<b>${esc(b.nome)}</b><small>${brl(b.preco)}</small></button>
       ${q ? `<div class="t-beb-q"><button data-acao="menosBeb" data-tp="${tp}" data-nome="${esc(b.nome)}" aria-label="Tirar um">−</button><b>${q}</b><button data-acao="pedirBebida" data-tp="${tp}" data-nome="${esc(b.nome)}" aria-label="Mais um">+</button></div>` : ""}</div>`;
   }).join("")}</div></section><footer class="t-barra"><div class="t-info">${qb ? `<b class="t-okk">✓ ${qb} ${un}${qb > 1 ? "s" : ""} no pedido</b>` : `Nenhum${D ? "" : "a"} ${un} escolhid${D ? "o" : "a"}`}</div><button class="t-prim ${qb ? "t-ok" : "t-neutro"}" data-acao="semBebida">${qb ? "Pronto, ver meu pedido →" : `Não quero ${un} →`}</button></footer>`;
@@ -386,7 +392,8 @@ document.addEventListener("click", async (e) => {
   }
   if (a === "chipObs") { const ps = (montagem.obs || "").split(",").map((x) => x.trim()).filter(Boolean), k = ps.findIndex((x) => x.toLowerCase() === d.txt.toLowerCase()); if (k >= 0) ps.splice(k, 1); else ps.push(d.txt); montagem.obs = ps.join(", "); return render(); }
   if (a === "irPasso") { const k = +d.n, c = montagem.passos[k]; if (c.adicional > 0 && montagem.pagos[c.id] === false) { montagem.pagos[c.id] = undefined; return perguntarPago(k); } montagem.i = k; return render(); }
-  if (a === "menosBeb") { const k = carrinho.findIndex((c) => c.key === (d.tp || "bebida") + "|" + d.nome); if (k >= 0) mudarQtd(k, -1); return; }
+  if (a === "menosBeb") { const tk = (d.tp || "bebida") + "|" + d.nome, k = carrinho.map((c) => c.key === tk || c.key.startsWith(tk + " - ")).lastIndexOf(true); if (k >= 0) mudarQtd(k, -1); return; } // suco: tira do último sabor
+  if (a === "saborSuco") { $("#modal").hidden = true; return addBebida(d.nome, "bebida", d.sabor); }
   if (a === "tecla") { if (pinDigitado.length < 8) pinDigitado += d.n; return desenharPin(); }
   if (a === "okPin") return entrarAdmin();
   if (a === "apagarPin") { pinDigitado = pinDigitado.slice(0, -1); return desenharPin(); }
@@ -501,12 +508,23 @@ async function avisoSenhas() { // avisa se alguma senha ainda é a padrão
   } catch (e) {}
 }
 
-function addBebida(nome, tp) { // também serve pros doces (tp = "doce")
+function addBebida(nome, tp, sabor) { // também serve pros doces (tp = "doce"); suco: pergunta o sabor antes
   tp = tp === "doce" ? "doce" : "bebida";
-  const b = avulsos(tp).find((x) => x.nome === nome), key = tp + "|" + nome, ex = carrinho.find((c) => c.key === key);
+  const b = avulsos(tp).find((x) => x.nome === nome);
   if (!b) return;
-  if (ex) ex.qtd++; else carrinho.push({ key, tipo: tp, nome, preco: b.preco, grupos: [], obs: "", qtd: 1 });
+  if (tp === "bebida" && ehSuco(nome) && saboresTodos().length && !sabor) return perguntarSabor(b);
+  const nm = sabor ? nome + " - " + sabor : nome, key = tp + "|" + nm, ex = carrinho.find((c) => c.key === key); // vai pro pedido como "Suco Grande - Laranja"
+  if (ex) ex.qtd++; else carrinho.push({ key, tipo: tp, nome: nm, preco: b.preco, grupos: [], obs: "", qtd: 1 });
   salvar("carrinho", carrinho); render(); pulsaCarrinho();
+}
+function perguntarSabor(b) { // janela: "Qual sabor?" com os sabores que tem hoje
+  const ss = saboresHoje(), IC = { laranja: "🍊", limao: "🍋", maracuja: "💛", abacaxi: "🍍", uva: "🍇", morango: "🍓", manga: "🥭", acerola: "🍒" };
+  const ic = (s) => IC[String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()] || "🥤";
+  if (!ss.length) return toast("O suco acabou por hoje 😕");
+  $("#modal").innerHTML = `<div class="modal-caixa larga pp"><div class="pp-ic">🥤</div><h2>Qual sabor?</h2><p class="pp-sub">${esc(b.nome)} - ${brl(b.preco)}</p>
+    <div class="pp-ops">${ss.map((s) => `<button class="pp-op" data-acao="saborSuco" data-nome="${esc(b.nome)}" data-sabor="${esc(s)}"><span>${ic(s)}</span><b>${esc(s)}</b></button>`).join("")}</div>
+    <button class="pp-voltar" data-acao="fecharModal">← Voltar</button></div>`;
+  $("#modal").hidden = false;
 }
 // foto da bebida: escolhe o arquivo em fotos/bebidas/ pelo nome cadastrado (sem foto = continua o 🥤)
 function fotoBebida(nome) {
@@ -528,11 +546,11 @@ function fotoBebida(nome) {
   if (/coca/.test(n)) return zero ? (grande ? "coca-600-zero" : "coca-lata-zero") : (lata ? "coca-lata" : "coca-600");
   return null;
 }
-const listaDe = (id) => id === "produto" ? marmitexLista().map((m) => ({ key: "produto:" + m.id, label: m.nome + " - " + brl(m.preco) })) : id === "bebida"
-  ? bebidasLista().map((b) => ({ key: "bebida:" + b.nome, label: b.nome + " - " + brl(b.preco) })) : id === "doce"
+const listaDe = (id) => id === "sabor" ? saboresTodos().map((s) => ({ key: "sabor:" + s, label: s })) : id === "produto" ? marmitexLista().map((m) => ({ key: "produto:" + m.id, label: m.nome + " - " + brl(m.preco) })) : id === "bebida"
+  ? bebidasLista().map((b) => ({ key: "bebida:" + b.nome, label: b.nome + " - " + brl(b.preco) + (soBalanca(b) ? " (só balança)" : "") })) : id === "doce"
   ? docesLista().map((b) => ({ key: "doce:" + b.nome, label: b.nome + " - " + brl(b.preco) }))
   : categorias().find((c) => c.id === id).itens.slice().sort((x, y) => x.localeCompare(y, "pt-BR", { sensitivity: "base", numeric: true })).map((n) => ({ key: id + ":" + n, label: n })); // ordem alfabética
-const nomeEtapa = (id) => (id === "produto" ? "Produtos" : id === "bebida" ? "Bebidas" : id === "doce" ? "Doces" : (etapasLista().find((c) => c.id === id) || {}).nome);
+const nomeEtapa = (id) => (id === "produto" ? "Produtos" : id === "bebida" ? "Bebidas" : id === "sabor" ? "Sabores do suco" : id === "doce" ? "Doces" : (etapasLista().find((c) => c.id === id) || {}).nome);
 function adminAjustes() {
   const abas = [["aparencia", "🎨 Aparência"], ["uso", "🔒 Segurança e uso"], ["dados", "💾 Dados e servidor"]];
   const idle = ler("idle", 90), t = parseInt(localStorage.getItem("cfgT") || "0", 10);
@@ -931,7 +949,7 @@ function htmlAdmin() {
     <section class="conteudo admin a2-conteudo"><div class="a2-cab"><h2>${at[1]} ${at[2]}</h2><p>${at[3]}</p></div>${corpo}</section></div></div>`;
 }
 function pillsEtapas(contador, prod) {
-  const et = [...(prod ? [["produto", "Produtos"]] : []), ...etapasLista().map((c) => [c.id, c.nome]), ["bebida", "Bebidas"], ["doce", "Doces"]];
+  const et = [...(prod ? [["produto", "Produtos"]] : []), ...etapasLista().map((c) => [c.id, c.nome]), ["bebida", "Bebidas"], ...(saboresTodos().length ? [["sabor", "Sabores do suco"]] : []), ["doce", "Doces"]];
   if (!et.some(([id]) => id === etapaAtual)) etapaAtual = et[0][0];
   return `<div class="pills a2-pills">${et.map(([id, nome]) => { const l = listaDe(id), on = l.filter((i) => !indisponiveis.has(i.key)).length;
     return `<button class="pill ${id === etapaAtual ? "on" : ""} ${contador && !on ? "zero" : ""}" data-acao="etapaAtual" data-id="${id}">${esc(nome)}${contador ? ` <small>${on}/${l.length}</small>` : ""}</button>`; }).join("")}</div>`;
@@ -989,11 +1007,12 @@ function ajustesMarmitex() { // PRODUTOS: cartões à esquerda, edição à dire
   return `<div class="a2-split">${lado}<div class="a2-dir">${dir}</div></div>`;
 }
 
-const todasChaves = () => ["produto", ...etapasLista().map((c) => c.id), "bebida", "doce"].flatMap((id) => listaDe(id).map((i) => i.key));
+const todasChaves = () => ["produto", ...etapasLista().map((c) => c.id), "bebida", "sabor", "doce"].flatMap((id) => listaDe(id).map((i) => i.key));
 const ligadosAgora = () => todasChaves().filter((k) => !indisponiveis.has(k));
 function aplicarCardapio(nome) {
   const m = ler("cardapios", {})[nome]; if (!m) return;
-  const on = new Set(m.on); indisponiveis = new Set(todasChaves().filter((k) => !on.has(k)));
+  const on = new Set(m.on), sab = [...indisponiveis].filter((k) => k.startsWith("sabor:")); // sabores do suco: o cardápio salvo não mexe (fica como estava)
+  indisponiveis = new Set([...todasChaves().filter((k) => !k.startsWith("sabor:") && !on.has(k)), ...sab]);
   salvar("indisponiveis", [...indisponiveis]); salvar("cardapioAtivo", nome);
 }
 function aplicarAgendado() { // de manhã aplica o cardápio marcado com o dia da semana (só com o totem parado)

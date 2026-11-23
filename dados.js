@@ -104,6 +104,12 @@ const BEBIDAS = [
   { nome: "Guaraná Antártica 600ml", preco: 10 },
 ];
 
+// Bebidas que só a BALANÇA vende (e o caixa/garçom): NÃO aparecem pro cliente no totem nem no site/robô do delivery (dona 23/11)
+const SO_BALANCA = ["Suco Pequeno"];
+// Sabores do SUCO (toda bebida que começa com "Suco"): o cliente escolhe o sabor ao pedir. O que acabou, desliga no admin
+// do totem (Cardápio de hoje > Sabores do suco) e some no totem e no site/robô também. (dona 23/11)
+const SUCO_SABORES = ["Laranja", "Limão", "Maracujá", "Abacaxi"];
+
 // Doces vendidos no totem (aparecem em "Doces" depois da 1ª marmitex). O admin do totem pode criar/esconder outros.
 // (nome DOCES_TOTEM pra não bater com a lista DOCES do caixa.html, que também carrega este arquivo)
 const DOCES_TOTEM = [

@@ -388,7 +388,7 @@ async function conferirWhats() {
 const vm = require("vm");
 function cardapioDoTotem() {
   if (!cfg || !cfg.t || !cfg.dados) return null; // o totem ainda não mandou as configurações: não mexe no site
-  let P; try { P = vm.runInNewContext(fs.readFileSync(path.join(__dirname, "dados.js"), "utf8") + "\n;({ MARMITEX, CATEGORIAS, BEBIDAS })"); } catch (e) { return null; }
+  let P; try { P = vm.runInNewContext(fs.readFileSync(path.join(__dirname, "dados.js"), "utf8") + "\n;({ MARMITEX, CATEGORIAS, BEBIDAS, SO_BALANCA: typeof SO_BALANCA !== 'undefined' ? SO_BALANCA : [], SUCO_SABORES: typeof SUCO_SABORES !== 'undefined' ? SUCO_SABORES : [] })"); } catch (e) { return null; }
   const d = cfg.dados, L = (k, p) => { try { return d[k] == null ? p : JSON.parse(d[k]); } catch (e) { return p; } };
   const ind = new Set(L("indisponiveis", [])), rem = new Set(L("removidos", [])), extras = L("extras", {});
   const valorNoNome = (nome) => { const m = String(nome || "").match(/R\$\s*(\d+(?:[.,]\d+)?)\s*$/); return m ? parseFloat(m[1].replace(",", ".")) : 0; };
@@ -405,7 +405,12 @@ function cardapioDoTotem() {
     return { id: m.id, nome: o.nome || m.nome, preco: Number(o.preco !== undefined ? o.preco : m.preco) || 0, disponivel: !ind.has("produto:" + m.id), regras };
   });
   const bebidas = [...P.BEBIDAS, ...L("bebidasExtras", [])].filter((b, i, a) => b && b.nome && a.findIndex((x) => x.nome === b.nome) === i && !rem.has("bebida:" + b.nome))
-    .map((b) => ({ nome: b.nome, preco: Number(b.preco) || 0, disponivel: !ind.has("bebida:" + b.nome) }));
+    .flatMap((b) => { // só balança (ex.: Suco Pequeno): desligada no site
+      const ok = !ind.has("bebida:" + b.nome) && !P.SO_BALANCA.includes(b.nome), preco = Number(b.preco) || 0;
+      // SUCO: no site/robô vai um por sabor ("Suco Grande - Laranja"); sabor desligado no admin do totem = indisponível
+      if (/^suco\b/i.test(String(b.nome).trim()) && P.SUCO_SABORES.length && !P.SO_BALANCA.includes(b.nome)) return [{ nome: b.nome, preco, disponivel: false }, ...P.SUCO_SABORES.map((s) => ({ nome: b.nome + " - " + s, preco, disponivel: ok && !ind.has("sabor:" + s) }))];
+      return [{ nome: b.nome, preco, disponivel: ok }];
+    });
   return { etapas: ets.map((c) => ({ id: c.id, nome: c.nome, pergunta: c.pergunta, adicional: c.adicional, itens: c.itens.map((n) => ({ nome: n, disponivel: !ind.has(c.id + ":" + n) })) })), produtos, bebidas };
 }
 let cardEnviado = "", cardQuando = 0, enviandoCard = false;
