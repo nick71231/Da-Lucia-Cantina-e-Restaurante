@@ -171,6 +171,7 @@ body.tec-on .modal.lado > .caixa-modal { max-height: none; height: calc(100vh - 
 .modal.lado #ac-itens { flex: none; overflow: visible; padding: 14px 22px 4px; }
 .modal.lado .ac-head { padding: 4px 22px 16px; border-bottom: 0; }
 .modal.lado .ac-extras { margin-top: 6px; }
+.modal.lado .ac-bebida-bar { margin: 8px 16px 0; } .ac-bebida-bar .btn { flex: 1; } /* bebida logo embaixo do Juntar (dona 23/11) */
 .modal.lado .ac-pag1 { margin-top: 16px; } .modal.lado .ac-pag1 > span { display: block; margin-bottom: 8px; font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--vermelho); }
 .modal.lado .ac-tiles { grid-template-columns: repeat(3, 1fr); }
 .modal.lado .ac-tile { position: relative; min-height: 70px; background: #fff; border: 2px solid var(--bege); }
@@ -1581,7 +1582,27 @@ async function logoImp(src) { // logo do admin do totem; se não tiver, a da pas
 }
 
 // ----- cabeçalho: LOGO NO CANTO SUPERIOR ESQUERDO + nome do restaurante do lado -----
-function cabecalhoESC(img, dots, tel) { // tel: 3ª linha (telefone), só no comprovante do cliente
+// comprovante do cliente (loja): do lado da logo, tudo à esquerda: DA LÚCIA, Cantina & Restaurante, razão social, CNPJ,
+// endereço + cidade na mesma linha (quebra se não couber) e telefone. Sem a inscrição estadual (pedido da dona 23/11).
+function cabecalhoLojaESC(img, dots, tel, lj) {
+  const cv = document.createElement("canvas"); cv.width = dots; cv.height = 10; let g = cv.getContext("2d");
+  let lw = 0, lh = 0; if (img) { lw = Math.round(dots * 0.3); lh = Math.round((img.height * lw) / img.width); if (lh > 230) { lh = 230; lw = Math.round((img.width * lh) / img.height); } }
+  const x = img ? lw + 14 : 0, larg = dots - x - 4, A = (s) => `${s}px Arial, sans-serif`, med = (t, f) => { g.font = f; return g.measureText(t).width; };
+  let fs = 40; while (med("DA LÚCIA", `bold ${fs}px Georgia, serif`) > larg && fs > 16) fs -= 2;
+  let fs2 = Math.round(fs * 0.5); while (med("Cantina & Restaurante", A(fs2)) > larg && fs2 > 10) fs2--;
+  const ie = (t) => /^\s*(ie\b|i\.e\.|inscri)/i.test(t), info = [lj.razao, lj.cnpj ? "CNPJ: " + lj.cnpj : "", [lj.endereco, lj.cidade].filter(Boolean).join(" - "), lj.extra && !ie(lj.extra) ? lj.extra : "", tel].map((t) => String(t || "").trim()).filter(Boolean);
+  let fi = 19; while (fi > 15 && info.some((t) => med(t, A(fi)) > larg)) fi--; // tudo numa linha só (endereço + cidade juntos); se nem assim couber, a linha quebra
+  const linhas = [{ t: "DA LÚCIA", f: `bold ${fs}px Georgia, serif`, h: Math.round(fs * 1.15) }, { t: "Cantina & Restaurante", f: A(fs2), h: Math.round(fs2 * 1.5) }];
+  info.forEach((t) => { let l = ""; t.split(/\s+/).forEach((p) => { const n = l ? l + " " + p : p; if (l && med(n, A(fi)) > larg) { linhas.push({ t: l, f: A(fi), h: Math.round(fi * 1.3) }); l = p; } else l = n; }); if (l) linhas.push({ t: l, f: A(fi), h: Math.round(fi * 1.3) }); });
+  const th = linhas.reduce((s, l) => s + l.h, 0), H = Math.max(th, lh) + 8;
+  cv.height = H; g = cv.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, dots, H);
+  if (img) g.drawImage(img, 0, Math.round((H - lh) / 2), lw, lh);
+  g.fillStyle = "#000"; g.textBaseline = "middle"; let y = Math.round((H - th) / 2);
+  linhas.forEach((l) => { g.font = l.f; g.fillText(l.t, x, y + l.h / 2); y += l.h; });
+  return rasterESC(g, dots, H, x);
+}
+function cabecalhoESC(img, dots, tel, lj) { // tel: 3ª linha (telefone), só no comprovante do cliente; lj: dados da loja (comprovante)
+  if (lj && (lj.razao || lj.cnpj || lj.endereco || lj.cidade)) return cabecalhoLojaESC(img, dots, tel, lj);
   const H = tel ? 150 : 130, cv = document.createElement("canvas"); cv.width = dots; cv.height = H;
   const g = cv.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, dots, H);
   let x = 0;
@@ -1597,6 +1618,9 @@ function cabecalhoESC(img, dots, tel) { // tel: 3ª linha (telefone), só no com
   let fs2 = Math.round(fs * 0.5); g.font = `${fs2}px Arial, sans-serif`; while (g.measureText("Cantina & Restaurante").width > larg && fs2 > 10) g.font = `${--fs2}px Arial, sans-serif`;
   g.fillText("Cantina & Restaurante", x, H * (tel ? 0.6 : 0.73));
   if (tel) g.fillText(tel, x, H * 0.85);
+  return rasterESC(g, dots, H, x);
+}
+function rasterESC(g, dots, H, x) { // canvas -> bytes ESC/POS (x: onde começa o texto; antes dele é a logo)
   // preto e branco: a logo com pontilhado (pra cores claras não sumirem), o texto com corte simples
   const px = g.getImageData(0, 0, dots, H).data, cinza = new Float32Array(dots * H);
   for (let i = 0; i < cinza.length; i++) cinza[i] = 0.299 * px[i * 4] + 0.587 * px[i * 4 + 1] + 0.114 * px[i * 4 + 2];
@@ -1627,8 +1651,8 @@ function quebraL(t, w) {
   });
   if (l) out.push(l); return out.length ? out : [""];
 }
-function escposDoc(L, k, img, tel, alto) { // alto: letra em altura dupla (comprovante do cliente)
-  const W = k.cols, by = [0x1B, 0x40, 0x1B, 0x74, 0, ...cabecalhoESC(img, k.dots, tel)];
+function escposDoc(L, k, img, tel, alto, lj) { // alto: letra em altura dupla (comprovante do cliente); lj: dados da loja no cabeçalho, do lado da logo
+  const W = k.cols, by = [0x1B, 0x40, 0x1B, 0x74, 0, ...cabecalhoESC(img, k.dots, tel, lj)];
   const linha = (txt, o = {}) => { by.push(0x1B, 0x61, { l: 0, c: 1, r: 2 }[o.a || "l"], 0x1B, 0x45, o.b ? 1 : 0, 0x1B, 0x2D, o.u ? 1 : 0, 0x1D, 0x21, o.s === "alta" || alto ? 0x01 : 0); for (const ch of semAc(txt)) by.push(ch.charCodeAt(0)); by.push(0x0A); };
   L.forEach((o) => {
     if (o.hr) return linha("-".repeat(W));
@@ -1649,14 +1673,8 @@ const TEL_LOJA = "(12) 99120-6380";
 const rotComp = (p) => p.tipo === "delivery" ? "Delivery " + nDel(p) : p.tipo === "balanca" ? (p.numero > 10000 ? "Marmitex M" + (p.numero - 10000) : "Comanda " + p.numero) : "Pedido #" + String(p.numero).padStart(4, "0");
 const kgBR = (g) => (g / 1000).toFixed(3).replace(".", ",") + " kg";
 const nomeComp = (c) => /^prato por quilo/i.test(c.nome) ? "Self-service" + (c.peso ? " " + kgBR(c.peso) : "") : (c.qtd || 1) + "x " + String(c.nome).replace(/\s*\(R\$\s?[\d.,]+\)\s*$/, "").replace(/\s*-\s*R\$\s?[\d.,]+$/, "");
-function lojaL(lj) { // linhas do restaurante (centralizadas) no topo do comprovante
-  lj = lj || {}; const L = [];
-  if (lj.razao) L.push({ t: lj.razao, a: "c" }); if (lj.cnpj) L.push({ t: "CNPJ: " + lj.cnpj, a: "c" });
-  if (lj.endereco) L.push({ t: lj.endereco, a: "c" }); if (lj.cidade) L.push({ t: lj.cidade, a: "c" }); if (lj.extra) L.push({ t: lj.extra, a: "c" });
-  return L;
-}
 function comprovanteL(peds, novos, pagsProntos, quando, lj) { // novos: ids dos recebimentos feitos agora (só eles entram no papel); pagsProntos: reimpressão
-  const agora = new Date(quando || Date.now()), L = [...lojaL(lj), { hr: 1 }, { t: "COMPROVANTE DE PAGAMENTO", a: "c", b: 1 }, { hr: 1 }];
+  const agora = new Date(quando || Date.now()), L = [{ hr: 1 }, { t: "COMPROVANTE DE PAGAMENTO", a: "c", b: 1 }, { hr: 1 }];
   peds.forEach((p, i) => { L.push({ e: rotComp(p), d: i ? "" : agora.toLocaleDateString("pt-BR").slice(0, 5) + " " + hora(agora) }); if (p.nome) L.push({ t: p.nome }); });
   L.push({ hr: 1 });
   const pags = pagsProntos || peds.flatMap((p) => (p.pagamentos || []).filter((g) => novos.has(g.id) && !g.estornado).map((g) => ({ ...g, p })));
@@ -1680,7 +1698,7 @@ async function imprimirComprovante(ids, antes, dias) { // antes: ids dos recebim
     const peds = ids.map((id) => todos.find((x) => x.id === id)).filter(Boolean);
     const k = await cfgImp(), novos = new Set(peds.flatMap((p) => (p.pagamentos || []).map((g) => g.id)).filter((id) => !antes.has(id))), { L, tot } = comprovanteL(peds, novos, null, null, k.loja);
     if (!(tot > 0)) return avisoImp("✕ Não achei o pagamento pra imprimir", "erro");
-    const img = await logoImp(k.logo), x = await mandarImp(escposDoc(L, k, img, k.loja.tel || TEL_LOJA, 1));
+    const img = await logoImp(k.logo), x = await mandarImp(escposDoc(L, k, img, k.loja.tel || TEL_LOJA, 1, k.loja));
     avisoImp(x.ok ? "✓ Comprovante impresso" : "✕ Não imprimiu: " + x.erro, x.ok ? "ok" : "erro");
   } catch (e) { avisoImp("✕ Não imprimiu o comprovante", "erro"); }
 }
@@ -1699,7 +1717,7 @@ async function reimprimirComprovante(p) {
     : [{ forma: p.pagamento, valor: p.valor, itens: p.itens.map((c) => c.iid), p }];
   avisoImp("🖨 Imprimindo comprovante...", "");
   try { const k = await cfgImp(), { L, tot } = comprovanteL([p], null, pags, p.pagoEm || p.quando, k.loja); if (!(tot > 0)) return avisoImp("✕ Não achei o pagamento pra imprimir", "erro");
-    const img = await logoImp(k.logo), x = await mandarImp(escposDoc(L, k, img, k.loja.tel || TEL_LOJA, 1)); avisoImp(x.ok ? "✓ Comprovante impresso" : "✕ Não imprimiu: " + x.erro, x.ok ? "ok" : "erro"); }
+    const img = await logoImp(k.logo), x = await mandarImp(escposDoc(L, k, img, k.loja.tel || TEL_LOJA, 1, k.loja)); avisoImp(x.ok ? "✓ Comprovante impresso" : "✕ Não imprimiu: " + x.erro, x.ok ? "ok" : "erro"); }
   catch (e) { avisoImp("✕ Não imprimiu o comprovante", "erro"); }
 }
 const idsPags = (ps) => new Set(ps.flatMap((p) => (p.pagamentos || []).map((g) => g.id)));
@@ -1874,10 +1892,10 @@ function abrirAcerto(ids) { // escolhe quais itens acertar e a forma de pagament
     <section class="ac-sec ac-sec-itens"><div class="ac-sec-t" id="ac-itens-t">Itens <small id="ac-nit"></small></div><div id="ac-itens"></div></section>
     <div class="ac-head">
     <div class="ac-junta-bar"><span class="ac-junta-ic">🔗</span><input id="ac-junta" placeholder="Juntar outra comanda (nº ou nome)" title="Juntar outra comanda: nº ou nome"><button class="btn mini" data-a="acJunta">Juntar</button></div>
+    <div class="ac-extras ac-bebida-bar"><button class="btn" id="dc-abre" data-a="dcAbrir">➕ Bebida, sorvete ou doce</button></div>
     <section class="ac-sec ac-pag1"><div class="ac-sec-t">Como vai pagar?</div><div class="ac-tiles">${FORMAS_PAG.map((k, i) => `<button class="btn ac-tile" data-a="acSet" data-f="${k}"><i>${FIC[k]}</i>${FORMAS[k]}<small class="ac-f">F${i + 1}</small></button>`).join("")}<button class="btn ac-tile ac-conta" id="ac-conta" data-a="marcar" data-id="${esc(ps[0].id)}" hidden><i>📒</i>Marcar na conta</button></div></section>
     <section class="ac-sec ac-mais"><div class="ac-sec-t">Outras opções</div>
     <div id="ac-mais-bts" class="ac-mais-bts"></div>
-    <div class="ac-extras"><button class="btn mini" id="dc-abre" data-a="dcAbrir">➕ Bebida, sorvete ou doce</button></div>
     <div id="dc-fundo" class="dc-fundo" data-a="dcFechar" hidden></div><div id="ac-picker" class="dc-pop" hidden></div></section></div>
     </div>
     <div class="ac-rodape"><div id="ac-resumo"></div>
@@ -1889,7 +1907,7 @@ function abrirAcerto(ids) { // escolhe quais itens acertar e a forma de pagament
 }
 function atualizarAcerto() {
   const A = acerto; if (!A || !$("#ac-itens")) return;
-  document.querySelectorAll(".ac-pag1, .ac-mais, .ac-junta-bar, #ac-itens-t").forEach((el) => (el.style.display = A.duas ? "none" : ""));
+  document.querySelectorAll(".ac-pag1, .ac-mais, .ac-junta-bar, .ac-bebida-bar, #ac-itens-t").forEach((el) => (el.style.display = A.duas ? "none" : ""));
   if (A.duas) return desenharDuas();
   $("#ac-titulo").textContent = tituloAcerto();
   if ($("#ac-sub")) $("#ac-sub").textContent = subAcerto();
