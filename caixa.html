@@ -783,11 +783,24 @@ function recsPer(P, a, b) {
   if (recCache[k] && recCache[k].v) return recCache[k].v;
   return P.flatMap((p) => pagsDe(p).map((g) => ({ ...g, dia: g.dia || p.dia }))).filter((g) => g.dia >= a && g.dia <= b);
 }
+// MARCADO NA CONTA no período (pente fino 23/11): pedidos "na conta" + o que foi pra conta SEM ser pedido na conta (marmita do
+// WhatsApp que chega em R$0 e vai pra conta do cliente, lançamento à mão). Antes o Fechamento/Painel deixava esses de fora (23/11: 289 x 589).
+const lcCache = {};
+function lancsPer(a, b) {
+  const k = a + "|" + b, c = lcCache[k];
+  if ((!c || Date.now() - c.t > 4000) && !(c && c.indo)) { lcCache[k] = { ...(c || {}), indo: true, t: (c && c.t) || 0 }; aut("/api/lancamentos?de=" + a + "&ate=" + b).then((r) => (r.ok ? r.json() : null)).then((v) => { const mudou = v && JSON.stringify(v) !== JSON.stringify((lcCache[k] || {}).v); lcCache[k] = { v: v || (lcCache[k] || {}).v, t: Date.now(), indo: false }; if (mudou && (aba === "fechamento" || aba === "painel")) { ultimoHtml = ""; desenhar(); } }).catch(() => { lcCache[k] = { ...(lcCache[k] || {}), indo: false, t: Date.now() }; }); }
+  return (lcCache[k] && lcCache[k].v) || [];
+}
+function naContaPer(P, a, b) {
+  const conta = P.filter((p) => p.status === "conta"), ids = new Set(conta.map((p) => p.id)), extra = lancsPer(a, b).filter((l) => !(l.pedidoId && ids.has(l.pedidoId)));
+  return { v: round2(soma(conta, valConta) + soma(extra, (l) => l.valor)), nPed: conta.length, nExtra: extra.length, vExtra: round2(soma(extra, (l) => l.valor)) };
+}
+const txtNaConta = (nc) => nc.nPed + " pedido(s)" + (nc.nExtra ? " + " + nc.nExtra + " marmita(s)/lançamento(s) " + brl(nc.vExtra) : "");
 function fechamento() {
   const P = pedsPer(), CP = contasPer(), [a, b] = intervalo(), unico = a === b;
   const recs = recsPer(P, a, b), por = (f) => soma(recs.filter((g) => g.forma === f), (g) => g.valor), est = estornosDe(P), conta = P.filter((p) => p.status === "conta");
   const totV = round2(soma(recs, (g) => g.valor)), totC = round2(soma(CP, (g) => g.valor)), refsC = round2(soma(CP, (g) => g.refeicoes || 0)), cDin = round2(soma(CP.filter((g) => g.forma === "dinheiro"), (g) => g.valor));
-  const pagos = P.filter((p) => p.status === "pago").length, canc = P.filter((p) => p.status === "cancelado").length, ab = P.filter((p) => p.status === "aguardando"), vAb = round2(soma(ab, (p) => p.valor - soma(pagsDe(p), (g) => g.valor)));
+  const nc = naContaPer(P, a, b), pagos = P.filter((p) => p.status === "pago").length, canc = P.filter((p) => p.status === "cancelado").length, ab = P.filter((p) => p.status === "aguardando"), vAb = round2(soma(ab, (p) => p.valor - soma(pagsDe(p), (g) => g.valor)));
   const qd = unico ? (a === hojeISO() ? "hoje" : "neste dia") : "no período";
   const formas = Object.keys(FORMAS).filter((f) => FORMAS_PAG.includes(f) || recs.some((g) => g.forma === f)).map((f) => ({ f, n: recs.filter((g) => g.forma === f).length, v: round2(por(f)) })).sort((x, y) => y.v - x.v), mx = Math.max(1, ...formas.map((x) => x.v));
   const porC = Object.keys(PAGFORMAS).map((f) => [f, round2(soma(CP.filter((g) => g.forma === f), (g) => g.valor))]).filter(([, v]) => v > 0);
@@ -795,13 +808,13 @@ function fechamento() {
   return `<div class="fx-hero"><div class="fx-total"><small>Total recebido ${qd}</small><b>${brl(totV + totC)}</b><span>vendas ${brl(totV)}${totC ? " + contas " + brl(totC) : ""}</span>
       <div class="fx-acoes"><button class="btn" data-a="zapResumo" title="Abre o WhatsApp com o resumo e também deixa ele copiado">📲 Enviar resumo</button><button class="btn" data-a="csv">⬇ CSV</button><button class="btn" data-a="backup">💾 Backup</button></div></div>
     <div class="ct-stats fx-mini"><div class="ok"><small>Pedidos pagos</small><b>${pagos}</b><span>ticket médio ${brl(pagos ? soma(P.filter((p) => p.status === "pago"), (p) => p.valor) / pagos : 0)}</span></div><div class="${ab.length ? "dev" : ""}"><small>Em aberto</small><b>${ab.length}</b><span>${brl(vAb)} a receber</span></div>
-      <div><small>Na conta</small><b>${brl(soma(conta, valConta))}</b><span>${conta.length} pedido(s)</span></div><div class="${canc || est.length ? "dev" : ""}"><small>Cancelados</small><b>${canc}</b><span>${est.length ? est.length + " estorno(s) · " + brl(soma(est, (x) => x.valor)) : "nenhum estorno"}</span></div></div></div>
+      <div><small>Na conta</small><b>${brl(nc.v)}</b><span>${txtNaConta(nc)}</span></div><div class="${canc || est.length ? "dev" : ""}"><small>Cancelados</small><b>${canc}</b><span>${est.length ? est.length + " estorno(s) · " + brl(soma(est, (x) => x.valor)) : "nenhum estorno"}</span></div></div></div>
     <div class="fx-cols"><div class="gv-box"><h4>Por forma de pagamento</h4>${formas.map((x) => `<div class="fx-fp"><span class="fx-ic">${FIC[x.f] || "💰"}</span><div class="fx-fp-n"><b>${FORMAS[x.f]}</b><small>${x.n} recebimento(s)</small></div><div class="fx-bar"><i style="width:${(x.v / mx) * 100}%"></i></div><strong>${brl(x.v)}</strong><em>${pct(x.v, totV)}</em></div>`).join("") || `<p class="cel-vazio">Nenhum recebimento ${qd}.</p>`}</div>
       <div class="gv-box"><h4>Dinheiro e contas</h4>
         ${linhaR("💵", unico ? "Dinheiro das vendas (gaveta)" : "Dinheiro das vendas", brl(por("dinheiro")), unico ? "confira na aba Gaveta" : "")}
         ${linhaR("📒", "Contas recebidas", brl(totC), (refsC ? String(refsC).replace(".", ",") + " refeições · " : "") + (porC.map(([f, v]) => PAGFORMAS[f] + " " + brl(v)).join(" · ") || CP.length + " pagamento(s)"), "ok")}
         ${cDin > 0 ? linhaR("💵", "Contas pagas em dinheiro", brl(cDin), "também entra na gaveta") : ""}
-        ${linhaR("📝", "Marcado na conta " + qd, brl(soma(conta, valConta)), conta.length + " pedido(s) que vão ser cobrados depois")}
+        ${linhaR("📝", "Marcado na conta " + qd, brl(nc.v), txtNaConta(nc) + " · vão ser cobrados depois")}
         ${(() => { const pb = pagBoys[a + "|" + b] || [], v = round2(soma(pb, (x) => x.valor)); if (!pb.length) return ""; const por = {}; pb.forEach((x) => (por[x.entregador] = round2((por[x.entregador] || 0) + x.valor))); return linhaR("🛵", "Pago aos motoboys", "− " + brl(v), Object.entries(por).map(([n, x]) => n + " " + brl(x)).join(" · ") + (unico ? " · saiu da gaveta" : ""), "dev"); })()}
         ${est.length ? linhaR("↩️", "Estornos", brl(soma(est, (x) => x.valor)), est.length + " devolução(ões)", "dev") : ""}</div></div>
     ${CP.length ? `<div class="gv-box"><h4>Contas recebidas ${qd}</h4><div class="tl">${CP.slice().sort((x, y) => String(x.data).localeCompare(String(y.data))).map((p) => `<div class="tl-it pag" style="cursor:default"><span class="tl-dia"><b>${dataBR(p.data).slice(0, 5)}</b></span><div class="tl-txt"><b>${esc(nomeChave(p.chave))}</b><span>${PAGFORMAS[p.forma] || esc(p.forma || "")}${p.refeicoes ? " · " + String(p.refeicoes).replace(".", ",") + " ref." : ""}</span></div><b class="tl-v">${brl(p.valor)}</b><span></span></div>`).join("")}</div></div>` : ""}`;
@@ -2132,7 +2145,7 @@ async function desenharPainel() {
 }
 function painelHtml() {
   const P = pedsPer(), CP = contasPer(), [a, b] = intervalo(), unico = a === b, ds = diasEntre(a, b);
-  const rendaDe = (ps) => soma(ps.flatMap(pagsDe), (g) => g.valor) + soma(ps.filter((p) => p.status === "conta"), valConta), vs = P.filter((p) => pagsDe(p).length || p.status === "conta"), fat = rendaDe(P);
+  const rendaDe = (ps) => soma(ps.flatMap(pagsDe), (g) => g.valor) + soma(ps.filter((p) => p.status === "conta"), valConta), vs = P.filter((p) => pagsDe(p).length || p.status === "conta"), ncP = naContaPer(P, a, b), fat = rendaDe(P) + ncP.vExtra; // + marmita do WhatsApp/lançado à mão na conta
   const fatO = per.modo === "dia" ? rendaDe(cacheOntem[dia] || []) : 0, delta = fatO ? Math.round(((fat - fatO) / fatO) * 100) : null;
   const aberto = soma(P.filter((p) => p.status === "aguardando"), (p) => p.valor - soma(pagsDe(p), (g) => g.valor));
   let serie, rots, tituloSerie;
@@ -2144,7 +2157,7 @@ function painelHtml() {
   const max = Math.max(...serie, 1), iPico = serie.indexOf(Math.max(...serie)), mostraV = serie.length <= 16;
   const cont = {}; vs.forEach((p) => p.itens.forEach((c) => { if (p.status === "conta" || p.status === "pago" || c.pago) { const n = norm(c.nome); cont[n] = (cont[n] || 0) + (c.qtd || 1); } }));
   const top = Object.entries(cont).sort((x, y) => y[1] - x[1]).slice(0, 8), mt = top.length ? top[0][1] : 1, totQ = soma(Object.values(cont), (q) => q);
-  const fp = {}; P.flatMap(pagsDe).forEach((g) => { fp[g.forma] = (fp[g.forma] || 0) + g.valor; }); P.filter((p) => p.status === "conta").forEach((p) => { fp.conta = (fp.conta || 0) + valConta(p); });
+  const fp = {}; P.flatMap(pagsDe).forEach((g) => { fp[g.forma] = (fp[g.forma] || 0) + g.valor; }); P.filter((p) => p.status === "conta").forEach((p) => { fp.conta = (fp.conta || 0) + valConta(p); }); if (ncP.vExtra) fp.conta = (fp.conta || 0) + ncP.vExtra;
   const fpL = Object.entries(fp).sort((x, y) => y[1] - x[1]), totFp = soma(fpL, (x) => x[1]), COR = { dinheiro: "#1f9a45", pix: "#18a0a8", credito: "#3a5591", debito: "#7a5ab8", refeicao: "#c9852b", cartao: "#5c6b8a", conta: "#a50f14" };
   const nomeF = (f) => (f === "conta" ? "Na conta" : FORMAS[f] || f), icF = (f) => (f === "conta" ? "📒" : FIC[f] || "💰");
   const totC = round2(soma(CP, (g) => g.valor)), refsC = round2(soma(CP, (g) => g.refeicoes || 0));
@@ -2251,7 +2264,7 @@ function textoFechamento(g) {
   const totV = soma(recs, (x) => x.valor), totC = round2(soma(CP, (x) => x.valor)), refsC = round2(soma(CP, (x) => x.refeicoes || 0));
   const L = ["*Fechamento - Da Lúcia*", a === b ? "Data: " + dataBR(a) : "Período: " + dataBR(a) + " a " + dataBR(b), "", "Pedidos pagos: " + P.filter((p) => p.status === "pago").length, "Total recebido: " + brl(totV)];
   Object.keys(FORMAS).forEach((f) => { const n = recs.filter((x) => x.forma === f).length; if (n) L.push("  - " + FORMAS[f] + ": " + brl(por(f)) + " (" + n + ")"); });
-  L.push("", "Cancelados: " + P.filter((p) => p.status === "cancelado").length, "Estornos: " + est.length + " (" + brl(soma(est, (e) => e.valor)) + ")", "Marcado na conta: " + brl(soma(conta, valConta)) + " (" + conta.length + " pedidos)", "Ainda em aberto: " + P.filter((p) => p.status === "aguardando").length);
+  L.push("", "Cancelados: " + P.filter((p) => p.status === "cancelado").length, "Estornos: " + est.length + " (" + brl(soma(est, (e) => e.valor)) + ")", "Marcado na conta: " + brl(naContaPer(P, a, b).v) + " (" + txtNaConta(naContaPer(P, a, b)) + ")", "Ainda em aberto: " + P.filter((p) => p.status === "aguardando").length);
   if (CP.length) {
     L.push("", "*Contas / antecipados recebidos*", "Total: " + brl(totC) + (refsC ? " (" + String(refsC).replace(".", ",") + " refeições)" : ""));
     Object.keys(PAGFORMAS).forEach((f) => { const v = round2(soma(CP.filter((x) => x.forma === f), (x) => x.valor)); if (v > 0) L.push("  - " + PAGFORMAS[f] + ": " + brl(v)); });

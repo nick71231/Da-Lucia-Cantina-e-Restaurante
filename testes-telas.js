@@ -115,6 +115,13 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
     t(c.din === 110 && c.troco === 50 && c.traz === 160 && c.pix === 30 && c.car === 25 && c.nCar === 1 && c.taxas === 25 && c.total === 165,
       "motoboy: traz 40 + 50 + 20 (ainda não recebido) + 50 de troco = 160; o que o cliente pagou no Pix não entra no dinheiro: " + JSON.stringify(c));
   }
+  { // Fechamento: marmita/lançamento que foi direto pra conta (sem pedido "na conta") entra no "Marcado na conta" (23/11 mostrava 289 em vez de 589)
+    const elza = (await api("GET", "/api/clientes", undefined, cx)).find((x) => x.nome === "Elza");
+    await api("POST", "/api/lancamentos", { clienteId: elza.id, dia: hojeISO, valor: 61.5, obs: "1x marmita R$61,50 (WhatsApp)" }, cx);
+    await clica(w, '[data-aba="fechamento"]'); await dorme(1500); await clica(w, '[data-aba="fechamento"]');
+    t(/Marcado na conta[^]*?61,50/.test(texto(w, "#lista")) && /marmita\(s\)\/lançamento\(s\) R\$\s*61,50/.test(texto(w, "#lista")), "Fechamento: marmita lançada direto na conta entra no 'Marcado na conta'");
+    await clica(w, '[data-aba="aberto"]');
+  }
   w.close();
 
   console.log("\nBalança");

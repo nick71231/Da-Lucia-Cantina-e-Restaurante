@@ -496,7 +496,7 @@ async function enviarGestao() {
 const ARQ_RZ = path.join(DIR_DADOS, "resumo-zap.json");
 let rz = { tel: process.env.DADOS_DIR ? "" : "12991076412", hora: 15, ultimo: "" }; try { rz = { ...rz, ...JSON.parse(fs.readFileSync(ARQ_RZ, "utf8")) }; } catch (e) {}
 function textoFechamento(dia) {
-  const R = resumoGestao(dia), soma = (o) => cents(Object.values(o).reduce((s, v) => s + v, 0)), b = (v) => rs(v);
+  const R = resumoGestao(dia), soma = (o) => cents(Object.values(o).reduce((s, v) => s + v, 0)), b = (v) => "R$ " + Number(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); // R$ 6.228,79
   const sal = soma(R.recebido.salao), del = soma(R.recebido.delivery), tot = cents(sal + del), fo = {};
   [R.recebido.salao, R.recebido.delivery].forEach((o) => Object.entries(o).forEach(([k, v]) => (fo[k] = cents((fo[k] || 0) + v))));
   const NF = { dinheiro: "💵 Dinheiro", pix: "💠 Pix", debito: "💳 Débito", credito: "💳 Crédito", refeicao: "🍽️ Refeição", cartao: "💳 Cartão" };
@@ -566,6 +566,11 @@ async function tratar(req, res) {
     const out = [];
     for (const x of db.pedidos) for (const g of pagsDe(x)) { const d = g.dia || x.dia; if (d >= de && d <= ate && g.valor > 0) out.push({ forma: g.forma, valor: g.valor, dia: d, quando: g.quando || x.quando, pedidoId: x.id, pedidoDia: x.dia, tipo: x.tipo || "totem", numero: x.numero }); }
     return json(res, 200, out);
+  }
+  if (p === "/api/lancamentos" && req.method === "GET") { // tudo que foi marcado em conta no período (inclui marmita do WhatsApp e lançado à mão): o Fechamento soma
+    const de = String(url.searchParams.get("de") || ""), ate = String(url.searchParams.get("ate") || de);
+    if (!/^\d{4}-\d\d-\d\d$/.test(de) || !/^\d{4}-\d\d-\d\d$/.test(ate)) return json(res, 400, { erro: "período inválido" });
+    return json(res, 200, db.lancamentos.filter((l) => l.dia >= de && l.dia <= ate).map((l) => ({ id: l.id, dia: l.dia, valor: l.valor, pedidoId: l.pedidoId || null, clienteId: l.clienteId, obs: l.obs })));
   }
   if (p === "/api/pendencias" && req.method === "GET") { // comandas/pedidos de DIAS ANTERIORES que ficaram em aberto (o caixa só lista o dia: sumiam da tela - pente fino 23/11)
     const hj = hoje(), out = db.pedidos.filter((x) => x.status === "aguardando" && x.dia < hj && (x.itens || []).length)
