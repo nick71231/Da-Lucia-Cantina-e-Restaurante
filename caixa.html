@@ -1831,7 +1831,7 @@ function bip() {
 }
 // ----- FIADO: cliente avulso com consumo sem pagar há 2 dias ou mais -----
 function fiadosAtrasados(C) { // [{ c, saldo, desde }] — "desde" = dia do consumo mais antigo ainda não pago (null = vem do mês passado)
-  if (!C) return []; const lim = addDias(hojeISO(), -2), out = [];
+  if (!C) return []; const lim = addDias(hojeISO(), -5), out = []; // fiado: aviso com 5 dias sem pagar (dona 23/11; antes 2)
   for (const c of clientes.filter((x) => x.ativo !== false && ehAvulso(x))) {
     const k = chaveCli(c), ls = C.lancamentos.filter((l) => l.clienteId === c.id).sort((a, b) => a.dia.localeCompare(b.dia));
     let pago = soma(C.pagamentos.filter((p) => p.chave === k), (p) => p.valor) - Math.max(0, C.anterior[k] || 0), desde;
@@ -1845,14 +1845,36 @@ function fiadosAtrasados(C) { // [{ c, saldo, desde }] — "desde" = dia do cons
 let fiadoUltBip = 0;
 async function checarFiado() {
   let C; try { const r = await aut("/api/contas?mes=" + hojeISO().slice(0, 7)); if (!r.ok) return; C = await r.json(); } catch (e) { return; }
+  avisarFechamento(C);
   const L = fiadosAtrasados(C); let el = $("#aviso-fiado");
   if (!L.length || Date.now() < fiadoOculto) { if (el) el.remove(); return; } // ✕ esconde por 1 h
   if (!el) { el = document.createElement("button"); el.id = "aviso-fiado"; el.type = "button"; el.dataset.a = "verFiado"; el.style.cssText = "position:fixed;left:calc(var(--lat, 0px) + 16px);bottom:16px;z-index:900;max-width:min(420px,calc(100vw - 32px));text-align:left;border:0;border-radius:16px;padding:12px 16px;background:#fde0e0;color:#a50f14;font:700 .95rem system-ui;box-shadow:0 10px 28px rgba(0,0,0,.25);cursor:pointer"; document.body.appendChild(el); }
-  el.innerHTML = `<span data-x="1" title="Esconder por 1 hora" style="float:right;margin:-4px -6px 0 12px;padding:2px 8px;border-radius:8px;background:#fff8">✕</span>⏰ ${L.length === 1 ? "1 fiado" : L.length + " fiados"} sem pagar há 2 dias ou mais · ${brl(L.reduce((t, x) => t + x.saldo, 0))}<br><small style="font-weight:500">${L.slice(0, 3).map((x) => esc(x.c.nome)).join(", ")}${L.length > 3 ? " e mais " + (L.length - 3) : ""} · toque para ver</small>`;
+  el.innerHTML = `<span data-x="1" title="Esconder por 1 hora" style="float:right;margin:-4px -6px 0 12px;padding:2px 8px;border-radius:8px;background:#fff8">✕</span>⏰ ${L.length === 1 ? "1 fiado" : L.length + " fiados"} sem pagar há 5 dias ou mais · ${brl(L.reduce((t, x) => t + x.saldo, 0))}<br><small style="font-weight:500">${L.slice(0, 3).map((x) => esc(x.c.nome)).join(", ")}${L.length > 3 ? " e mais " + (L.length - 3) : ""} · toque para ver</small>`;
   if (Date.now() - fiadoUltBip > 60 * 60e3) { fiadoUltBip = Date.now(); bip(); setTimeout(bip, 300); setTimeout(bip, 600); } // apita (3 bipes) no máximo 1x por hora
   if (!el._some) el._some = setTimeout(() => { fiadoOculto = Date.now() + 3600e3; const x = $("#aviso-fiado"); if (x) x.remove(); }, 5000); // fica 5 s na tela e some (volta daqui 1 h)
 }
 let fiadoOculto = 0;
+// CONTA MENSAL e EMPRESAS (dona 23/11): do dia 25 até o fim do mês, aviso "o fechamento do mês está chegando" com quem tem saldo
+// e ainda não recebeu o extrato (o "Marcar como enviado" da conta tira da lista). Mesmo jeito do aviso de fiado: 5 s na tela, volta em 1 h.
+function contasDoFechamento(C) {
+  if (!C) return []; const ks = [...new Set(clientes.filter((c) => c.ativo !== false && cobDe(c) === "mensal").map(chaveCli))], out = [];
+  for (const k of ks) {
+    const ids = new Set(clientes.filter((c) => chaveCli(c) === k).map((c) => c.id));
+    const saldo = round2((C.anterior[k] || 0) + soma(C.lancamentos.filter((l) => ids.has(l.clienteId)), (l) => l.valor) - soma(C.pagamentos.filter((p) => p.chave === k), (p) => p.valor));
+    if (saldo > 0.009 && !(C.enviados || {})[k]) out.push({ k, nome: k.startsWith("e:") ? k.slice(2) : (clientes.find((c) => chaveCli(c) === k) || {}).nome || "?", saldo });
+  }
+  return out.sort((a, b) => b.saldo - a.saldo);
+}
+let fechaOculto = 0;
+function avisarFechamento(C) {
+  const d = Number(hojeISO().slice(8, 10)), L = d >= 25 ? contasDoFechamento(C) : []; let el = $("#aviso-fecha");
+  if (!L.length || Date.now() < fechaOculto) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement("button"); el.id = "aviso-fecha"; el.type = "button"; el.style.cssText = "position:fixed;left:calc(var(--lat, 0px) + 16px);bottom:96px;z-index:900;max-width:min(420px,calc(100vw - 32px));text-align:left;border:0;border-radius:16px;padding:12px 16px;background:#fff1cc;color:#7a4a00;font:700 .95rem system-ui;box-shadow:0 10px 28px rgba(0,0,0,.25);cursor:pointer"; document.body.appendChild(el); }
+  const fim = new Date(+hojeISO().slice(0, 4), +hojeISO().slice(5, 7), 0).getDate();
+  el.innerHTML = `<span data-x="1" title="Esconder por 1 hora" style="float:right;margin:-4px -6px 0 12px;padding:2px 8px;border-radius:8px;background:#fff8">✕</span>📅 Fechamento do mês chegando (dia ${fim}) · ${L.length === 1 ? "1 conta" : L.length + " contas"} · ${brl(L.reduce((t, x) => t + x.saldo, 0))}<br><small style="font-weight:500">${L.slice(0, 3).map((x) => esc(x.nome)).join(", ")}${L.length > 3 ? " e mais " + (L.length - 3) : ""} · toque para ver e mandar o extrato</small>`;
+  if (!el._some) el._some = setTimeout(() => { fechaOculto = Date.now() + 3600e3; const x = $("#aviso-fecha"); if (x) x.remove(); }, 5000);
+}
+document.addEventListener("click", (e) => { const a = e.target.closest && e.target.closest("#aviso-fecha"); if (!a) return; fechaOculto = Date.now() + 3600e3; a.remove(); if (!e.target.closest("[data-x]")) { aba = "contas"; desenhar(); window.scrollTo(0, 0); } });
 document.addEventListener("click", (e) => { if (e.target.closest && e.target.closest("#aviso-fiado [data-x]")) { fiadoOculto = Date.now() + 3600e3; $("#aviso-fiado").remove(); return; } if (e.target.closest && e.target.closest("#aviso-fiado")) { cliFiltro = "deve"; aba = "clientes"; desenhar(); window.scrollTo(0, 0); } });
 function avisarNovos() { const n = pedidos.filter((p) => p.status === "aguardando").length; if (ultimoAguard !== null && n > ultimoAguard) bip(); ultimoAguard = n; } // apita quando chega pedido novo
 
@@ -2276,7 +2298,11 @@ document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.
 // ===================== CLIENTES (visual novo) =====================
 let cliFiltro = "todos", cliBusca = "", contasCli = null;
 const ehMarmCli = (c) => !c.empresa && /marmit|\bmta\b/i.test(c.nome || ""); // "POLYANA MARMITA": cliente de marmita (tem conta), não é avulso
-const ehAvulso = (c) => !c.empresa && !ehMarmCli(c); // marca no restaurante e não tem conta: é fiado
+// COBRANÇA (dona 23/11): "fiado" = avisa com 5 dias sem pagar; "mensal" = conta que fecha no fim do mês (aviso a partir do dia 25).
+// Empresa é sempre mensal. Sem escolha no cadastro: cliente de marmita = mensal, o resto = fiado.
+const cobDe = (c) => (c.empresa ? "mensal" : c.cobranca === "fiado" || c.cobranca === "mensal" ? c.cobranca : ehMarmCli(c) ? "mensal" : "fiado");
+const ehAvulso = (c) => !c.empresa && cobDe(c) === "fiado"; // fiado (aviso em 5 dias)
+const ehMensalPessoa = (c) => !c.empresa && !ehMarmCli(c) && cobDe(c) === "mensal"; // pessoa com conta mensal (sem empresa, não é marmita)
 const contaDoCli = (c) => { // resumo do mês atual pra mostrar na lista
   const C = contasCli; if (!C) return null; const k = chaveCli(c), ids = new Set(clientes.filter((x) => chaveCli(x) === k).map((x) => x.id));
   const tot = soma(C.lancamentos.filter((l) => ids.has(l.clienteId)), (l) => l.valor), pg = soma(C.pagamentos.filter((p) => p.chave === k), (p) => p.valor);
@@ -2285,12 +2311,13 @@ const contaDoCli = (c) => { // resumo do mês atual pra mostrar na lista
 async function abrirClientes() { await carregarClientes(); try { contasCli = await (await aut("/api/contas?mes=" + hojeISO().slice(0, 7))).json(); } catch (e) { contasCli = null; } desenharClientes(); }
 function desenharClientes() {
   const ativos = clientes.filter((c) => c.ativo !== false), arq = clientes.filter((c) => c.ativo === false), emps = [...new Set(ativos.map((c) => c.empresa).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  const F = [["todos", "Todos", ativos.length], ["emp", "Empresas", emps.length], ["marm", "Marmita", ativos.filter(ehMarmCli).length], ["avulso", "Avulsos (fiado)", ativos.filter(ehAvulso).length], ["deve", "Devendo", 0], ["arq", "Arquivados", arq.length]];
-  const devendo = (c) => { const s = contaDoCli(c); return s != null && s > 0.009; }; F[4][2] = ativos.filter((c) => !c.empresa && devendo(c)).length + emps.filter((e) => devendo(ativos.find((c) => c.empresa === e))).length;
+  const marmM = (c) => ehMarmCli(c) && cobDe(c) === "mensal"; // marmita com conta mensal (marmita marcada como fiado vai pro grupo Fiado)
+  const F = [["todos", "Todos", ativos.length], ["emp", "Empresas", emps.length], ["marm", "Marmita", ativos.filter(marmM).length], ["mensal", "Conta mensal", ativos.filter(ehMensalPessoa).length], ["avulso", "Fiado", ativos.filter(ehAvulso).length], ["deve", "Devendo", 0], ["arq", "Arquivados", arq.length]];
+  const devendo = (c) => { const s = contaDoCli(c); return s != null && s > 0.009; }; F[5][2] = ativos.filter((c) => !c.empresa && devendo(c)).length + emps.filter((e) => devendo(ativos.find((c) => c.empresa === e))).length;
   const saldoPill = (c) => { const s = contaDoCli(c); if (s == null || (Math.abs(s) < 0.009)) return ""; return s > 0 ? `<span class="st-pill dev">deve ${brl(s)}</span>` : `<span class="st-pill ok">crédito ${brl(-s)}</span>`; };
   const zap1 = (t) => { const n = String(t || "").replace(/\D/g, ""); return n ? `<a class="btn mini cl-zap" href="https://wa.me/${n.length <= 11 ? "55" + n : n}" target="_blank" rel="noopener" title="Abrir WhatsApp">📲 ${esc(t.trim())}</a>` : ""; };
   const zap = (t) => { const ts = String(t || "").split(/[\/,;]|\se\s/).filter((x) => x.replace(/\D/g, "")); return ts.length ? ts.map(zap1).join("") : `<span class="cl-semtel">sem telefone</span>`; }; // um botão por telefone
-  const tipo = (c) => `<span class="st-pill">${c.modo === "refeicao" ? "🍽 Refeição " + brl(c.valorRefeicao) : "R$ Valor livre"}</span>${c.empresa ? "" : `<span class="st-pill">${c.pagamento === "depois" ? "Paga depois" : "Antecipado"}</span>`}`;
+  const tipo = (c) => `<span class="st-pill">${c.modo === "refeicao" ? "🍽 Refeição " + brl(c.valorRefeicao) : "R$ Valor livre"}</span>${c.empresa ? "" : `<span class="st-pill">${c.pagamento === "depois" ? "Paga depois" : "Antecipado"}</span><span class="st-pill">${cobDe(c) === "mensal" ? "📒 Conta mensal" : "👤 Fiado"}</span>`}`;
   const linha = (c, dentroEmp) => `<div class="cl-it" data-nome="${esc(c.nome + " " + (c.empresa || "") + " " + (c.telefone || "") + " " + String(c.telefone || "").replace(/\D/g, ""))}"><span class="cli-av">${esc((c.nome || "?").trim().charAt(0).toUpperCase())}</span>
     <div class="cl-info"><b>${esc(c.nome)}</b><div class="cl-tags">${tipo(c)}${!dentroEmp && c.empresa ? `<span class="st-pill env">🏢 ${esc(c.empresa)}</span>` : ""}${dentroEmp ? "" : saldoPill(c)}</div></div>
     ${zap(c.telefone)}${c.ativo === false ? `<button class="btn mini" data-a="cliReat" data-c="${c.id}">↩ Reativar</button>` : `${dentroEmp ? "" : `<button class="btn mini" data-a="cliConta" data-k="${esc(chaveCli(c))}">📒 Conta</button>`}<button class="btn mini" data-a="cliEditar" data-c="${c.id}">✎ Editar</button>`}</div>`;
@@ -2298,12 +2325,13 @@ function desenharClientes() {
   if (cliFiltro === "arq") corpo = arq.map((c) => linha(c)).join("") || `<div class="vazio-box"><span>🗃️</span>Nenhum cliente arquivado.</div>`;
   else {
     const grupoEmp = (e) => { const ms = ativos.filter((c) => c.empresa === e).sort((a, b) => a.nome.localeCompare(b.nome)); return `<div class="cl-grupo" data-nome="${esc((e + " " + ms.map((m) => m.nome).join(" ")).toLowerCase())}"><div class="cl-gtopo"><span class="cli-av emp">🏢</span><div class="cl-info"><b>${esc(e)}</b><div class="cl-tags"><span class="st-pill">${ms.length} funcionário(s)</span><span class="st-pill">Empresa paga</span>${saldoPill(ms[0])}</div></div><button class="btn mini" data-a="cliNovo" data-emp="${esc(e)}">＋ Funcionário</button><button class="btn mini" data-a="cliConta" data-k="${esc("e:" + e)}">📒 Conta</button></div>${ms.map((c) => linha(c, true)).join("")}</div>`; };
-    const avulsos = ativos.filter(ehAvulso).sort((a, b) => a.nome.localeCompare(b.nome)), marms = ativos.filter(ehMarmCli).sort((a, b) => a.nome.localeCompare(b.nome)), atr = new Map(fiadosAtrasados(contasCli).map((x) => [x.c.id, x]));
+    const avulsos = ativos.filter(ehAvulso).sort((a, b) => a.nome.localeCompare(b.nome)), marms = ativos.filter(marmM).sort((a, b) => a.nome.localeCompare(b.nome)), mensais = ativos.filter(ehMensalPessoa).sort((a, b) => a.nome.localeCompare(b.nome)), atr = new Map(fiadosAtrasados(contasCli).map((x) => [x.c.id, x]));
     const linhaF = (c) => { const x = atr.get(c.id); return x ? linha(c).replace('<div class="cl-tags">', `<div class="cl-tags"><span class="st-pill dev">⏰ fiado desde ${x.desde ? dataBR(x.desde).slice(0, 5) : "o mês passado"}</span>`) : linha(c); };
     if (cliFiltro === "todos" || cliFiltro === "marm") corpo += marms.length ? `<div class="cl-grupo"><div class="cl-gtit">🍱 Marmita <small>${marms.length}</small></div>${marms.map((c) => linha(c)).join("")}</div>` : "";
     if (cliFiltro === "todos" || cliFiltro === "emp") corpo += emps.map(grupoEmp).join("");
-    if (cliFiltro === "todos" || cliFiltro === "avulso") corpo += avulsos.length ? `<div class="cl-grupo"><div class="cl-gtit">👤 Clientes avulsos (fiado) <small>${avulsos.length}</small></div>${avulsos.map(linhaF).join("")}</div>` : "";
-    if (cliFiltro === "deve") corpo = emps.filter((e) => devendo(ativos.find((c) => c.empresa === e))).map(grupoEmp).join("") + [...marms, ...avulsos].filter(devendo).map(linhaF).join("");
+    if (cliFiltro === "todos" || cliFiltro === "mensal") corpo += mensais.length ? `<div class="cl-grupo"><div class="cl-gtit">📒 Conta mensal <small>${mensais.length} · fecha no fim do mês</small></div>${mensais.map((c) => linha(c)).join("")}</div>` : (cliFiltro === "mensal" ? `<div class="vazio-box"><span>📒</span>Nenhuma pessoa com conta mensal. No ✎ Editar do cliente, escolha <b>Cobrança: Conta mensal</b>.</div>` : "");
+    if (cliFiltro === "todos" || cliFiltro === "avulso") corpo += avulsos.length ? `<div class="cl-grupo"><div class="cl-gtit">👤 Fiado <small>${avulsos.length} · aviso com 5 dias sem pagar</small></div>${avulsos.map(linhaF).join("")}</div>` : "";
+    if (cliFiltro === "deve") corpo = emps.filter((e) => devendo(ativos.find((c) => c.empresa === e))).map(grupoEmp).join("") + [...marms, ...mensais, ...avulsos].filter(devendo).map(linhaF).join("");
     corpo = corpo || `<div class="vazio-box"><span>👥</span>${cliFiltro === "deve" ? "Ninguém devendo este mês. 🎉" : "Nenhum cliente ainda. Toque em “＋ Novo cliente”."}</div>`;
   }
   $("#lista").innerHTML = `<div class="ct-topo"><div class="ct-seg">${F.map(([k, n, q]) => `<button class="btn ${cliFiltro === k ? "on" : ""}" data-a="cliFiltro" data-f="${k}">${n} <i>${q}</i></button>`).join("")}</div><span class="ct-esp"></span><button class="btn ok" data-a="cliNovo">＋ Novo cliente</button></div>
@@ -2323,6 +2351,7 @@ function modalCliente(id, empPad) {
     <div class="cf">Como marca<input type="hidden" id="c-modo" value="${e.modo === "refeicao" ? "refeicao" : "valor"}"><div class="ct-seg cf-seg" data-campo="c-modo"><button class="btn ${e.modo !== "refeicao" ? "on" : ""}" data-a="cfSeg" data-v="valor">R$ Valor livre</button><button class="btn ${e.modo === "refeicao" ? "on" : ""}" data-a="cfSeg" data-v="refeicao">🍽 Por refeição</button></div></div>
     <label class="cf" id="cf-preco" ${e.modo === "refeicao" ? "" : "hidden"}>Valor de cada refeição<input id="c-preco" inputmode="decimal" placeholder="Ex.: 22,00" value="${e.valorRefeicao ? String(e.valorRefeicao).replace(".", ",") : ""}"></label>
     <div class="cf" id="cf-pag" ${e.empresa ? "hidden" : ""}>Pagamento<input type="hidden" id="c-pag" value="${e.pagamento === "depois" ? "depois" : "antecipado"}"><div class="ct-seg cf-seg" data-campo="c-pag"><button class="btn ${e.pagamento !== "depois" ? "on" : ""}" data-a="cfSeg" data-v="antecipado">Paga antecipado</button><button class="btn ${e.pagamento === "depois" ? "on" : ""}" data-a="cfSeg" data-v="depois">Paga depois (fiado)</button></div></div>
+    <div class="cf" id="cf-cob" ${e.empresa ? "hidden" : ""}>Cobrança<input type="hidden" id="c-cob" value="${cobDe(e)}"><div class="ct-seg cf-seg" data-campo="c-cob"><button class="btn ${cobDe(e) === "fiado" ? "on" : ""}" data-a="cfSeg" data-v="fiado">👤 Fiado <small>(aviso com 5 dias sem pagar)</small></button><button class="btn ${cobDe(e) === "mensal" ? "on" : ""}" data-a="cfSeg" data-v="mensal">📒 Conta mensal <small>(fecha no fim do mês, aviso no dia 25)</small></button></div></div>
     <label class="cf">Telefone / WhatsApp <small>(mais de um? separe com / — pedido de qualquer um cai nesta conta)</small><input id="c-tel" inputmode="tel" value="${esc(e.telefone || "")}" placeholder="(12) 99999-9999 / (12) 98888-8888"></label>
     <label class="cf">Endereço de entrega <small>(o robô do WhatsApp usa na marmita, sem perguntar toda vez)</small><input id="c-end" value="${esc(e.endereco || "")}" placeholder="Ex.: Rua das Flores, 25, Centro, apto 3" maxlength="200"></label>
     ${id ? `<button class="btn cf-arq" data-a="cliJuntar" data-c="${id}">🔀 Cadastro repetido? Juntar com outro cliente</button><button class="btn ruim cf-arq" data-a="cliArq" data-c="${id}">🗃 Arquivar cliente</button>` : ""}</div>
@@ -2334,7 +2363,7 @@ function checaDup(id) { const el = $("#c-dup"), n = normN(($("#c-nome") || {}).v
 document.addEventListener("input", (e) => {
   if (e.target.id === "cli-busca") { cliBusca = e.target.value; filtrarClientes(); }
   else if (e.target.id === "c-nome") checaDup(($('[data-a="cliSalvar"]') || { dataset: {} }).dataset.c || null);
-  else if (e.target.id === "c-emp") { const p = $("#cf-pag"); if (p) p.hidden = !!e.target.value.trim(); }
+  else if (e.target.id === "c-emp") { const emp = !!e.target.value.trim(); ["#cf-pag", "#cf-cob"].forEach((s) => { const p = $(s); if (p) p.hidden = emp; }); } // empresa: sempre conta mensal
 });
 document.addEventListener("click", async (e) => {
   const t = e.target.closest("[data-a]"); if (!t) return; const d = t.dataset, a = d.a;
@@ -2345,7 +2374,7 @@ document.addEventListener("click", async (e) => {
   else if (a === "cfSeg") { const box = t.closest(".cf-seg"); box.querySelectorAll(".btn").forEach((b) => b.classList.toggle("on", b === t)); $("#" + box.dataset.campo).value = d.v; if (box.dataset.campo === "c-modo") $("#cf-preco").hidden = d.v !== "refeicao"; }
   else if (a === "cliSalvar") {
     const nome = $("#c-nome").value.trim(); if (!nome) return alert("Digite o nome.");
-    const b = { nome, empresa: $("#c-emp").value.trim(), modo: $("#c-modo").value, valorRefeicao: num("#c-preco") || 0, pagamento: $("#c-pag").value, telefone: $("#c-tel").value.trim(), endereco: ($("#c-end") || { value: "" }).value.trim() };
+    const b = { nome, empresa: $("#c-emp").value.trim(), modo: $("#c-modo").value, valorRefeicao: num("#c-preco") || 0, pagamento: $("#c-pag").value, cobranca: ($("#c-cob") || { value: "" }).value, telefone: $("#c-tel").value.trim(), endereco: ($("#c-end") || { value: "" }).value.trim() };
     if (b.modo === "refeicao" && !(b.valorRefeicao > 0)) return alert("Informe o valor de cada refeição.");
     try { await api(d.c ? "PUT" : "POST", "/api/clientes" + (d.c ? "/" + d.c : ""), b); } catch (err) { return; }
     $("#modal").hidden = true; await carregarClientes(); desenharClientes(); avisoImp(d.c ? "✓ Cliente salvo" : "✓ Cliente adicionado", "ok");

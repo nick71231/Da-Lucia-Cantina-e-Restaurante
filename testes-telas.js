@@ -55,9 +55,17 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
   }
   { // clientes: "MARMITA" no nome vai pro grupo Marmita; avulso com consumo de 3 dias atrás sem pagar = alerta de fiado
     const zm = await api("POST", "/api/clientes", { nome: "ZECA MARMITA" }, cx), zf = await api("POST", "/api/clientes", { nome: "ZECA FIADO" }, cx);
-    const d3 = new Date(Date.now() - 3 * 864e5).toLocaleDateString("en-CA"); await api("POST", "/api/lancamentos", { clienteId: zf.id, dia: d3, valor: 40 }, cx);
+    // dona 23/11: fiado avisa com 5 dias (3 dias ainda não); quem é "conta mensal" não entra no aviso de fiado
+    const zn = await api("POST", "/api/clientes", { nome: "ZECA NOVO" }, cx), zc = await api("POST", "/api/clientes", { nome: "ZECA MENSAL", cobranca: "mensal" }, cx);
+    const dd = (n) => new Date(Date.now() - n * 864e5).toLocaleDateString("en-CA");
+    await api("POST", "/api/lancamentos", { clienteId: zf.id, dia: dd(6), valor: 40 }, cx); await api("POST", "/api/lancamentos", { clienteId: zn.id, dia: dd(3), valor: 15 }, cx);
+    await api("POST", "/api/lancamentos", { clienteId: zc.id, dia: dd(6), valor: 70 }, cx); await api("POST", "/api/lancamentos", { clienteId: zm.id, dia: dd(6), valor: 50 }, cx);
     const wf = await abre("/caixa.html", (win) => { win.sessionStorage.setItem("caixaToken", admin); win.sessionStorage.setItem("caixaRole", "admin"); }); await dorme(4600);
-    t(texto(wf, "#aviso-fiado").includes("ZECA FIADO") && !texto(wf, "#aviso-fiado").includes("ZECA MARMITA"), "alerta de fiado: avulso sem pagar há 2+ dias aparece (cliente de marmita não)");
+    const avF = texto(wf, "#aviso-fiado");
+    t(avF.includes("ZECA FIADO") && !avF.includes("ZECA MARMITA") && !avF.includes("ZECA MENSAL") && !avF.includes("ZECA NOVO") && /5 dias/.test(avF), "alerta de fiado: só fiado com 5+ dias sem pagar (3 dias, marmita e conta mensal não)");
+    const fech = wf.eval("contasDoFechamento(contasCli || null)") || [];
+    { const C = await api("GET", "/api/contas?mes=" + new Date().toLocaleDateString("en-CA").slice(0, 7), undefined, cx); const nomes = wf.eval("(c) => contasDoFechamento(c).map((x) => x.nome)")(C);
+      t(nomes.includes("ZECA MENSAL") && nomes.includes("ZECA MARMITA") && !nomes.includes("ZECA FIADO"), "fechamento do mês (dia 25): lista conta mensal e marmita com saldo, não o fiado"); void fech; }
     await clica(wf, '[data-aba="clientes"]'); await clica(wf, '[data-a="cliFiltro"][data-f="marm"]');
     t(texto(wf, "#lista").includes("ZECA MARMITA") && !texto(wf, "#lista").includes("ZECA FIADO"), "clientes: quem tem MARMITA no nome fica no grupo Marmita, não nos avulsos");
     wf.close();

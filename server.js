@@ -518,7 +518,7 @@ async function tratar(req, res) {
   if (p === "/api/clientes" && req.method === "POST") {
     const b = await corpo(req); if (!String(b.nome || "").trim()) return json(res, 400, { erro: "nome" });
     const uc = String(b.uid || "").slice(0, 80); if (uc) { const ja = db.clientes.find((x) => x.uid === uc); if (ja) return json(res, 200, ja); } // clique duplo: não cadastra 2x
-    const c = { id: uid("c"), uid: uc || undefined, nome: String(b.nome).trim(), empresa: String(b.empresa || "").trim(), modo: b.modo === "refeicao" ? "refeicao" : "valor", valorRefeicao: Number(b.valorRefeicao) || 0, telefone: String(b.telefone || "").trim(), endereco: String(b.endereco || "").trim().slice(0, 200) || undefined, pagamento: b.pagamento === "depois" ? "depois" : "antecipado", ativo: true };
+    const c = { id: uid("c"), uid: uc || undefined, nome: String(b.nome).trim(), empresa: String(b.empresa || "").trim(), modo: b.modo === "refeicao" ? "refeicao" : "valor", valorRefeicao: Number(b.valorRefeicao) || 0, telefone: String(b.telefone || "").trim(), endereco: String(b.endereco || "").trim().slice(0, 200) || undefined, pagamento: b.pagamento === "depois" ? "depois" : "antecipado", cobranca: ["fiado", "mensal"].includes(b.cobranca) ? b.cobranca : undefined, ativo: true }; // cobranca: fiado (avisa em 5 dias) ou mensal (fecha no fim do mês); vazio = o caixa decide (empresa/marmita = mensal)
     db.clientes.push(c); await gravar(); return json(res, 200, c);
   }
   const mc = p.match(/^\/api\/clientes\/([^/]+)$/);
@@ -530,6 +530,7 @@ async function tratar(req, res) {
     if (b.modo) c.modo = b.modo === "refeicao" ? "refeicao" : "valor";
     if (b.valorRefeicao !== undefined) c.valorRefeicao = Number(b.valorRefeicao) || 0;
     if (b.pagamento) c.pagamento = b.pagamento === "depois" ? "depois" : "antecipado";
+    if (b.cobranca !== undefined) { if (["fiado", "mensal"].includes(b.cobranca)) c.cobranca = b.cobranca; else delete c.cobranca; } // fiado x conta mensal (dona 23/11)
     if (b.ativo !== undefined) c.ativo = !!b.ativo;
     await gravar(); return json(res, 200, c);
   }
