@@ -62,6 +62,14 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
     t(texto(wf, "#lista").includes("ZECA MARMITA") && !texto(wf, "#lista").includes("ZECA FIADO"), "clientes: quem tem MARMITA no nome fica no grupo Marmita, não nos avulsos");
     wf.close();
   }
+  { // comandas JUNTADAS no Receber: o "Marcar na conta" continua aparecendo e marca todas (dona 23/11: sumia)
+    const abertos = (await api("GET", "/api/pedidos?dia=" + new Date().toLocaleDateString("en-CA"), undefined, cx)).filter((p) => p.status === "aguardando");
+    w.abrirAcerto(abertos.map((p) => p.id)); await dorme(100);
+    t(abertos.length >= 2 && !w.document.querySelector("#ac-conta").hidden, "comandas juntadas: o botão Marcar na conta aparece");
+    await clica(w, "#ac-conta"); await dorme(100);
+    t(!!w.document.querySelector("#busca-cli"), "comandas juntadas: Marcar na conta abre a escolha do cliente");
+    await clica(w, '[data-a="fechar"]'); await dorme(100);
+  }
   await clica(w, '[data-a="receber"]'); // 1º cartão = pedido do Beto (1 item)
   t(!w.document.querySelector("#modal").hidden && w.document.querySelectorAll(".ac-li").length === 1 && w.document.querySelector("#ac-ok").disabled, "janela de acerto lista o item e só libera depois de escolher a forma");
   { // Receber em painel na direita: Esc fecha, F1..F5 escolhem a forma (e o F5 não recarrega), Marcar na conta, imprimir sempre

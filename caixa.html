@@ -1475,15 +1475,18 @@ async function marcarDoAcerto() {
     if (com) { const r = await lancarDocesNaComanda(dl, com); if (!r) { $("#ac-conta").disabled = false; return; } }
     else { const novo = await criarPedidoDoces(dl, p); if (!novo) { $("#ac-conta").disabled = false; return; } docesJunto = novo.id; } // marmitex M / totem / delivery: pedido separado, marcado junto
     A.doces = {}; }
-  marcarNaConta(p.id);
+  marcarNaConta(A.ps.map((x) => x.id)); // comandas juntadas: marca todas
 }
+// pedidos da marcação (1 só, ou várias comandas juntadas no Receber) e os itens em aberto de todos eles
+const pedsDiv = (D) => (D ? D.ids || [D.id] : []).map((id) => pedidos.find((x) => x.id === id)).filter(Boolean);
 function marcarNaConta(id) { // 1º escolhe a pessoa; depois dá pra trocar a pessoa de cada item (ex.: um prato pra cada funcionário)
-  const p = pedidos.find((x) => x.id === id); if (!p || !p.itens.some((c) => !c.pago)) return alert("Não tem nenhum item em aberto nesse pedido.");
-  escolherCliente((cli) => { divisao = { id, atrib: {}, pickando: false }; p.itens.filter((c) => !c.pago).forEach((c) => { divisao.atrib[c.iid] = cli.id; }); modalDivisao(); });
+  const ids = [].concat(id), ps = ids.map((i) => pedidos.find((x) => x.id === i)).filter((p) => p && p.itens.some((c) => !c.pago)); // várias comandas juntas: marca todas (dona 23/11)
+  if (!ps.length) return alert("Não tem nenhum item em aberto nesse pedido.");
+  escolherCliente((cli) => { divisao = { id: ps[0].id, ids: ps.map((p) => p.id), atrib: {}, pickando: false }; ps.forEach((p) => p.itens.filter((c) => !c.pago).forEach((c) => { divisao.atrib[c.iid] = cli.id; })); modalDivisao(); });
 }
 function modalDivisao() {
-  const D = divisao, p = D && pedidos.find((x) => x.id === D.id); if (!p) { divisao = null; $("#modal").hidden = true; return; }
-  const ab = p.itens.filter((c) => !c.pago), tit = rotPed(p) + (p.nome ? " - " + p.nome : ""), tot = {};
+  const D = divisao, ps = pedsDiv(D); if (!ps.length) { divisao = null; $("#modal").hidden = true; return; }
+  const p = ps[0], ab = ps.flatMap((x) => x.itens.filter((c) => !c.pago)), tit = ps.length > 1 ? ps.map((x) => curto(x)).join(" + ") : rotPed(p) + (p.nome ? " - " + p.nome : ""), tot = {};
   ab.forEach((c) => { tot[D.atrib[c.iid]] = round2((tot[D.atrib[c.iid]] || 0) + valorNaConta(c, D.atrib[c.iid])); });
   abrirModal(`<div class="cm-corpo"><h2>Marcar na conta<small>${esc(tit)}</small></h2>
     <p class="dica" style="text-align:left;margin:2px 0">Toque no nome ao lado de cada item para trocar a pessoa (um prato pra cada funcionário, por exemplo).</p>
@@ -1498,15 +1501,21 @@ document.addEventListener("click", async (e) => {
   if (a === "divItem" && divisao) { const iid = d.i, at = clientes.find((x) => x.id === divisao.atrib[iid]); divisao.pickando = true; escolherCliente((cli) => { divisao.pickando = false; divisao.atrib[iid] = cli.id; modalDivisao(); }, null, at && at.empresa ? at.empresa : ""); }
   else if (a === "divTodos" && divisao) { divisao.pickando = true; escolherCliente((cli) => { divisao.pickando = false; Object.keys(divisao.atrib).forEach((i) => { divisao.atrib[i] = cli.id; }); modalDivisao(); }); }
   else if (a === "divOk" && divisao) {
-    const D = divisao, p = pedidos.find((x) => x.id === D.id); if (!p) return; const ab = p.itens.filter((c) => !c.pago); if (!ab.length) return;
+    const D = divisao, ps = pedsDiv(D); if (!ps.length) return; const ab = ps.flatMap((x) => x.itens.filter((c) => !c.pago)); if (!ab.length) return;
     $("#modal").hidden = true;
     if ($("#div-marm")) D.precoMarm = parseFloat(String($("#div-marm").value).replace(",", ".")) || 0;
     if (faltaPrecoMarm(ab, D) && !(D.precoMarm > 0)) { $("#modal").hidden = false; return alert("Digite o valor da marmita."); }
-    const ok = await patch(D.id, { status: "conta", clienteId: D.atrib[ab[0].iid], divisao: ab.map((c) => ({ iid: c.iid, clienteId: D.atrib[c.iid] })), precoMarmita: D.precoMarm || undefined });
-    if (!ok) return modalDivisao(); // o servidor recusou: volta pra janela sem perder o que foi escolhido
+    const feitos = [];
+    for (const p of ps) { // cada comanda vai pra conta com os itens dela (juntadas: todas, uma depois da outra)
+      const its = p.itens.filter((c) => !c.pago); if (!its.length) continue;
+      const ok = await patch(p.id, { status: "conta", clienteId: D.atrib[its[0].iid], divisao: its.map((c) => ({ iid: c.iid, clienteId: D.atrib[c.iid] })), precoMarmita: D.precoMarm || undefined });
+      if (!ok) { D.ids = ps.filter((x) => !feitos.includes(x)).map((x) => x.id); D.id = D.ids[0]; return modalDivisao(); } // o servidor recusou: volta pra janela com o que faltou
+      feitos.push(p);
+    }
+    const p = ps[0];
     if (docesJunto) { const dj = pedidos.find((x) => x.id === docesJunto), cli = D.atrib[ab[0].iid]; docesJunto = null;
       if (dj) { const itd = dj.itens.filter((c) => !c.pago); await patch(dj.id, { status: "conta", clienteId: cli, divisao: itd.map((c) => ({ iid: c.iid, clienteId: cli })) }); } }
-    divisao = null; if (d.imp) imprimirVias(docConta(p, ab, D.atrib));
+    divisao = null; if (d.imp) for (const x of feitos) await imprimirVias(docConta(x, ab.filter((c) => x.itens.includes(c)), D.atrib));
   }
   else if (a === "impLanc") impLancamento(d.id);
 });
@@ -1911,7 +1920,7 @@ function atualizarAcerto() {
   if (A.duas) return desenharDuas();
   $("#ac-titulo").textContent = tituloAcerto();
   if ($("#ac-sub")) $("#ac-sub").textContent = subAcerto();
-  if ($("#ac-conta")) $("#ac-conta").hidden = A.ps.length !== 1; // conta: 1 pedido (com bebida/doce: em comanda entra nela; nos outros vira um pedido junto, marcado na mesma conta)
+  if ($("#ac-conta")) $("#ac-conta").hidden = !A.ps.length; // conta: 1 pedido ou várias comandas juntas (com bebida/doce: em comanda entra nela; nos outros vira um pedido junto, marcado na mesma conta)
   const bts =(chave, forma, dis) => `<span class="ac-formas">${FORMAS_PAG.map((k) => `<button class="btn mini ${forma === k ? "on" : ""}" data-a="acForma" data-i="${esc(chave)}" data-f="${k}" ${dis ? "disabled" : ""}>${FIC[k]} ${FORMAS[k]}</button>`).join("")}</span>`;
   let h = "", total = 0, aberto = 0, sem = 0, nsel = 0; const tot = {}, conta = (v, f) => { total += v; nsel++; if (f) tot[f] = (tot[f] || 0) + v; else sem++; };
   A.ps.forEach((p) => {
