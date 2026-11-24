@@ -353,6 +353,15 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
     t(fz.movimento === true && /Fechamento Da Lúcia/.test(fz.texto) && /Total recebido: R\$ [\d.]+,\d\d/.test(fz.texto) && /Marcado na conta: R\$/.test(fz.texto) && /Gaveta/.test(fz.texto) && fz.tel === "", "fechamento do dia pro WhatsApp: total, formas, conta e gaveta (nos testes o envio fica desligado)");
     t(Math.abs(depois - antes - 33) < 0.01, "Gestão: comanda de R$ 33 marcada na conta soma R$ 33 no 'vendido na conta' (antes somava 66): " + antes + " -> " + depois);
   }
+  { // ✂ dividir valor (dona 24/11): marmitex de R$24, paga R$14 no Pix e R$10 vai pra conta de outra pessoa
+    const gil = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "GILMARA TESTE" }, tkD)).j, pt = (await reqEm(sd.base, "POST", "/api/pedidos", { uid: "div-1", nome: "Patrick", itens: [{ nome: "Marmitex - R$24,00", preco: 24, qtd: 1 }] }, "")).j;
+    const dv = await reqEm(sd.base, "PATCH", "/api/pedidos/" + pt.id, { dividirItem: { iid: pt.itens[0].iid, valor: 14 } }, tkD);
+    const errado = await reqEm(sd.base, "PATCH", "/api/pedidos/" + pt.id, { dividirItem: { iid: dv.j.itens[0].iid, valor: 30 } }, tkD);
+    const [a, b] = dv.j.itens, pg = await reqEm(sd.base, "PATCH", "/api/pedidos/" + pt.id, { acertar: [{ iid: a.iid, forma: "pix" }] }, tkD);
+    const ct = await reqEm(sd.base, "PATCH", "/api/pedidos/" + pt.id, { status: "conta", clienteId: gil.id }, tkD), cs = (await reqEm(sd.base, "GET", "/api/contas", undefined, tkD)).j;
+    t(dv.s === 200 && dv.j.valor === 24 && a.preco === 14 && b.preco === 10 && errado.s === 400 && pg.s === 200 && ct.s === 200 && ct.j.status === "conta"
+      && cs.lancamentos.some((l) => l.clienteId === gil.id && l.pedidoId === pt.id && l.valor === 10), "dividir valor: R$24 vira 14 + 10; paga 14 no Pix e os 10 vão pra conta de outra pessoa");
+  }
   { // juntar cadastro repetido: lançamentos passam pro outro e o repetido some
     const a1 = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "LUIS ALMOCO", empresa: "OBRA X" }, tkD)).j, a2 = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "ALMOCO", empresa: "OBRA X" }, tkD)).j;
     await reqEm(sd.base, "POST", "/api/lancamentos", { clienteId: a1.id, dia: "2026-01-05", valor: 30 }, tkD);

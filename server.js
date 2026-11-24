@@ -871,6 +871,20 @@ async function tratar(req, res) {
       fecharSePago(ped); if (!ped.itens.length && !ped.reservada) ped.status = "cancelado";
       await gravar(); return json(res, 200, ped);
     }
+    if (u.dividirItem !== undefined) {                           // ✂ divide o valor de um item em 2 partes (paga uma, a outra vai pra conta de alguém)
+      if (ped.status !== "aguardando") return json(res, 409, { erro: "só dá pra dividir item de pedido em aberto" });
+      const c = ped.itens.find((x) => x.iid === String((u.dividirItem || {}).iid || "")); if (!c) return json(res, 409, { erro: "esse item já não está no pedido" });
+      if (c.pago) return json(res, 409, { erro: "esse item já foi pago" });
+      const v = cents(Number(u.dividirItem.valor)), un = cents(c.preco);
+      if (!(v > 0 && v < un)) return json(res, 400, { erro: "o valor tem que ser maior que zero e menor que " + brl2(un) });
+      let alvo = c, i = ped.itens.indexOf(c);
+      if ((c.qtd || 1) > 1) { c.qtd--; alvo = { ...JSON.parse(JSON.stringify(c)), iid: uid("i"), qtd: 1 }; ped.itens.splice(++i, 0, alvo); } // várias unidades: separa 1 e divide ela
+      const resto = { ...JSON.parse(JSON.stringify(alvo)), iid: uid("i"), preco: cents(un - v), nome: String(alvo.nome).slice(0, 70) + " (resto)" };
+      alvo.preco = v; ped.itens.splice(i + 1, 0, resto);
+      if (ped.tipo === "balanca") recalcComanda(ped); else { ped.valor = cents(ped.itens.reduce((t, x) => t + valorItem(x), 0)); ped.unidades = ped.itens.reduce((t, x) => t + (x.qtd || 1), 0); }
+      (ped.divisoes = ped.divisoes || []).push({ de: un, partes: [v, resto.preco], quando: Date.now(), quem: req.papel });
+      await gravar(); return json(res, 200, ped);
+    }
     if (u.acertar !== undefined) {                               // acertar só alguns itens, cada um com a sua forma de pagamento
       const r = acertar(ped, u.acertar, u.recebido, req.papel); if (!r.ok) return json(res, r.s, { erro: r.erro });
       await gravar(); return json(res, 200, ped);

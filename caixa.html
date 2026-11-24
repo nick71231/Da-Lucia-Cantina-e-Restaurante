@@ -1991,6 +1991,17 @@ function abrirAcerto(ids) { // escolhe quais itens acertar e a forma de pagament
   $("#modal").classList.add("lado");
   atualizarAcerto();
 }
+// ✂ dividir o valor de um item em 2 partes (dona 24/11: marmitex de R$24 do Patrick, paga R$14 e R$10 vai pra conta da Gilmara).
+// Depois é só receber uma parte e marcar a outra na conta, com os botões de sempre.
+async function acDividir(pid, iid) {
+  const p = pedidos.find((x) => x.id === pid), c = p && p.itens.find((x) => x.iid === iid); if (!c) return;
+  const un = Number(c.preco), t = prompt(`Dividir ${c.qtd > 1 ? "1 unidade de " : ""}${c.nome} (${brl(un)}) em 2 partes.\n\nValor da 1ª parte (ex.: o que ele paga agora). O resto vira a 2ª parte:`, "");
+  if (t === null) return; const v = round2(parseFloat(String(t).replace(/[^0-9,.]/g, "").replace(",", ".")) || 0);
+  if (!(v > 0 && v < un)) return alert("Digite um valor maior que zero e menor que " + brl(un) + ".");
+  const ids = acerto ? acerto.ps.map((x) => x.id) : [pid];
+  if (!(await patch(pid, { dividirItem: { iid, valor: v } }))) return;
+  await carregar(); abrirAcerto(ids);
+}
 function atualizarAcerto() {
   const A = acerto; if (!A || !$("#ac-itens")) return;
   document.querySelectorAll(".ac-pag1, .ac-mais, .ac-junta-bar, .ac-bebida-bar, #ac-itens-t").forEach((el) => (el.style.display = A.duas ? "none" : ""));
@@ -2005,7 +2016,7 @@ function atualizarAcerto() {
     if (A.ps.length > 1) h += `<div class="ac-grupo"><b>${rotPed(p)}</b>${p.nome ? " - " + esc(p.nome) : ""}<button class="btn mini" data-a="acTira" data-id="${esc(p.id)}">Tirar</button></div>`;
     h += ab.map((c) => { const k = kIt(p, c), s = A.itens[k]; if (s.on) conta(valorIt(c), s.forma); else aberto += valorIt(c);
       return `<div class="ac-item ${s.on ? "on" : ""}"><button class="ac-chk ${s.on ? "on" : ""}" data-a="acItem" data-i="${esc(k)}">${s.on ? "✓" : ""}</button>
-      <span class="ac-nome"><b>${c.qtd}x ${esc(c.nome)}</b>${(c.grupos || []).length ? `<small>${esc((c.grupos || []).flatMap((g) => g.itens).join(", "))}</small>` : ""}</span><b class="ac-val">${brl(valorIt(c))}</b>${bts(k, s.forma, !s.on)}</div>`; }).join("")
+      <span class="ac-nome"><b>${c.qtd}x ${esc(c.nome)}</b>${(c.grupos || []).length ? `<small>${esc((c.grupos || []).flatMap((g) => g.itens).join(", "))}</small>` : ""}${c.preco > 0.01 ? `<button class="btn mini ac-div" data-a="acDividir" data-id="${esc(p.id)}" data-iid="${esc(c.iid)}" title="Dividir o valor em 2 partes (ex.: paga R$14 agora e R$10 vai pra conta de alguém)">✂ dividir valor</button>` : ""}</span><b class="ac-val">${brl(valorIt(c))}</b>${bts(k, s.forma, !s.on)}</div>`; }).join("")
       + (pg.length ? `<p class="dica">Já pagos: ${pg.map((c) => esc(c.nome) + " (" + (FORMAS[c.pago.forma] || c.pago.forma) + ")").join("; ")}</p>` : "");
   });
   const dl = Object.values(A.doces);
@@ -2461,6 +2472,7 @@ document.addEventListener("click", (e) => {
   else if (a === "juntaRec") abrirAcerto([...juntar]);
   else if (!A) return;
   else if (a === "acJunta") acJuntar();
+  else if (a === "acDividir") acDividir(d.id, d.iid);
   else if (a === "acTira") { if (A.ps.length < 2) return; const p = A.ps.find((x) => x.id === d.id); A.ps = A.ps.filter((x) => x.id !== d.id); if (p) p.itens.forEach((c) => delete A.itens[kIt(p, c)]); atualizarAcerto(); }
   else if (a === "acRap") { $("#ac-rec").value = Number(d.v).toFixed(2).replace(".", ","); atualizarAcerto(); }
   else if (a === "dcAbrir" || a === "dcFechar") { A.picker = a === "dcAbrir" ? !A.picker : false; atualizarAcerto(); if (A.picker) { const b = $("#dc-busca"); if (b) { b.focus(); b.select(); } } }
