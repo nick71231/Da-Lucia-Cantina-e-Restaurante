@@ -64,6 +64,22 @@ const cpfOk = (v) => { const s = String(v || "").replace(/\D/g, ""); if (s.lengt
 const dv11 = (s) => { let soma = 0, p = 2; for (let i = s.length - 1; i >= 0; i--) { soma += Number(s[i]) * p; p = p === 9 ? 2 : p + 1; } const r = soma % 11; return r < 2 ? 0 : 11 - r; };
 const TPAG = { dinheiro: "01", credito: "03", debito: "04", refeicao: "11", pix: "17", cartao: "99" };
 
+// ZIP simples (deflate, nomes em UTF-8), sem biblioteca: pras notas do mês da contadora
+const zlib = require("zlib");
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = (b) => { let c = 0xffffffff; for (const x of b) c = CRC[(c ^ x) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+function zipar(files) {
+  const loc = [], cen = []; let off = 0; const d = new Date(), dosT = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1), dosD = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  for (const f of files) {
+    const nome = Buffer.from(f.nome, "utf8"), comp = zlib.deflateRawSync(f.dados), crc = crc32(f.dados);
+    const h = Buffer.alloc(30); h.writeUInt32LE(0x04034b50, 0); h.writeUInt16LE(20, 4); h.writeUInt16LE(0x0800, 6); h.writeUInt16LE(8, 8); h.writeUInt16LE(dosT, 10); h.writeUInt16LE(dosD, 12); h.writeUInt32LE(crc, 14); h.writeUInt32LE(comp.length, 18); h.writeUInt32LE(f.dados.length, 22); h.writeUInt16LE(nome.length, 26); h.writeUInt16LE(0, 28);
+    loc.push(h, nome, comp);
+    const c = Buffer.alloc(46); c.writeUInt32LE(0x02014b50, 0); c.writeUInt16LE(20, 4); c.writeUInt16LE(20, 6); c.writeUInt16LE(0x0800, 8); c.writeUInt16LE(8, 10); c.writeUInt16LE(dosT, 12); c.writeUInt16LE(dosD, 14); c.writeUInt32LE(crc, 16); c.writeUInt32LE(comp.length, 20); c.writeUInt32LE(f.dados.length, 24); c.writeUInt16LE(nome.length, 28); c.writeUInt32LE(off, 42);
+    cen.push(c, nome); off += 30 + nome.length + comp.length;
+  }
+  const cd = Buffer.concat(cen), e = Buffer.alloc(22); e.writeUInt32LE(0x06054b50, 0); e.writeUInt16LE(files.length, 8); e.writeUInt16LE(files.length, 10); e.writeUInt32LE(cd.length, 12); e.writeUInt32LE(off, 16);
+  return Buffer.concat([...loc, cd, e]);
+}
 module.exports = function criarFiscal({ DIR_DADOS }) {
   const ARQ = path.join(DIR_DADOS, "fiscal.json"), PEM = path.join(DIR_DADOS, "certificado.pem"), PASTA = path.join(DIR_DADOS, "nfce");
   const ler = () => { try { return JSON.parse(fs.readFileSync(ARQ, "utf8")); } catch (e) { return null; } };
@@ -231,11 +247,14 @@ module.exports = function criarFiscal({ DIR_DADOS }) {
     if (just.length < 15) throw new Error("o motivo precisa ter pelo menos 15 letras");
     const id = "ID110111" + nf.chave + "01";
     const inf = `<infEvento Id="${id}"><cOrgao>35</cOrgao><tpAmb>${amb}</tpAmb><CNPJ>${cfg.cnpj}</CNPJ><chNFe>${nf.chave}</chNFe><dhEvento>${agoraSP()}</dhEvento><tpEvento>110111</tpEvento><nSeqEvento>1</nSeqEvento><verEvento>1.00</verEvento><detEvento versao="1.00"><descEvento>Cancelamento</descEvento><nProt>${nf.prot}</nProt><xJust>${esc(semAc(just)).slice(0, 255)}</xJust></detEvento></infEvento>`;
-    const r = await soap(amb, "NFeRecepcaoEvento4", "nfeRecepcaoEvento", `<envEvento xmlns="${NS}" versao="1.00"><idLote>${String(Date.now()).slice(-15)}</idLote><evento xmlns="${NS}" versao="1.00">${inf}${assinar(inf, id)}</evento></envEvento>`);
+    const evento = `<evento xmlns="${NS}" versao="1.00">${inf}${assinar(inf, id)}</evento>`;
+    const r = await soap(amb, "NFeRecepcaoEvento4", "nfeRecepcaoEvento", `<envEvento xmlns="${NS}" versao="1.00"><idLote>${String(Date.now()).slice(-15)}</idLote>${evento}</envEvento>`);
     const ret = tag(r, "retEvento") || r, cs = tag(ret, "cStat"), mot = tag(ret, "xMotivo");
     if (cs !== "135" && cs !== "155") throw new Error("SEFAZ não cancelou: " + (cs || "?") + " - " + (mot || ""));
-    const dir = path.join(PASTA, amb === 1 ? "producao" : "homologacao", new Date().toLocaleDateString("en-CA").slice(0, 7)); fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, nf.chave + "-cancelamento.xml"), r);
+    // guarda no formato oficial (procEventoNFe = evento assinado + resposta da SEFAZ), na pasta do mês da nota (é o que a contadora importa)
+    const dir = path.join(PASTA, amb === 1 ? "producao" : "homologacao", new Date(nf.quando || Date.now()).toLocaleDateString("en-CA").slice(0, 7)); fs.mkdirSync(dir, { recursive: true });
+    const retXml = (r.match(/<retEvento[\s\S]*?<\/retEvento>/) || [""])[0];
+    fs.writeFileSync(path.join(dir, nf.chave + "-cancelamento.xml"), `<?xml version="1.0" encoding="UTF-8"?><procEventoNFe xmlns="${NS}" versao="1.00">${evento}${retXml}</procEventoNFe>`);
     return { cancProt: tag(ret, "nProt"), canceladaEm: Date.now(), motivoCanc: just };
   }
   function status() {
@@ -244,6 +263,25 @@ module.exports = function criarFiscal({ DIR_DADOS }) {
     return { emit: { xNome: e.xNome, CNPJ: e.CNPJ, xLgr: e.xLgr, nro: e.nro, xBairro: e.xBairro, xMun: e.xMun, UF: e.UF }, configurado: !!(cfg && cfg.csc && cfg.emit), certificado: C ? { nome: C.nome, validade: C.validade } : null, ambiente: cfg && cfg.ambiente === 1 ? 1 : 2, serie: cfg ? Number(cfg.serie) || 2 : 2, proximo: cfg ? (cfg.numeros || {})[cfg.ambiente === 1 ? 1 : 2] || 1 : 1, cscId: cfg && cfg.cscId };
   }
   function mudarAmbiente(a) { const cfg = ler(); if (!cfg) throw new Error("sem configuração"); cfg.ambiente = a === 1 ? 1 : 2; salvar(cfg); return status(); }
-  return { status, instalarCertificado, statusSefaz, emitir, cancelar, mudarAmbiente, classe, cpfOk, _montar: montar, _assinar: assinar };
+  // ---------- NOTAS DO MÊS PRA CONTADORA (dona 24/11): os XML de produção do mês (autorizados + cancelamentos) + resumo.csv, num ZIP ----------
+  function notasDoMes(mes) {
+    if (!/^\d{4}-\d\d$/.test(String(mes))) throw new Error("mês inválido");
+    const dir = path.join(PASTA, "producao", mes), out = [];
+    if (fs.existsSync(dir)) for (const a of fs.readdirSync(dir).filter((x) => /-procNFe\.xml$/.test(x))) {
+      const x = fs.readFileSync(path.join(dir, a), "utf8"), chave = a.slice(0, 44), canc = path.join(dir, chave + "-cancelamento.xml");
+      out.push({ arq: path.join(dir, a), canc: fs.existsSync(canc) ? canc : null, chave, numero: Number(tag(x, "nNF")), serie: Number(tag(x, "serie")), dhEmi: tag(x, "dhEmi"), valor: Number(tag(x, "vNF")) || 0, cpf: tag(tag(x, "dest") || "", "CPF") || "", obs: (tag(x, "infCpl") || "").split(" | Trib aprox")[0].replace(/^Trib aprox.*$/, ""), prot: tag(tag(x, "protNFe") || "", "nProt") || "" });
+    }
+    return out.sort((a, b) => a.serie - b.serie || a.numero - b.numero);
+  }
+  function contadora(tel) { const cfg = ler() || {}; if (tel !== undefined) { cfg.contadora = { tel: String(tel).replace(/\D/g, "").slice(0, 13) }; salvar(cfg); } return (cfg.contadora || {}).tel || ""; }
+  function zipDoMes(mes) {
+    const ns = notasDoMes(mes), br = (v) => Number(v).toFixed(2).replace(".", ",");
+    const csv = "﻿" + [["Número", "Série", "Emissão", "Valor (R$)", "Situação", "CPF", "Chave de acesso", "Protocolo", "Observação"].join(";"),
+      ...ns.map((n) => [n.numero, n.serie, String(n.dhEmi || "").slice(0, 19).replace("T", " "), br(n.valor), n.canc ? "CANCELADA" : "AUTORIZADA", n.cpf, "'" + n.chave, "'" + n.prot, '"' + String(n.obs || "").replace(/"/g, "'") + '"'].join(";"))].join("\r\n");
+    const files = [{ nome: "resumo-" + mes + ".csv", dados: Buffer.from(csv, "utf8") }, ...ns.flatMap((n) => [{ nome: "autorizadas/" + path.basename(n.arq), dados: fs.readFileSync(n.arq) }, ...(n.canc ? [{ nome: "cancelamentos/" + path.basename(n.canc), dados: fs.readFileSync(n.canc) }] : [])])];
+    const aut = ns.filter((n) => !n.canc);
+    return { zip: zipar(files), qtd: ns.length, autorizadas: aut.length, canceladas: ns.length - aut.length, total: Math.round(aut.reduce((s, n) => s + n.valor, 0) * 100) / 100 };
+  }
+  return { status, instalarCertificado, statusSefaz, emitir, cancelar, mudarAmbiente, notasDoMes, zipDoMes, contadora, classe, cpfOk, _montar: montar, _assinar: assinar };
 };
 module.exports.classe = classe; module.exports.cpfOk = cpfOk; module.exports.CLASSES = CLASSES;

@@ -459,6 +459,16 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
       const cc = await reqEm(sf.base, "POST", "/api/fiscal/cancelar", { id: cm.id, motivo: "curto" }, cxT), cOk = await reqEm(sf.base, "POST", "/api/fiscal/cancelar", { id: cm.id, motivo: "Cliente desistiu da compra" }, cxT);
       const ev = recebidas.filter((x) => /NFeRecepcaoEvento4/.test(x.url)).pop(), est2 = await reqEm(sf.base, "PATCH", "/api/pedidos/" + cm.id, { estornarTudo: true, motivo: "teste de estorno" }, cxT);
       t(cc.s === 502 && cOk.s === 200 && cOk.j.status === "cancelada" && /<tpEvento>110111<\/tpEvento>/.test(ev.b) && /<nProt>/.test(ev.b) && est2.s === 200, "cancelar o cupom (motivo com 15+ letras); depois o estorno do pedido funciona");
+      { // notas do mês pra contadora (só produção): resumo, ZIP e WhatsApp com o arquivo
+        const mesT = hoje.slice(0, 7), vazio = await reqEm(sf.base, "POST", "/api/fiscal/contadora", { mes: mesT, tel: "86999990000" }, cxT);
+        await reqEm(sf.base, "POST", "/api/fiscal/ambiente", { ambiente: 1 }, adm);
+        const c4 = (await reqEm(sf.base, "POST", "/api/balanca", { comanda: 53, valor: 22, uid: "nf5" }, cxT)).j; await reqEm(sf.base, "PATCH", "/api/pedidos/" + c4.id, { acertar: c4.itens.map((c) => ({ iid: c.iid, forma: "dinheiro" })), recebido: 22 }, cxT);
+        const e4 = await reqEm(sf.base, "POST", "/api/fiscal/emitir", { ids: [c4.id], modo: "simples" }, cxT), res = (await reqEm(sf.base, "GET", "/api/fiscal/notas?mes=" + mesT, undefined, cxT)).j;
+        const zr = await fetch(sf.base + "/api/fiscal/notas-zip?mes=" + mesT, { headers: { Authorization: "Bearer " + cxT } }), zb = Buffer.from(await zr.arrayBuffer());
+        const env = await reqEm(sf.base, "POST", "/api/fiscal/contadora", { mes: mesT, tel: "(86) 99999-0000" }, cxT), fila = JSON.parse(fs.readFileSync(path.join(dF, "whats-fila.json"), "utf8")).pop();
+        t(vazio.s === 400 && e4.s === 200 && res.autorizadas === 1 && res.total === 22 && zr.ok && zb.slice(0, 2).toString() === "PK" && zb.includes(Buffer.from(e4.j.chave + "-procNFe.xml")) && zb.includes(Buffer.from("resumo-" + mesT + ".csv"))
+          && env.s === 200 && fila.tel === "86999990000" && /Notas fiscais/.test(fila.arquivo) && fs.existsSync(fila.arquivo) && /1 cupom\(ns\) autorizado/.test(fila.texto), "notas pra contadora: resumo do mês, ZIP (XML + planilha) e WhatsApp com o arquivo");
+      }
       t((await reqEm(sf.base, "GET", "/fiscal.js", undefined, "")).s === 403 && (await reqEm(sf.base, "GET", "/dados/fiscal.json", undefined, "")).s === 403, "fiscal.js e a configuração fiscal não são entregues pela rede");
       sf.srv.kill(); sefaz.close();
     }

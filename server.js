@@ -623,6 +623,27 @@ async function tratar(req, res) {
       return json(res, 200, peds[0].nfce);
     } catch (e) { console.error("cupom fiscal: " + e.message); return json(res, 502, { erro: e.message }); }
   }
+  // notas do mês pra contadora: resumo, ZIP pra baixar e envio pelo WhatsApp (robô)
+  if (p === "/api/fiscal/notas" && req.method === "GET") {
+    try { const ns = fiscal.notasDoMes(String(url.searchParams.get("mes") || hoje().slice(0, 7))), aut = ns.filter((n) => !n.canc); return json(res, 200, { qtd: ns.length, autorizadas: aut.length, canceladas: ns.length - aut.length, total: cents(aut.reduce((s, n) => s + n.valor, 0)), contadora: fiscal.contadora() }); }
+    catch (e) { return json(res, 400, { erro: e.message }); }
+  }
+  if (p === "/api/fiscal/notas-zip" && req.method === "GET") {
+    const mes = String(url.searchParams.get("mes") || ""); let z; try { z = fiscal.zipDoMes(mes); } catch (e) { return json(res, 400, { erro: e.message }); }
+    res.writeHead(200, { "Content-Type": "application/zip", "Content-Disposition": `attachment; filename="Notas fiscais ${mes} - Da Lucia.zip"`, "Cache-Control": "no-store" }); return res.end(z.zip);
+  }
+  if (p === "/api/fiscal/contadora" && req.method === "POST") { // { mes, tel }: guarda o número da contadora e manda o ZIP do mês pelo WhatsApp
+    const b = await corpo(req), mes = String(b.mes || ""), tel = String(b.tel || "").replace(/\D/g, "");
+    if (tel.length < 10) return json(res, 400, { erro: "digite o WhatsApp da contadora com DDD" });
+    let z; try { z = fiscal.zipDoMes(mes); } catch (e) { return json(res, 400, { erro: e.message }); }
+    if (!z.qtd) return json(res, 400, { erro: "nenhuma nota emitida pelo caixa em " + mes.split("-").reverse().join("/") });
+    fiscal.contadora(tel);
+    const dirZ = path.join(DIR_DADOS, "nfce", "zips"); fs.mkdirSync(dirZ, { recursive: true });
+    const arq = path.join(dirZ, `Notas fiscais ${mes} - Da Lucia.zip`); fs.writeFileSync(arq, z.zip);
+    const [aa, mm] = mes.split("-"), texto = `🧾 *Notas fiscais (NFC-e) - Da Lúcia Cantina e Restaurante*\nCNPJ 20.128.902/0001-15 · ${mm}/${aa}\n\n${z.autorizadas} cupom(ns) autorizado(s) · R$ ${z.total.toFixed(2).replace(".", ",")}${z.canceladas ? `\n${z.canceladas} cancelado(s)` : ""}\n\nNo ZIP: os XML (autorizadas e cancelamentos) e o resumo em planilha 👇`;
+    filaWhats.push({ id: "contadora-" + mes + "-" + Date.now(), tel: tel.startsWith("55") ? tel.slice(2) : tel, texto, arquivo: arq, quando: Date.now() }); filaWhats = filaWhats.slice(-200);
+    await gravarArquivo(ARQ_WHATS, filaWhats); return json(res, 200, { ok: true, qtd: z.qtd, autorizadas: z.autorizadas, canceladas: z.canceladas, total: z.total });
+  }
   if (p === "/api/fiscal/cancelar" && req.method === "POST") { // cancela o cupom na SEFAZ (até 30 min depois de emitido)
     const b = await corpo(req), ped = db.pedidos.find((x) => x.id === String(b.id || ""));
     if (!ped || !ped.nfce || ped.nfce.status !== "autorizada") return json(res, 404, { erro: "esse pedido não tem cupom fiscal ativo" });

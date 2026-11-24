@@ -200,6 +200,9 @@ input.cf-ruim { border-color: #d9534f !important; background: #fff5f5 !important
 .cf-msg.ok { background: #e9f6ec; color: #16793a; } .cf-msg.ruim { background: #fde0e0; color: #a50f14; }
 .cf-aviso { background: #fff1cc; color: #7a4a00; padding: 8px 12px; border-radius: 12px; font-weight: 600; margin: 0 0 8px; }
 .cf-canc { font-size: .8rem; color: #a50f14; }
+.cf-ct { display: flex; gap: 8px; flex-wrap: wrap; } .cf-ct input { flex: 1 1 160px; min-width: 0; padding: 9px 12px; border: 1px solid #e2d6c9; border-radius: 10px; font: inherit; }
+.cf-ct-res { margin: 8px 0; padding: 10px 12px; border-radius: 12px; background: #f7f2ec; color: #4a2f22; font-size: .9rem; }
+.cf-ct-bts { display: flex; gap: 8px; flex-wrap: wrap; } .cf-ct-bts .btn { flex: 1; }
 /* separar por valor */
 .dv { display: grid; gap: 10px; }
 .dv-cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -1930,9 +1933,42 @@ async function modalFiscal() { // botão 🧾 no topo: certificado, teste x prod
       <button class="btn" data-a="cfInstalar" style="margin-top:8px">🔐 Instalar certificado</button>
       <h4 style="margin-top:18px">Ambiente</h4><div class="cf-seg">${[[2, "🧪 Teste"], [1, "✅ Produção"]].map(([k, t]) => `<button type="button" class="btn mini ${S.ambiente === k ? "on" : ""}" data-a="cfAmb" data-v="${k}">${t}</button>`).join("")}</div>`
       : `<p class="det-obs">Só o administrador instala o certificado e muda o ambiente.</p>`}
+    <h4 style="margin-top:18px">📤 Notas para a contadora</h4><p class="det-obs" style="margin:0 0 6px">Todo mês: os arquivos (XML) dos cupons emitidos pelo caixa e um resumo em planilha, num ZIP.</p>
+    <div class="cf-ct"><input type="month" id="cf-mes" value="${cfMesPadrao()}"><input id="cf-tel" inputmode="tel" placeholder="WhatsApp da contadora (com DDD)" value="${esc(cfTelFmt(S.contadora || ""))}"></div>
+    <div class="cf-ct-res" id="cf-ct-res">…</div>
+    <div class="cf-ct-bts"><button class="btn ok" data-a="cfContadora">📲 Mandar no WhatsApp</button><button class="btn" data-a="cfZip">⬇ Baixar ZIP</button></div>
     <div id="cf-msg" class="cf-msg" hidden></div></div>
     <div class="acoes cm-rodape"><button class="btn" data-a="fechar">Fechar</button><button class="btn" data-a="cfSefaz" ${C ? "" : "disabled"}>🔌 Testar conexão com a SEFAZ</button></div>`);
+  cfResumoMes();
 }
+// notas pra contadora: até o dia 10 sugere o mês passado (é quando costuma mandar o fechamento)
+const cfMesPadrao = () => { const d = new Date(); if (d.getDate() <= 10) d.setMonth(d.getMonth() - 1); return d.toLocaleDateString("en-CA").slice(0, 7); };
+const cfTelFmt = (t) => { const s = String(t || "").replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, ""); return s.length >= 10 ? "(" + s.slice(0, 2) + ") " + s.slice(2, -4) + "-" + s.slice(-4) : s; };
+async function cfResumoMes() {
+  const el = $("#cf-ct-res"), m = ($("#cf-mes") || {}).value; if (!el || !m) return;
+  try { const r = await aut("/api/fiscal/notas?mes=" + m), j = await r.json(); if (!r.ok) { el.textContent = j.erro || "—"; return; }
+    if (!$("#cf-tel").value && j.contadora) $("#cf-tel").value = cfTelFmt(j.contadora);
+    el.innerHTML = j.qtd ? `<b>${j.autorizadas}</b> cupom(ns) autorizado(s) · <b>${brl(j.total)}</b>${j.canceladas ? ` · ${j.canceladas} cancelado(s)` : ""}` : "Nenhum cupom emitido pelo caixa nesse mês.";
+  } catch (e) { el.textContent = "Sem conexão com o servidor."; }
+}
+document.addEventListener("change", (e) => { if (e.target.id === "cf-mes") cfResumoMes(); });
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("[data-a]"); if (!t) return; const a = t.dataset.a;
+  if (a === "cfZip") {
+    const m = $("#cf-mes").value; cfMsg("⏳ Montando o ZIP…");
+    try { const r = await aut("/api/fiscal/notas-zip?mes=" + m); if (!r.ok) { const j = await r.json().catch(() => ({})); return cfMsg("✕ " + esc(j.erro || "não deu"), "ruim"); }
+      const bl = await r.blob(), x = document.createElement("a"); x.href = URL.createObjectURL(bl); x.download = "Notas fiscais " + m + " - Da Lucia.zip"; x.click(); cfMsg("✓ ZIP baixado (pasta Downloads).", "ok");
+    } catch (er) { cfMsg("✕ Sem conexão com o servidor.", "ruim"); }
+  } else if (a === "cfContadora") {
+    const m = $("#cf-mes").value, tel = $("#cf-tel").value.replace(/\D/g, "");
+    if (tel.length < 10) return cfMsg("Digite o WhatsApp da contadora com DDD.", "ruim");
+    if (!confirm(`Mandar as notas de ${m.split("-").reverse().join("/")} para o WhatsApp ${cfTelFmt(tel)}?`)) return;
+    t.disabled = true; cfMsg("⏳ Preparando…");
+    try { const r = await aut("/api/fiscal/contadora", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mes: m, tel }) }), j = await r.json().catch(() => ({})); t.disabled = false;
+      cfMsg(r.ok ? `✓ Na fila do robô: ${j.autorizadas} cupom(ns) · ${brl(j.total)}${j.canceladas ? " · " + j.canceladas + " cancelado(s)" : ""}. Chega no WhatsApp da contadora em instantes.` : "✕ " + esc(j.erro || "não deu"), r.ok ? "ok" : "ruim");
+    } catch (er) { t.disabled = false; cfMsg("✕ Sem conexão com o servidor.", "ruim"); }
+  }
+});
 const cfMsg = (h, tipo) => { const el = $("#cf-msg"); if (!el) return; el.hidden = false; el.innerHTML = h; el.className = "cf-msg " + (tipo || ""); };
 document.addEventListener("change", (e) => { if (e.target.id === "cf-on") { const o = $("#cf-op"); if (o) o.hidden = !e.target.checked; if (e.target.checked) setTimeout(() => { const i = $("#cf-cpf"); if (i) i.focus(); }, 30); } });
 document.addEventListener("input", (e) => { if (e.target.id === "cf-cpf") { const v = cpfFmt(e.target.value); if (v !== e.target.value) e.target.value = v; const s = v.replace(/\D/g, ""); e.target.classList.toggle("cf-ruim", s.length === 11 && !cpfValido(s)); } });
