@@ -2099,10 +2099,13 @@ function aposVenda() { // volta pro campo de busca já pronto pra digitar a pró
 const d2Conta = () => { const A = acerto, D = A.duas, p = A.ps[0], aberto = round2(soma(p.itens.filter((c) => !c.pago), valorIt)), v1 = Math.min(aberto, Math.max(0, parseFloat(String(D.v1).replace(",", ".")) || 0)); return { p, aberto, v1: round2(v1), v2: round2(aberto - v1) }; };
 function desenharDuas() {
   const A = acerto, D = A.duas, { aberto, v2 } = d2Conta();
-  const tiles = (q, sel) => `<div class="ac-tiles d2-t">${FORMAS_PAG.map((k) => `<button class="btn ac-tile ${sel === k ? "on" : ""}" data-a="d2Forma" data-q="${q}" data-f="${k}"><i>${FIC[k]}</i>${FORMAS[k]}</button>`).join("")}</div>`;
+  // 2ª forma também pode ser "📒 Na conta" de um cliente (dona 24/11: paga uma parte e o resto vai pra conta de alguém)
+  const tiles = (q, sel) => `<div class="ac-tiles d2-t">${FORMAS_PAG.map((k) => `<button class="btn ac-tile ${sel === k ? "on" : ""}" data-a="d2Forma" data-q="${q}" data-f="${k}"><i>${FIC[k]}</i>${FORMAS[k]}</button>`).join("")}${q === 2 ? `<button class="btn ac-tile ${sel === "conta" ? "on" : ""}" data-a="d2Forma" data-q="2" data-f="conta"><i>📒</i>Na conta</button>` : ""}</div>`;
+  if (D.f2 === "conta" && !clientes.length) carregarClientes().then(() => { if (acerto && acerto.duas) desenharDuas(); });
+  const cliSel = D.f2 === "conta" ? `<label class="d2-val">De quem é a conta?<select id="d2-cli"><option value="">— escolha o cliente —</option>${clientes.filter((c) => c.ativo !== false).sort((a, b) => a.nome.localeCompare(b.nome)).map((c) => `<option value="${esc(c.id)}" ${D.cli === c.id ? "selected" : ""}>${esc(c.nome)}${c.empresa && c.empresa !== c.nome ? " (" + esc(c.empresa) + ")" : ""}</option>`).join("")}</select></label>` : "";
   $("#ac-itens").innerHTML = `<div class="d2"><div class="d2-tit">Pagar com 2 formas <b>total ${brl(aberto)}</b></div>
     <div class="d2-passo"><span>1ª forma</span>${tiles(1, D.f1)}<label class="d2-val">Quanto em ${FORMAS[D.f1]}?<span class="cel-rs">R$<input id="d2-v1" inputmode="decimal" autocomplete="off" placeholder="0,00" value="${esc(D.v1)}"></span></label></div>
-    <div class="d2-passo"><span>O resto, <b id="d2-resto">${brl(v2)}</b>, vai em:</span>${tiles(2, D.f2)}</div>
+    <div class="d2-passo"><span>O resto, <b id="d2-resto">${brl(v2)}</b>, vai em:</span>${tiles(2, D.f2)}${cliSel}</div>
     <button class="btn ac-dividir" data-a="d2Sair">↩ Voltar pro jeito simples</button></div>`;
   d2Rodape();
 }
@@ -2111,15 +2114,17 @@ function d2Rodape() {
   if ($("#d2-resto")) $("#d2-resto").textContent = brl(v2);
   $("#ac-din").hidden = !(din > 0); $("#ac-tr").textContent = din > 0 && !isNaN(rec) ? (rec >= din ? "Troco: " + brl(rec - din) : "Falta: " + brl(din - rec)) : "";
   $("#ac-rapido").innerHTML = din > 0 ? [din, ...[20, 30, 40, 50, 100].filter((v) => v > din)].map((v, i) => `<button class="btn mini" data-a="acRap" data-v="${v}">${i ? brl(v) : "Valor exato"}</button>`).join("") : "";
-  $("#ac-resumo").innerHTML = `<div class="ac-linha"><div class="ac-tot"><small>Receber agora</small><b>${brl(v1 + v2)}</b></div><div class="ac-chips">${v1 > 0 ? `<span class="ac-chip">${FIC[D.f1]} ${FORMAS[D.f1]} ${brl(v1)}</span>` : ""}${v2 > 0 ? `<span class="ac-chip">${FIC[D.f2]} ${FORMAS[D.f2]} ${brl(v2)}</span>` : ""}${!(v1 > 0 && v2 > 0) ? '<span class="ac-chip falta">digite quanto vai na 1ª forma</span>' : ""}</div></div>`;
-  const ok = v1 > 0 && v2 > 0 && D.f1 !== D.f2 && (din <= 0 || isNaN(rec) || rec >= din);
-  $("#ac-ok").disabled = !ok; $("#ac-ok").textContent = rotReceber(v1 + v2);
+  const naConta = D.f2 === "conta", nomeC = naConta && D.cli ? nomeCli(D.cli) : "";
+  $("#ac-resumo").innerHTML = `<div class="ac-linha"><div class="ac-tot"><small>Receber agora</small><b>${brl(naConta ? v1 : v1 + v2)}</b></div><div class="ac-chips">${v1 > 0 ? `<span class="ac-chip">${FIC[D.f1]} ${FORMAS[D.f1]} ${brl(v1)}</span>` : ""}${v2 > 0 ? `<span class="ac-chip">${naConta ? "📒 Na conta" + (nomeC ? " de " + esc(nomeC) : "") : FIC[D.f2] + " " + FORMAS[D.f2]} ${brl(v2)}</span>` : ""}${!(v1 > 0 && v2 > 0) ? '<span class="ac-chip falta">digite quanto vai na 1ª forma</span>' : ""}${naConta && !D.cli ? '<span class="ac-chip falta">escolha de quem é a conta</span>' : ""}</div></div>`;
+  const ok = v1 > 0 && v2 > 0 && D.f1 !== D.f2 && (!naConta || !!D.cli) && (din <= 0 || isNaN(rec) || rec >= din);
+  $("#ac-ok").disabled = !ok; $("#ac-ok").textContent = naConta ? `Receber ${brl(v1)} e marcar ${brl(v2)} na conta` : rotReceber(v1 + v2);
 }
+document.addEventListener("change", (e) => { if (e.target.id === "d2-cli" && acerto && acerto.duas) { acerto.duas.cli = e.target.value; d2Rodape(); } });
 document.addEventListener("input", (e) => { if (e.target.id === "d2-v1" && acerto && acerto.duas) { acerto.duas.v1 = e.target.value; d2Rodape(); } else if (e.target.id === "ac-rec" && acerto && acerto.duas) d2Rodape(); });
 async function receberDuas() {
   const D = acerto.duas, { p, v1, v2 } = d2Conta(), rec = parseFloat(String($("#ac-rec") ? $("#ac-rec").value : "").replace(",", ".")); $("#ac-ok").disabled = true;
   const antes = idsPags([p]);
-  const ok = await patch(p.id, { acertarValores: { partes: [{ forma: D.f1, valor: v1 }, { forma: D.f2, valor: v2 }], recebido: isNaN(rec) ? undefined : rec } });
+  const ok = await patch(p.id, { acertarValores: { partes: [{ forma: D.f1, valor: v1 }, D.f2 === "conta" ? { forma: "conta", valor: v2, clienteId: D.cli } : { forma: D.f2, valor: v2 }], recebido: isNaN(rec) ? undefined : rec } });
   if (ok) { aposVenda(); return depoisDeReceber([p], antes); }
   d2Rodape();
 }

@@ -40,21 +40,38 @@ function acertar(ped, sel, recebido, papel) { // sel = [{ iid, forma }]: cada it
 // pagar o que está em aberto com 2 (até 4) formas POR VALOR (ex.: marmita R$24 = R$18 no dinheiro + R$6 no Pix).
 // Cada parte vira um recebimento com o seu valor (o fechamento soma certo em cada forma); as partes ficam ligadas
 // por "dividido" e o estorno de uma desfaz todas.
-function acertarValores(ped, partes, recebido, papel) {
+// conta = { cli, valor }: uma parte vai pra CONTA de um cliente (dona 24/11: "paga R$14 e marca R$10 na conta da Gilmara", em qualquer pedido).
+// As outras partes são recebidas; o pedido fica "na conta" com o resto (valConta = valor - recebido) e um lançamento desse valor.
+function acertarValores(ped, partes, recebido, papel, conta) {
   if (ped.status !== "aguardando") return { s: 409, erro: "o pedido não está em aberto" };
   const abertos = ped.itens.filter((c) => !c.pago), total = cents(abertos.reduce((s, c) => s + valorItem(c), 0));
   if (!abertos.length) return { s: 400, erro: "nada em aberto" };
-  if (!Array.isArray(partes) || partes.length < 2 || partes.length > 4) return { s: 400, erro: "informe de 2 a 4 formas" };
+  if (!Array.isArray(partes) || partes.length < (conta ? 1 : 2) || partes.length > 4) return { s: 400, erro: "informe de 2 a 4 formas" };
   const ps = partes.map((x) => ({ forma: String(x && x.forma), valor: cents(Number(x && x.valor)) }));
   if (ps.some((x) => !FORMAS_VALIDAS.includes(x.forma) || !(x.valor > 0)) || new Set(ps.map((x) => x.forma)).size !== ps.length) return { s: 400, erro: "formas ou valores inválidos" };
-  if (Math.abs(cents(ps.reduce((s, x) => s + x.valor, 0)) - total) > 0.009) return { s: 400, erro: "a soma das partes tem que dar " + total.toFixed(2).replace(".", ",") };
+  if (conta && !(conta.valor > 0)) return { s: 400, erro: "valor da conta inválido" };
+  if (Math.abs(cents(ps.reduce((s, x) => s + x.valor, 0) + (conta ? conta.valor : 0)) - total) > 0.009) return { s: 400, erro: "a soma das partes tem que dar " + total.toFixed(2).replace(".", ",") };
   const agora = Date.now(), grupo = uid("d"), recs = ps.map((x) => ({ id: uid("g"), forma: x.forma, itens: abertos.map((c) => c.iid), valor: x.valor, dia: hoje(), quando: agora, operador: papel, dividido: grupo }));
   const din = recs.find((r) => r.forma === "dinheiro");
   if (din) { const rec = recebido === undefined || recebido === null || recebido === "" ? din.valor : cents(recebido); if (!(rec >= din.valor)) return { s: 400, erro: "o valor recebido é menor que a parte em dinheiro" }; din.recebido = rec; din.troco = cents(rec - din.valor); ped.recebido = rec; ped.troco = din.troco; }
   ped.pagamentos = ped.pagamentos || []; recs.forEach((r) => ped.pagamentos.push(r));
   abertos.forEach((c) => { c.pago = { forma: "dividido", pagId: recs[0].id, dividido: grupo, quando: agora }; });
+  if (conta) { // o resto vai pra conta do cliente: pedido "na conta" (só o resto é cobrado depois)
+    const jaPago = cents(ps.reduce((s, x) => s + x.valor, 0));
+    ped.status = "conta"; ped.clienteId = conta.cli.id; ped.clienteIds = [conta.cli.id]; ped.pagamento = "conta"; ped.contaParcial = grupo;
+    db.lancamentos = db.lancamentos.filter((l) => l.pedidoId !== ped.id);
+    db.lancamentos.push({ id: uid("l"), clienteId: conta.cli.id, dia: ped.dia, qtd: 0, valor: cents(conta.valor), obs: (rotuloPed(ped) + " (resto - já pago R$" + jaPago.toFixed(2).replace(".", ",") + ")").slice(0, 120), pedidoId: ped.id });
+    return { ok: true };
+  }
   fecharSePago(ped);
   return { ok: true };
+}
+const rotuloPed = (ped) => (ped.tipo === "delivery" ? "Delivery D" + ped.numero : ped.tipo !== "balanca" ? "Pedido #" + ped.numero : ped.numero > 10000 ? "Marmitex M" + (ped.numero - 10000) : "Comanda " + ped.numero);
+// desfez a conta de um pedido pago em parte + resto na conta: estorna as partes recebidas juntas (o pedido volta inteiro pro "em aberto")
+function desfazContaParcial(ped) {
+  const g = ped.contaParcial; if (!g) return; delete ped.contaParcial;
+  (ped.pagamentos || []).forEach((x) => { if (x.dividido === g && !x.estornado) x.estornado = { motivo: "desfez a conta (pago em parte + resto na conta)", quando: Date.now() }; });
+  ped.itens.forEach((c) => { if (c.pago && c.pago.dividido === g) delete c.pago; });
 }
 const TRANS = { aguardando: ["pago", "conta", "cancelado"], conta: ["aguardando", "cancelado"], pago: ["cancelado"], cancelado: [] }; // mudanças de estado permitidas
 // lê os dados. Se o pedidos.json estiver estragado (luz caiu no meio da gravação, disco...), usa o .tmp ou o backup mais novo.
@@ -660,7 +677,7 @@ async function tratar(req, res) {
     // apagou da conta o lançamento de um pedido marcado na conta e não sobrou nenhum: o pedido volta pro "em aberto" do caixa
     // (antes ficava "na conta" sem estar em conta nenhuma: sumia do caixa e a Gestão ainda contava como vendido na conta)
     const ped = l && l.pedidoId && db.pedidos.find((x) => x.id === l.pedidoId);
-    if (ped && ped.status === "conta" && !db.lancamentos.some((x) => x.pedidoId === ped.id)) { ped.status = "aguardando"; ped.clienteId = null; delete ped.clienteIds; ped.pagamento = null; delete ped.contaAuto; }
+    if (ped && ped.status === "conta" && !db.lancamentos.some((x) => x.pedidoId === ped.id)) { ped.status = "aguardando"; ped.clienteId = null; delete ped.clienteIds; ped.pagamento = null; delete ped.contaAuto; desfazContaParcial(ped); }
     await gravar(); return json(res, 200, { ok: true });
   }
   if (p === "/api/pagamentos" && req.method === "POST") {
@@ -890,7 +907,14 @@ async function tratar(req, res) {
       await gravar(); return json(res, 200, ped);
     }
     if (u.acertarValores !== undefined) {                        // pagar o que está em aberto com 2 formas, por valor
-      const r = acertarValores(ped, u.acertarValores && u.acertarValores.partes, u.acertarValores && u.acertarValores.recebido, req.papel); if (!r.ok) return json(res, r.s, { erro: r.erro });
+      const av = u.acertarValores || {}, todas = Array.isArray(av.partes) ? av.partes : [], pc = todas.filter((x) => x && x.forma === "conta");
+      let conta = null;
+      if (pc.length) { // uma das partes vai pra conta de um cliente
+        const cli = pc.length === 1 && db.clientes.find((x) => x.id === String(pc[0].clienteId || "") && x.ativo !== false);
+        if (!cli) return json(res, 400, { erro: "escolha de quem é a conta" });
+        conta = { cli, valor: cents(Number(pc[0].valor)) };
+      }
+      const r = acertarValores(ped, todas.filter((x) => !(x && x.forma === "conta")), av.recebido, req.papel, conta); if (!r.ok) return json(res, r.s, { erro: r.erro });
       await gravar(); return json(res, 200, ped);
     }
     if (u.estornarPagamento !== undefined) {                     // desfaz UM recebimento (os itens voltam a ficar em aberto)
@@ -953,7 +977,7 @@ async function tratar(req, res) {
     } else if (novo === "cancelado") {
       if (ped.status === "pago" || pagas.length) { const mot = String(u.motivo || "").trim(); if (mot.length < 3) return json(res, 400, { erro: "informe o motivo do estorno" }); ped.estorno = { motivo: mot.slice(0, 200), quando: Date.now() }; pagas.forEach((g) => { g.estornado = { motivo: mot.slice(0, 200), quando: Date.now() }; }); }
       ped.status = "cancelado"; tiraDaConta();
-    } else if (novo === "aguardando") { ped.status = "aguardando"; ped.clienteId = null; delete ped.clienteIds; ped.pagamento = null; tiraDaConta(); }
+    } else if (novo === "aguardando") { ped.status = "aguardando"; ped.clienteId = null; delete ped.clienteIds; ped.pagamento = null; tiraDaConta(); desfazContaParcial(ped); }
     else return json(res, 400, { erro: "status inválido" });
     await gravar(); return json(res, 200, ped);
   }

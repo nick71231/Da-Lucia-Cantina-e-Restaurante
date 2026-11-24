@@ -362,6 +362,16 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
     t(dv.s === 200 && dv.j.valor === 24 && a.preco === 14 && b.preco === 10 && errado.s === 400 && pg.s === 200 && ct.s === 200 && ct.j.status === "conta"
       && cs.lancamentos.some((l) => l.clienteId === gil.id && l.pedidoId === pt.id && l.valor === 10), "dividir valor: R$24 vira 14 + 10; paga 14 no Pix e os 10 vão pra conta de outra pessoa");
   }
+  { // pagar em 2 formas com o resto NA CONTA de alguém (dona 24/11), em qualquer pedido; desfazer a conta volta tudo pro em aberto
+    const gil = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "CONTA PARCIAL" }, tkD)).j, cm = (await reqEm(sd.base, "POST", "/api/balanca", { comanda: 779, valor: 50, uid: "cp1" }, tkD)).j;
+    const sem = await reqEm(sd.base, "PATCH", "/api/pedidos/" + cm.id, { acertarValores: { partes: [{ forma: "pix", valor: 30 }, { forma: "conta", valor: 20 }] } }, tkD);
+    const r = await reqEm(sd.base, "PATCH", "/api/pedidos/" + cm.id, { acertarValores: { partes: [{ forma: "pix", valor: 30 }, { forma: "conta", valor: 20, clienteId: gil.id }] } }, tkD);
+    const cs = (await reqEm(sd.base, "GET", "/api/contas", undefined, tkD)).j, rc = (await reqEm(sd.base, "GET", "/api/recebimentos?de=" + hoje, undefined, tkD)).j;
+    t(sem.s === 400 && r.s === 200 && r.j.status === "conta" && cs.lancamentos.filter((l) => l.pedidoId === cm.id).map((l) => l.valor).join() === "20" && cs.lancamentos.some((l) => l.clienteId === gil.id && l.pedidoId === cm.id)
+      && rc.filter((g) => g.pedidoId === cm.id).map((g) => g.forma + g.valor).join() === "pix30", "2 formas com o resto na conta: R$30 no Pix (recebido) e R$20 na conta do cliente");
+    const df = await reqEm(sd.base, "PATCH", "/api/pedidos/" + cm.id, { status: "aguardando" }, tkD), cs2 = (await reqEm(sd.base, "GET", "/api/contas", undefined, tkD)).j, rc2 = (await reqEm(sd.base, "GET", "/api/recebimentos?de=" + hoje, undefined, tkD)).j;
+    t(df.s === 200 && df.j.status === "aguardando" && df.j.itens.every((c) => !c.pago) && !cs2.lancamentos.some((l) => l.pedidoId === cm.id) && !rc2.some((g) => g.pedidoId === cm.id), "desfazer a conta: tira da conta e estorna a parte paga (a comanda volta inteira pro em aberto)");
+  }
   { // juntar cadastro repetido: lançamentos passam pro outro e o repetido some
     const a1 = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "LUIS ALMOCO", empresa: "OBRA X" }, tkD)).j, a2 = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "ALMOCO", empresa: "OBRA X" }, tkD)).j;
     await reqEm(sd.base, "POST", "/api/lancamentos", { clienteId: a1.id, dia: "2026-01-05", valor: 30 }, tkD);

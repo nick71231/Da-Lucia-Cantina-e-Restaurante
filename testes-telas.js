@@ -115,6 +115,19 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
     t(c.din === 110 && c.troco === 50 && c.traz === 160 && c.pix === 30 && c.car === 25 && c.nCar === 1 && c.taxas === 25 && c.total === 165,
       "motoboy: traz 40 + 50 + 20 (ainda não recebido) + 50 de troco = 160; o que o cliente pagou no Pix não entra no dinheiro: " + JSON.stringify(c));
   }
+  { // 2 formas com o resto NA CONTA (dona 24/11): a tela mostra "Na conta", pede o cliente e o botão diz o que vai acontecer
+    const cmT = await api("POST", "/api/balanca", { comanda: 881, valor: 24, uid: "tcp1" }, bl); await clica(w, '[data-aba="aberto"]'); await dorme(1200);
+    w.eval("abrirAcerto")(cmT.id); await dorme(300); await clica(w, '[data-a="d2Abrir"]'); await clica(w, '[data-a="d2Forma"][data-q="2"][data-f="conta"]'); await dorme(400);
+    const v1 = w.document.querySelector("#d2-v1"); v1.value = "14"; v1.dispatchEvent(new w.Event("input", { bubbles: true }));
+    const sel = w.document.querySelector("#d2-cli"), op = sel && [...sel.options].find((o) => o.textContent.includes("Elza"));
+    const bloqueado = w.document.querySelector("#ac-ok").disabled;
+    if (op) { sel.value = op.value; sel.dispatchEvent(new w.Event("change", { bubbles: true })); }
+    const bt = w.document.querySelector("#ac-ok");
+    t(!!op && bloqueado && !bt.disabled && /Receber R\$\s*14,00 e marcar R\$\s*10,00 na conta/.test(bt.textContent), "2 formas: 'Na conta' pede o cliente e o botão diz 'Receber R$14 e marcar R$10 na conta': " + bt.textContent);
+    await clica(w, "#ac-ok"); await dorme(800);
+    const cm2 = (await api("GET", "/api/pedidos?dia=" + hojeISO, undefined, cx)).find((p) => p.id === cmT.id);
+    t(cm2 && cm2.status === "conta", "2 formas com conta: a comanda fica 'na conta' com o resto");
+  }
   { // Fechamento: marmita/lançamento que foi direto pra conta (sem pedido "na conta") entra no "Marcado na conta" (23/11 mostrava 289 em vez de 589)
     const elza = (await api("GET", "/api/clientes", undefined, cx)).find((x) => x.nome === "Elza");
     await api("POST", "/api/lancamentos", { clienteId: elza.id, dia: hojeISO, valor: 61.5, obs: "1x marmita R$61,50 (WhatsApp)" }, cx);
