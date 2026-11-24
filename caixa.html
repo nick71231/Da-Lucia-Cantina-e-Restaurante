@@ -181,6 +181,46 @@ body.tec-on .modal.lado > .caixa-modal { max-height: none; height: calc(100vh - 
 .ac-conta { border-style: dashed !important; border-color: #e3a6a6 !important; color: var(--vermelho); } .ac-conta[hidden] { display: none; }
 .modal.lado .ac-rodape { background: #f6efe6; padding: 14px 22px 0; }
 .ac-imp { display: flex; align-items: center; gap: 8px; margin: 10px 0 0; font-size: .9rem; color: #7a5a48; cursor: pointer; } .ac-imp input { width: 20px; height: 20px; margin: 0; }
+/* cupom fiscal (NFC-e) */
+.cf-box { margin-top: 8px; padding: 10px 12px; border: 1px solid #eadfd3; border-radius: 14px; background: #fffaf4; }
+.cf-box .ac-imp { margin: 0 !important; font-weight: 700; color: #4a2f22; flex-wrap: wrap; }
+.cf-teste { font-size: .68rem; font-weight: 800; letter-spacing: .05em; background: #fff1cc; color: #7a4a00; padding: 2px 8px; border-radius: 999px; }
+.cf-falta { font-weight: 500; color: #a50f14; }
+.cf-op { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+.cf-op input { flex: 1 1 160px; min-width: 0; padding: 9px 12px; border: 1px solid #e2d6c9; border-radius: 10px; font-size: .95rem; background: #fff; }
+input.cf-ruim { border-color: #d9534f !important; background: #fff5f5 !important; }
+.cf-seg { display: inline-flex; gap: 4px; background: #f3ede6; padding: 3px; border-radius: 12px; }
+.cf-seg .btn { border: 0 !important; background: transparent !important; box-shadow: none !important; color: #7a5a48; }
+.cf-seg .btn.on { background: #fff !important; box-shadow: 0 1px 3px rgba(0,0,0,.14) !important; color: #2b1710; font-weight: 700; }
+.cf-st { display: grid; gap: 6px; margin: 6px 0 4px; }
+.cf-li { display: grid; grid-template-columns: 26px 118px 1fr; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: #f7f2ec; }
+.cf-li.ok { background: #e9f6ec; } .cf-li.ruim { background: #fde0e0; } .cf-li em { font-style: normal; color: #4a2f22; } .cf-li small { color: #7a5a48; }
+.cf-msg { margin-top: 12px; padding: 12px 14px; border-radius: 14px; font-weight: 600; background: #fff3d6; color: #7a3b00; }
+.cf-msg.ok { background: #e9f6ec; color: #16793a; } .cf-msg.ruim { background: #fde0e0; color: #a50f14; }
+.cf-aviso { background: #fff1cc; color: #7a4a00; padding: 8px 12px; border-radius: 12px; font-weight: 600; margin: 0 0 8px; }
+.cf-canc { font-size: .8rem; color: #a50f14; }
+/* separar por valor */
+.dv { display: grid; gap: 10px; }
+.dv-cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dv-cab b { font-size: 1.02rem; color: #2b1710; } .dv-cab small { display: block; color: #7a5a48; font-size: .82rem; }
+.dv-igual { display: inline-flex; align-items: center; gap: 4px; background: #f3ede6; padding: 3px; border-radius: 12px; }
+.dv-igual span { font-size: .78rem; color: #7a5a48; padding: 0 6px; }
+.dv-q { border: 0; background: transparent; padding: 6px 11px; border-radius: 9px; font-weight: 700; color: #4a2f22; cursor: pointer; font: inherit; font-weight: 700; }
+.dv-q:hover { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.dv-parte { border: 1px solid #eadfd3; border-radius: 14px; padding: 10px 12px; background: #fff; display: grid; gap: 8px; }
+.dv-parte.dv-ult { background: #fffaf4; border-style: dashed; }
+.dv-top { display: flex; align-items: center; gap: 10px; }
+.dv-top > b:first-child { font-size: .92rem; color: #4a2f22; min-width: 62px; }
+.dv-val { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; font-weight: 700; color: #7a5a48; }
+.dv-val input { width: 110px; padding: 8px 10px; border: 1px solid #e2d6c9; border-radius: 10px; font-size: 1.05rem; font-weight: 700; text-align: right; }
+.dv-resto { margin-left: auto; font-size: .8rem; color: #7a5a48; } .dv-vr { font-size: 1.08rem; color: #16793a; } .dv-vr.dv-neg { color: #a50f14; }
+.dv-x { border: 0; background: #f3ede6; color: #7a5a48; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-weight: 700; }
+.dv-fs { display: flex; flex-wrap: wrap; gap: 6px; }
+.dv-f { border: 1px solid #e2d6c9; background: #fff; color: #4a2f22; border-radius: 999px; padding: 6px 11px; font: inherit; font-size: .84rem; cursor: pointer; }
+.dv-f:hover { border-color: #c9b6a4; } .dv-f.on { background: #a50f14; border-color: #a50f14; color: #fff; font-weight: 700; }
+.dv-f.dv-fc { border-style: dashed; } .dv-f.dv-fc.on { border-style: solid; }
+.dv-cli { width: 100%; padding: 9px 10px; border: 1px solid #e2d6c9; border-radius: 10px; font: inherit; background: #fff; }
+.dv-pe { display: flex; gap: 8px; flex-wrap: wrap; } .dv-pe .btn { flex: 1; }
 .modal.lado .caixa-modal .acoes { background: #f6efe6; padding: 12px 22px 18px; }
 @media (max-width: 600px) { .modal.lado > .caixa-modal { border-radius: 0; border-left: 0; } .modal.lado .ac-tiles { grid-template-columns: repeat(2, 1fr); } }
 
@@ -649,7 +689,7 @@ nav { flex-wrap: wrap; }
   <div class="area">
   <div class="topo-fixo"><header><h1 id="titulo-aba">Em aberto</h1>
     <div class="filtros"><input id="busca" placeholder="Buscar nº ou nome"><input id="dia" type="date"></div>
-    <div class="hd-dir"><span id="status">...</span><button class="btn mini" data-a="parado" id="btn-parado" title="Aviso de pedido parado">⏱</button><button class="btn mini" data-a="somCx" id="som-cx" title="Som de pedido novo">🔔</button><button class="btn mini" data-a="impCx" title="Impressora do caixa">🖨</button></div>
+    <div class="hd-dir"><span id="status">...</span><button class="btn mini" data-a="parado" id="btn-parado" title="Aviso de pedido parado">⏱</button><button class="btn mini" data-a="somCx" id="som-cx" title="Som de pedido novo">🔔</button><button class="btn mini" data-a="cfConfig" title="Cupom fiscal (NFC-e)">🧾</button><button class="btn mini" data-a="impCx" title="Impressora do caixa">🖨</button></div>
   </header></div>
   <main id="lista"></main>
   </div>
@@ -701,7 +741,7 @@ async function entrar() {
   } catch (e) { $("#pin").value = ""; $("#pin").placeholder = "Sem conexão com o servidor"; }
 }
 // Painel (faturamento, mais vendidos) é só do dono: com a senha do caixa ele some (os números ficam na Gestão do site)
-function iniciar() { if (sessionStorage.getItem("caixaRole") !== "admin") document.querySelectorAll('[data-aba="painel"]').forEach((b) => b.remove()); $("#gate").hidden = true; $("#app").hidden = false; $("#dia").value = dia; focaBusca(); carregarClientes().then(() => carregar()).then(focaBusca); setInterval(carregar, 3000); avisoPadrao(); setTimeout(checarFiado, 4000); setInterval(checarFiado, 10 * 60e3); }
+function iniciar() { if (sessionStorage.getItem("caixaRole") !== "admin") document.querySelectorAll('[data-aba="painel"]').forEach((b) => b.remove()); $("#gate").hidden = true; $("#app").hidden = false; $("#dia").value = dia; focaBusca(); carregarClientes().then(() => carregar()).then(focaBusca); setInterval(carregar, 3000); avisoPadrao(); setTimeout(checarFiado, 4000); setInterval(checarFiado, 10 * 60e3); carregarFiscal(); }
 // "Em aberto": o cursor já fica na busca, pronto pra digitar o nº da comanda (não rouba de janela aberta nem de outro campo)
 function focaBusca() {
   setTimeout(() => {
@@ -766,7 +806,7 @@ function card(p) {
     : p.status === "conta" ? `<p class="pg">Na conta de <b>${esc((p.clienteIds && p.clienteIds.length ? p.clienteIds : [p.clienteId]).map(nomeCli).join(" + "))}</b>${pagsDe(p).length ? " - resto de <b>" + brl(valConta(p)) + "</b> (o resto já foi pago)" : ""} <button class="btn ruim" data-a="desfazConta" data-id="${p.id}">Desfazer</button></p>`
     // estornar = devolve o dinheiro e o pedido VOLTA PRO EM ABERTO (pra receber de novo do jeito certo). Cancelar é outra coisa.
     // Em 2+ formas: dá pra estornar cada uma, ou tudo
-    : p.status === "pago" ? `<p class="pg">Pago: ${gs.map(fmt).join(" + ")} às ${hora(p.pagoEm || p.quando)}</p><button class="btn mini" data-a="reimpComp" data-id="${p.id}">🖨 Comprovante</button> ${gs.length > 1 ? estornos + " " : ""}<button class="btn ruim mini" data-a="estornarPag" data-id="${p.id}" data-pag="*">↩️ ${gs.length > 1 ? "Estornar tudo" : "Estornar"} (volta pra em aberto)</button> <button class="btn ruim mini" data-a="cancelar" data-id="${p.id}">Cancelar pedido</button>` : "";
+    : p.status === "pago" ? `<p class="pg">Pago: ${gs.map(fmt).join(" + ")} às ${hora(p.pagoEm || p.quando)}</p><button class="btn mini" data-a="reimpComp" data-id="${p.id}">🖨 Comprovante</button> ${cfBts(p)}${gs.length > 1 ? estornos + " " : ""}<button class="btn ruim mini" data-a="estornarPag" data-id="${p.id}" data-pag="*">↩️ ${gs.length > 1 ? "Estornar tudo" : "Estornar"} (volta pra em aberto)</button> <button class="btn ruim mini" data-a="cancelar" data-id="${p.id}">Cancelar pedido</button>` : "";
   const rec = p.status === "aguardando" && p.itens.some((c) => !c.pago);
   return `<article class="card st-${p.status}${par ? " parado" : ""}${rec ? " clicavel" : ""}${juntar.has(p.id) ? " marcado" : ""}"${rec ? ` data-rec="${p.id}"` : ""}><div class="topo"><b class="num">${curto(p)}</b>${p.numeroLocal && p.numeroLocal !== p.numero ? `<small>ticket ${p.numeroLocal}</small>` : ""}<span class="nome">${esc(p.nome || "Sem nome")}${ehMarm(p) ? ' <span class="mm-tag">marmitex</span>' : ""}${ehDel(p) ? ' <span class="mm-tag dl-tag">delivery</span>' : ""}</span>${juntar.has(p.id) ? `<span class="jt-badge">🔗 juntar</span>` : ""}${par ? `<span class="par-badge">⏰ há ${fmtMin(minP)}</span>` : ""}<span class="hora">${hora(p.quando)}</span><b class="valor">${brl(p.valor)}</b></div>
     ${ehDel(p) ? infoDel(p) : ""}<ul>${p.itens.map(linha).join("")}</ul>${rodape}</article>`;
@@ -1642,7 +1682,7 @@ function cabecalhoLojaESC(img, dots, tel, lj) {
   let fs = 40; while (med("DA LÚCIA", `bold ${fs}px Georgia, serif`) > larg && fs > 16) fs -= 2;
   let fs2 = Math.round(fs * 0.5); while (med("Cantina & Restaurante", A(fs2)) > larg && fs2 > 10) fs2--;
   const ie = (t) => /^\s*(ie\b|i\.e\.|inscri)/i.test(t), info = [lj.razao, lj.cnpj ? "CNPJ: " + lj.cnpj : "", [lj.endereco, lj.cidade].filter(Boolean).join(" - "), lj.extra && !ie(lj.extra) ? lj.extra : "", tel].map((t) => String(t || "").trim()).filter(Boolean);
-  let fi = 19; while (fi > 15 && info.some((t) => med(t, A(fi)) > larg)) fi--; // tudo numa linha só (endereço + cidade juntos); se nem assim couber, a linha quebra
+  let fi = 22; while (fi > 18 && info.some((t) => med(t, A(fi)) > larg)) fi--; // letra maior (dona 24/11: +3); tudo numa linha só (endereço + cidade juntos); se nem assim couber, a linha quebra
   const linhas = [{ t: "DA LÚCIA", f: `bold ${fs}px Georgia, serif`, h: Math.round(fs * 1.15) }, { t: "Cantina & Restaurante", f: A(fs2), h: Math.round(fs2 * 1.5) }];
   info.forEach((t) => { let l = ""; t.split(/\s+/).forEach((p) => { const n = l ? l + " " + p : p; if (l && med(n, A(fi)) > larg) { linhas.push({ t: l, f: A(fi), h: Math.round(fi * 1.3) }); l = p; } else l = n; }); if (l) linhas.push({ t: l, f: A(fi), h: Math.round(fi * 1.3) }); });
   const th = linhas.reduce((s, l) => s + l.h, 0), H = Math.max(th, lh) + 8;
@@ -1707,6 +1747,7 @@ function escposDoc(L, k, img, tel, alto, lj) { // alto: letra em altura dupla (c
   const linha = (txt, o = {}) => { by.push(0x1B, 0x61, { l: 0, c: 1, r: 2 }[o.a || "l"], 0x1B, 0x45, o.b ? 1 : 0, 0x1B, 0x2D, o.u ? 1 : 0, 0x1D, 0x21, o.s === "alta" || alto ? 0x01 : 0); for (const ch of semAc(txt)) by.push(ch.charCodeAt(0)); by.push(0x0A); };
   L.forEach((o) => {
     if (o.hr) return linha("-".repeat(W));
+    if (o.qr) { by.push(0x1B, 0x61, 1, ...qrESC(o.qr), 0x0A); return; } // QR Code do cupom fiscal, centralizado
     if (o.det !== undefined) return quebraL(o.det, W - 3).forEach((t) => linha("   " + t));
     if (o.assin !== undefined) { by.push(0x1B, 0x64, 3); linha("_".repeat(W - 6), { a: "c" }); return linha("Assinatura: " + o.assin, { a: "c" }); }
     if (o.e !== undefined) {
@@ -1797,6 +1838,132 @@ function avisoImp(txt, tipo) {
   el.style.background = tipo === "ok" ? "#e9f6ec" : tipo === "erro" ? "#fde0e0" : "#fff3d6"; el.style.color = tipo === "ok" ? "#16793a" : tipo === "erro" ? "#a50f14" : "#7a3b00";
   if (tipo) el._t = setTimeout(() => (el.style.opacity = "0"), 2500);
 }
+// ===================== CUPOM FISCAL (NFC-e) - o servidor emite direto na SEFAZ-SP (fiscal.js) =====================
+// Na hora de receber: "🧾 Emitir cupom fiscal" + CPF (opcional) + Discriminado (cada item) ou Simples (1 linha REFEIÇÃO com o total).
+// Pedido já pago: botão "🧾 Cupom fiscal" no card. Configuração (certificado A1, teste x produção): botão 🧾 no topo.
+let fiscalSt = null, cfAgora = null;
+async function carregarFiscal() { if (!sessionStorage.getItem("caixaToken")) return; try { const r = await aut("/api/fiscal"); if (r.ok) fiscalSt = await r.json(); } catch (e) {} } // só depois de entrar (sem login o aut recarrega a página)
+const fiscalPronto = () => !!(fiscalSt && fiscalSt.configurado && fiscalSt.certificado);
+const cfBts = (p) => { // botões do cupom fiscal no card do pedido pago
+  if (!fiscalSt || !fiscalSt.configurado) return "";
+  const nf = p.nfce, canc30 = nf && Date.now() - (nf.quando || 0) < 30 * 60e3;
+  if (nf && nf.status === "autorizada") return `<button class="btn mini cf-bt" data-a="cfReimp" data-id="${p.id}" title="Imprimir de novo">🧾 Cupom nº ${nf.numero}${nf.amb === 2 ? " (teste)" : ""}</button> ${canc30 ? `<button class="btn ruim mini" data-a="cfCanc" data-id="${p.id}">Cancelar cupom</button> ` : ""}`;
+  return (nf && nf.status === "cancelada" ? `<span class="cf-canc">🧾 cupom nº ${nf.numero} cancelado</span> ` : "") + (fiscalPronto() ? `<button class="btn mini cf-bt" data-a="cfEmitir" data-id="${p.id}">🧾 ${nf ? "Emitir outro cupom" : "Cupom fiscal"}</button> ` : "");
+};
+const cfModo = () => { try { return localStorage.getItem("cxCfModo") === "simples" ? "simples" : "discriminado"; } catch (e) { return "discriminado"; } };
+const cpfFmt = (v) => { const s = String(v || "").replace(/\D/g, "").slice(0, 11); return s.replace(/^(\d{3})(\d)/, "$1.$2").replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3").replace(/\.(\d{3})(\d{1,2})$/, ".$1-$2"); };
+const cpfValido = (v) => { const s = String(v || "").replace(/\D/g, ""); if (s.length !== 11 || /^(\d)\1+$/.test(s)) return false; for (const t of [9, 10]) { let so = 0; for (let i = 0; i < t; i++) so += +s[i] * (t + 1 - i); if (((so * 10) % 11) % 10 !== +s[t]) return false; } return true; };
+const CF_EXPL = { discriminado: "Sai cada coisa na nota: marmitex, refrigerante, doce, sorvete…", simples: "Sai uma linha só na nota: REFEIÇÃO, com o valor total." };
+const segModo = (m) => `<div class="cf-seg">${["discriminado", "simples"].map((k) => `<button type="button" class="btn mini ${m === k ? "on" : ""}" data-a="cfModo" data-m="${k}" title="${CF_EXPL[k]}">${k === "discriminado" ? "📋 Discriminado" : "🍽 Simples"}</button>`).join("")}</div>`;
+function htmlCupomAcerto() { // bloco no rodapé do Receber
+  if (!fiscalSt || !fiscalSt.configurado) return "";
+  const ok = fiscalPronto();
+  return `<div class="cf-box" id="cf-box"><label class="ac-imp cf-lab"><input type="checkbox" id="cf-on" ${ok ? "" : "disabled"}> 🧾 Emitir cupom fiscal${fiscalSt.ambiente === 2 ? ' <span class="cf-teste">TESTE</span>' : ""}${ok ? "" : ' <small class="cf-falta">· falta instalar o certificado (botão 🧾 no topo)</small>'}</label>
+    <div class="cf-op" id="cf-op" hidden><input id="cf-cpf" inputmode="numeric" maxlength="14" placeholder="CPF na nota (opcional)" autocomplete="off">${segModo(cfModo())}</div></div>`;
+}
+function lerCupom() { // o que foi marcado no Receber (null = sem cupom)
+  const on = $("#cf-on"); if (!on || !on.checked) return null;
+  return { cpf: String(($("#cf-cpf") || {}).value || "").replace(/\D/g, ""), modo: cfModo() };
+}
+function cupomOk(cf) { if (cf && cf.cpf && !cpfValido(cf.cpf)) { alert("Esse CPF não está certo. Confira os números ou deixe em branco."); const i = $("#cf-cpf"); if (i) i.focus(); return false; } return true; }
+async function emitirCupom(ids, cpf, modo) {
+  avisoImp("🧾 Emitindo o cupom fiscal…", "");
+  try {
+    const r = await aut("/api/fiscal/emitir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids, cpf, modo }) }), j = await r.json().catch(() => ({}));
+    if (!r.ok) { avisoImp("✕ O cupom fiscal não saiu", "erro"); alert("O cupom fiscal não saiu:\n\n" + (j.erro || "erro desconhecido") + "\n\nDá pra tentar de novo pelo pedido, em Pagos (botão 🧾 Cupom fiscal)."); return null; }
+    avisoImp("✓ Cupom fiscal nº " + j.numero + " autorizado", "ok"); cachePed = {}; carregar(); imprimirCupom(j); return j;
+  } catch (e) { avisoImp("✕ Sem conexão com o servidor", "erro"); return null; }
+}
+const qrESC = (s) => { const d = [...String(s)].map((ch) => ch.charCodeAt(0) & 0xff), n = d.length + 3; // QR Code nativo da impressora (ESC/POS GS ( k)
+  return [0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00, 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x05, 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x30, 0x1D, 0x28, 0x6B, n & 0xff, (n >> 8) & 0xff, 0x31, 0x50, 0x30, ...d, 0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30]; };
+function cupomL(nf) { // DANFE NFC-e (layout do manual da SEFAZ, resumido pra bobina de 80 mm)
+  const dt = (ms) => { const d = new Date(ms); return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR"); }, v = (x) => brl(x).replace("R$", "").trim();
+  const PG = { dinheiro: "Dinheiro", credito: "Cartao de Credito", debito: "Cartao de Debito", refeicao: "Vale Refeicao", pix: "PIX", cartao: "Cartao" };
+  const L = [];
+  if (nf.status === "cancelada") L.push({ t: "*** CUPOM CANCELADO ***", a: "c", b: 1, s: "alta" });
+  L.push({ t: "Documento Auxiliar da Nota Fiscal", a: "c", b: 1 }, { t: "de Consumidor Eletronica", a: "c", b: 1 });
+  if (nf.amb === 2) L.push({ t: "EMITIDA EM AMBIENTE DE HOMOLOGACAO", a: "c", b: 1 }, { t: "SEM VALOR FISCAL", a: "c", b: 1 });
+  L.push({ hr: 1 }, { e: "Cod. Descricao", d: "Total R$", b: 1 });
+  (nf.linhas || []).forEach((l) => { L.push({ e: l.cProd + " " + l.xProd, d: v(l.v) }, { det: String(l.qtd).replace(".", ",") + " UN x " + v(l.un) }); });
+  L.push({ hr: 1 }, { e: "Qtd. total de itens", d: String((nf.linhas || []).length) }, { e: "VALOR TOTAL R$", d: v(nf.valor), b: 1, s: "alta" }, { e: "FORMA DE PAGAMENTO", d: "VALOR PAGO R$", b: 1 });
+  (nf.pagL || []).forEach((p) => L.push({ e: PG[p.forma] || p.forma, d: v(p.valor) }));
+  if (nf.troco > 0) L.push({ e: "Troco R$", d: v(nf.troco) });
+  L.push({ hr: 1 }, { t: "Consulte pela Chave de Acesso em", a: "c", b: 1 }, { t: nf.urlChave, a: "c" }, { t: String(nf.chave).replace(/(\d{4})(?=\d)/g, "$1 "), a: "c" }, { hr: 1 });
+  L.push({ t: nf.cpf ? "CONSUMIDOR - CPF: " + cpfFmt(nf.cpf) : "CONSUMIDOR NAO IDENTIFICADO", a: "c", b: 1 });
+  L.push({ t: "NFC-e n " + String(nf.numero).padStart(9, "0") + "  Serie " + String(nf.serie).padStart(3, "0"), a: "c", b: 1 }, { t: dt(nf.quando), a: "c" });
+  L.push({ t: "Protocolo de autorizacao: " + (nf.prot || "-"), a: "c" }, { t: "Data de autorizacao: " + dt(nf.dhAut ? Date.parse(nf.dhAut) : nf.quando), a: "c" }, { qr: nf.qr });
+  L.push({ t: "Tributos Totais Incidentes", a: "c" }, { t: "(Lei Federal 12.741/2012): R$ " + v(nf.vTotTrib || 0), a: "c" });
+  return L;
+}
+async function imprimirCupom(nf) {
+  if (!fiscalSt) await carregarFiscal();
+  const E = (fiscalSt && fiscalSt.emit) || {}, cnpj = String(E.CNPJ || "").replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+  const lj = { razao: E.xNome, cnpj, endereco: [E.xLgr, E.nro].filter(Boolean).join(", ") + (E.xBairro ? " - " + E.xBairro : ""), cidade: [E.xMun, E.UF].filter(Boolean).join(" - ") };
+  try { const k = await cfgImp(), img = await logoImp(k.logo); avisoImp("🖨 Imprimindo o cupom fiscal…", ""); const x = await mandarImp(escposDoc(cupomL(nf), k, img, null, false, lj)); avisoImp(x.ok ? "✓ Cupom fiscal impresso" : "✕ Não imprimiu: " + x.erro, x.ok ? "ok" : "erro"); }
+  catch (e) { avisoImp("✕ Não imprimiu o cupom", "erro"); }
+}
+function modalCupom(id) { // pedido já pago: emitir o cupom depois
+  const p = pedidos.find((x) => x.id === id); if (!p) return; const m = cfModo();
+  abrirModal(`<div class="cm-corpo"><h2>🧾 Cupom fiscal<small>${esc(rotComp(p))}${p.nome ? " · " + esc(p.nome) : ""} · ${brl(p.valor)}</small></h2>
+    ${fiscalSt && fiscalSt.ambiente === 2 ? '<p class="cf-aviso">🧪 Modo TESTE: o cupom sai com "sem valor fiscal".</p>' : ""}
+    <h4>CPF na nota <small>(opcional)</small></h4><input id="cf-cpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" autocomplete="off" style="width:100%">
+    <h4>Como sai na nota</h4>${segModo(m)}<p class="det-obs" id="cf-exp">${CF_EXPL[m]}</p></div>
+    <div class="acoes cm-rodape"><button class="btn" data-a="fechar">Voltar</button><button class="btn ok" data-a="cfEmitirOk" data-id="${esc(id)}">🧾 Emitir e imprimir</button></div>`);
+  setTimeout(() => { const i = $("#cf-cpf"); if (i) i.focus(); }, 50);
+}
+async function modalFiscal() { // botão 🧾 no topo: certificado, teste x produção, testar a SEFAZ
+  await carregarFiscal(); const S = fiscalSt || {}, adm = sessionStorage.getItem("caixaRole") === "admin", C = S.certificado;
+  const linha = (ic, t, v, cls) => `<div class="cf-li ${cls || ""}"><span>${ic}</span><b>${t}</b><em>${v}</em></div>`;
+  abrirModal(`<div class="cm-corpo"><h2>🧾 Cupom fiscal (NFC-e)<small>Emitido pelo caixa, direto na SEFAZ-SP · série ${S.serie || 2}</small></h2>
+    <div class="cf-st">${linha("🔐", "Certificado", C ? esc(C.nome) + "<br><small>válido até " + new Date(C.validade).toLocaleDateString("pt-BR") + "</small>" : "não instalado", C ? "ok" : "ruim")}
+      ${linha(S.ambiente === 1 ? "✅" : "🧪", "Ambiente", S.ambiente === 1 ? "Produção (vale como nota fiscal)" : "Teste (sem valor fiscal)", S.ambiente === 1 ? "ok" : "")}
+      ${linha("#️⃣", "Próximo cupom", "nº " + (S.proximo || 1) + " · série " + (S.serie || 2))}</div>
+    ${adm ? `<h4>Certificado digital A1</h4><p class="det-obs" style="margin:0 0 6px">Escolha o arquivo do certificado (.pfx ou .p12) e digite a senha. A senha não fica guardada em lugar nenhum.</p>
+      <input type="file" id="cf-arq" accept=".pfx,.p12" style="width:100%"><input type="password" id="cf-senha" placeholder="Senha do certificado" autocomplete="new-password" style="width:100%;margin-top:8px">
+      <button class="btn" data-a="cfInstalar" style="margin-top:8px">🔐 Instalar certificado</button>
+      <h4 style="margin-top:18px">Ambiente</h4><div class="cf-seg">${[[2, "🧪 Teste"], [1, "✅ Produção"]].map(([k, t]) => `<button type="button" class="btn mini ${S.ambiente === k ? "on" : ""}" data-a="cfAmb" data-v="${k}">${t}</button>`).join("")}</div>`
+      : `<p class="det-obs">Só o administrador instala o certificado e muda o ambiente.</p>`}
+    <div id="cf-msg" class="cf-msg" hidden></div></div>
+    <div class="acoes cm-rodape"><button class="btn" data-a="fechar">Fechar</button><button class="btn" data-a="cfSefaz" ${C ? "" : "disabled"}>🔌 Testar conexão com a SEFAZ</button></div>`);
+}
+const cfMsg = (h, tipo) => { const el = $("#cf-msg"); if (!el) return; el.hidden = false; el.innerHTML = h; el.className = "cf-msg " + (tipo || ""); };
+document.addEventListener("change", (e) => { if (e.target.id === "cf-on") { const o = $("#cf-op"); if (o) o.hidden = !e.target.checked; if (e.target.checked) setTimeout(() => { const i = $("#cf-cpf"); if (i) i.focus(); }, 30); } });
+document.addEventListener("input", (e) => { if (e.target.id === "cf-cpf") { const v = cpfFmt(e.target.value); if (v !== e.target.value) e.target.value = v; const s = v.replace(/\D/g, ""); e.target.classList.toggle("cf-ruim", s.length === 11 && !cpfValido(s)); } });
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("[data-a]"); if (!t) return; const a = t.dataset.a;
+  if (a === "cfConfig") modalFiscal();
+  else if (a === "cfModo") { try { localStorage.setItem("cxCfModo", t.dataset.m); } catch (er) {} document.querySelectorAll('[data-a="cfModo"]').forEach((b) => b.classList.toggle("on", b.dataset.m === t.dataset.m)); const x = $("#cf-exp"); if (x) x.textContent = CF_EXPL[t.dataset.m]; }
+  else if (a === "cfEmitir") modalCupom(t.dataset.id);
+  else if (a === "cfEmitirOk") { const cpf = String(($("#cf-cpf") || {}).value || "").replace(/\D/g, ""); if (cpf && !cpfValido(cpf)) return alert("Esse CPF não está certo. Confira os números ou deixe em branco."); t.disabled = true; const id = t.dataset.id, p = pedidos.find((x) => x.id === id); const ids = (p && p.nfcePedidos) || [id]; $("#modal").hidden = true; await emitirCupom(ids, cpf, cfModo()); }
+  else if (a === "cfReimp") { const p = pedidos.find((x) => x.id === t.dataset.id); if (p && p.nfce) imprimirCupom(p.nfce); }
+  else if (a === "cfCanc") {
+    const p = pedidos.find((x) => x.id === t.dataset.id); if (!p || !p.nfce) return;
+    const mot = prompt(`Cancelar o cupom fiscal nº ${p.nfce.numero} na SEFAZ?\n(só dá até 30 minutos depois de emitido)\n\nMotivo (pelo menos 15 letras):`, "Cliente desistiu da compra");
+    if (mot === null) return; if (mot.trim().length < 15) return alert("O motivo precisa ter pelo menos 15 letras.");
+    try { const r = await aut("/api/fiscal/cancelar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: p.id, motivo: mot.trim() }) }), j = await r.json().catch(() => ({}));
+      if (!r.ok) return alert("Não cancelou: " + (j.erro || "erro")); avisoImp("✓ Cupom fiscal nº " + p.nfce.numero + " cancelado", "ok"); cachePed = {}; carregar(); } catch (er) { alert("Sem conexão com o servidor."); }
+  }
+  else if (a === "cfInstalar") {
+    const f = $("#cf-arq") && $("#cf-arq").files[0], senha = ($("#cf-senha") || {}).value || "";
+    if (!f) return cfMsg("Escolha o arquivo do certificado (.pfx ou .p12).", "ruim"); if (!senha) return cfMsg("Digite a senha do certificado.", "ruim");
+    cfMsg("⏳ Instalando…"); t.disabled = true;
+    const b64 = await new Promise((ok) => { const rd = new FileReader(); rd.onload = () => ok(String(rd.result).split(",")[1] || ""); rd.onerror = () => ok(""); rd.readAsDataURL(f); });
+    try { const r = await aut("/api/fiscal/certificado", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pfx: b64, senha }) }), j = await r.json().catch(() => ({}));
+      t.disabled = false; if (!r.ok) return cfMsg("✕ " + esc(j.erro || "Não instalou."), "ruim");
+      await modalFiscal(); cfMsg("✓ Certificado instalado: " + esc(j.nome) + " (válido até " + new Date(j.validade).toLocaleDateString("pt-BR") + "). Agora toque em “Testar conexão com a SEFAZ”.", "ok");
+    } catch (er) { t.disabled = false; cfMsg("✕ Sem conexão com o servidor.", "ruim"); }
+  }
+  else if (a === "cfAmb") {
+    const v = Number(t.dataset.v); if (v === 1 && !confirm("Mudar para PRODUÇÃO?\n\nA partir de agora os cupons valem como nota fiscal de verdade.")) return;
+    try { const r = await aut("/api/fiscal/ambiente", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ambiente: v }) }); if (!r.ok) return cfMsg("✕ Não mudou.", "ruim"); await modalFiscal(); cfMsg(v === 1 ? "✅ Produção: os cupons agora valem como nota fiscal." : "🧪 Teste: os cupons saem sem valor fiscal.", "ok"); } catch (er) { cfMsg("✕ Sem conexão com o servidor.", "ruim"); }
+  }
+  else if (a === "cfSefaz") {
+    cfMsg("⏳ Falando com a SEFAZ…"); t.disabled = true;
+    try { const r = await aut("/api/fiscal/sefaz", { method: "POST" }), j = await r.json().catch(() => ({})); t.disabled = false;
+      cfMsg(r.ok ? (j.ok ? "✓ SEFAZ em operação (" + esc(j.cStat) + " - " + esc(j.xMotivo) + ")" : "⚠ SEFAZ respondeu: " + esc(j.cStat) + " - " + esc(j.xMotivo)) : "✕ " + esc(j.erro || "não respondeu"), r.ok && j.ok ? "ok" : "ruim");
+    } catch (er) { t.disabled = false; cfMsg("✕ Sem conexão com o servidor.", "ruim"); }
+  }
+});
 // ----- tela "Impressora do caixa" (botão 🖨 no topo) -----
 const ipOk = (ip) => { const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(String(ip || "").trim()); return !!m && m.slice(1).every((n) => +n <= 255); };
 function statusImpCx(html, tipo) { const el = $("#icx-st"); if (el) { el.innerHTML = html; el.style.background = tipo === "ok" ? "#e9f6ec" : tipo === "erro" ? "#fde0e0" : tipo === "testando" ? "#fff3d6" : "#f3ede6"; el.style.color = tipo === "ok" ? "#16793a" : tipo === "erro" ? "#a50f14" : tipo === "testando" ? "#7a3b00" : "#8a6f60"; } }
@@ -1956,6 +2123,7 @@ async function carregarBebidasCx() { // respeita o que o admin do totem ligou/de
   } catch (e) {}
 }
 carregarBebidasCx(); setInterval(carregarBebidasCx, 5 * 60000);
+carregarFiscal(); setInterval(carregarFiscal, 5 * 60000); // cupom fiscal: certificado instalado? teste ou produção?
 const CATS_DC = [["b", "Bebidas", "🥤"], ["s", "Sorvetes", "🍦"], ["d", "Doces", "🍬"]];
 const catalogo = () => [...bebidasCx.map((b) => ({ nome: b.nome, preco: Number(b.preco) || 0, c: "b" })), ...(typeof SORVETES !== "undefined" ? SORVETES : []).map((x) => ({ nome: x.nome, preco: x.preco, c: "s" })), ...DOCES.map(([nome, preco]) => ({ nome, preco, c: "d" }))];
 const filtraDc = (cat, q) => { q = semAcento(q || "").toLowerCase(); return catalogo().filter((x) => (cat === "t" || cat === x.c) && (!q || semAcento(x.nome).toLowerCase().includes(q))); };
@@ -1966,7 +2134,10 @@ const subAcerto = () => { const ps = acerto.ps; if (ps.length > 1) return ps.len
 // "imprimir o comprovante sempre": marcado, o Receber já imprime (não pergunta). Fica guardado neste computador.
 const impAuto = () => { try { return localStorage.getItem("cxImpAuto") === "1"; } catch (e) { return false; } };
 const rotReceber = (v) => (impAuto() ? "Receber · Imprimir " : "Receber ") + brl(v);
-function depoisDeReceber(ps, antes) { if (impAuto()) imprimirComprovante(ps.map((p) => p.id), antes, [...new Set(ps.map((p) => p.dia || dia))]); else oferecerComprovante(ps, antes); }
+function depoisDeReceber(ps, antes) {
+  if (cfAgora) { const c = cfAgora; cfAgora = null; emitirCupom(ps.map((p) => p.id), c.cpf, c.modo); return; } // pediu cupom fiscal: ele é o comprovante
+  if (impAuto()) imprimirComprovante(ps.map((p) => p.id), antes, [...new Set(ps.map((p) => p.dia || dia))]); else oferecerComprovante(ps, antes);
+}
 const tituloAcerto = () => { const um = (p) => rotPed(p) + (p.nome ? " - " + p.nome : ""); return acerto.ps.length === 1 ? um(acerto.ps[0]) : "Unificar: " + acerto.ps.map((p) => curto(p)).join(" + "); };
 function acAddItens(p) { p.itens.filter((c) => !c.pago).forEach((c) => { acerto.itens[kIt(p, c)] = { on: true, forma: acerto.padrao || "" }; }); }
 function abrirAcerto(ids) { // escolhe quais itens acertar e a forma de pagamento de cada um (aceita várias comandas juntas)
@@ -1986,21 +2157,10 @@ function abrirAcerto(ids) { // escolhe quais itens acertar e a forma de pagament
     </div>
     <div class="ac-rodape"><div id="ac-resumo"></div>
     <div id="ac-din" class="ac-din" hidden><span>💵 Dinheiro recebido</span><input id="ac-rec" inputmode="decimal" placeholder="R$ 0,00"> <b id="ac-tr"></b><div id="ac-rapido" class="ac-rapido"></div></div>
-    <label class="ac-imp"><input type="checkbox" id="ac-imp" ${impAuto() ? "checked" : ""}> 🖨 Imprimir o comprovante sempre que receber</label></div>
+    <label class="ac-imp"><input type="checkbox" id="ac-imp" ${impAuto() ? "checked" : ""}> 🖨 Imprimir o comprovante sempre que receber</label>${htmlCupomAcerto()}</div>
     <div class="acoes"><button class="btn" data-a="fechar">Voltar</button><button class="btn ok" id="ac-ok" data-a="acOk" disabled>Receber</button></div>`);
   $("#modal").classList.add("lado");
   atualizarAcerto();
-}
-// ✂ dividir o valor de um item em 2 partes (dona 24/11: marmitex de R$24 do Patrick, paga R$14 e R$10 vai pra conta da Gilmara).
-// Depois é só receber uma parte e marcar a outra na conta, com os botões de sempre.
-async function acDividir(pid, iid) {
-  const p = pedidos.find((x) => x.id === pid), c = p && p.itens.find((x) => x.iid === iid); if (!c) return;
-  const un = Number(c.preco), t = prompt(`Dividir ${c.qtd > 1 ? "1 unidade de " : ""}${c.nome} (${brl(un)}) em 2 partes.\n\nValor da 1ª parte (ex.: o que ele paga agora). O resto vira a 2ª parte:`, "");
-  if (t === null) return; const v = round2(parseFloat(String(t).replace(/[^0-9,.]/g, "").replace(",", ".")) || 0);
-  if (!(v > 0 && v < un)) return alert("Digite um valor maior que zero e menor que " + brl(un) + ".");
-  const ids = acerto ? acerto.ps.map((x) => x.id) : [pid];
-  if (!(await patch(pid, { dividirItem: { iid, valor: v } }))) return;
-  await carregar(); abrirAcerto(ids);
 }
 function atualizarAcerto() {
   const A = acerto; if (!A || !$("#ac-itens")) return;
@@ -2016,7 +2176,7 @@ function atualizarAcerto() {
     if (A.ps.length > 1) h += `<div class="ac-grupo"><b>${rotPed(p)}</b>${p.nome ? " - " + esc(p.nome) : ""}<button class="btn mini" data-a="acTira" data-id="${esc(p.id)}">Tirar</button></div>`;
     h += ab.map((c) => { const k = kIt(p, c), s = A.itens[k]; if (s.on) conta(valorIt(c), s.forma); else aberto += valorIt(c);
       return `<div class="ac-item ${s.on ? "on" : ""}"><button class="ac-chk ${s.on ? "on" : ""}" data-a="acItem" data-i="${esc(k)}">${s.on ? "✓" : ""}</button>
-      <span class="ac-nome"><b>${c.qtd}x ${esc(c.nome)}</b>${(c.grupos || []).length ? `<small>${esc((c.grupos || []).flatMap((g) => g.itens).join(", "))}</small>` : ""}${c.preco > 0.01 ? `<button class="btn mini ac-div" data-a="acDividir" data-id="${esc(p.id)}" data-iid="${esc(c.iid)}" title="Dividir o valor em 2 partes (ex.: paga R$14 agora e R$10 vai pra conta de alguém)">✂ dividir valor</button>` : ""}</span><b class="ac-val">${brl(valorIt(c))}</b>${bts(k, s.forma, !s.on)}</div>`; }).join("")
+      <span class="ac-nome"><b>${c.qtd}x ${esc(c.nome)}</b>${(c.grupos || []).length ? `<small>${esc((c.grupos || []).flatMap((g) => g.itens).join(", "))}</small>` : ""}</span><b class="ac-val">${brl(valorIt(c))}</b>${bts(k, s.forma, !s.on)}</div>`; }).join("")
       + (pg.length ? `<p class="dica">Já pagos: ${pg.map((c) => esc(c.nome) + " (" + (FORMAS[c.pago.forma] || c.pago.forma) + ")").join("; ")}</p>` : "");
   });
   const dl = Object.values(A.doces);
@@ -2030,7 +2190,7 @@ function atualizarAcerto() {
   const nAb = soma(A.ps, (p) => p.itens.filter((c) => !c.pago).length) + soma(dl, (d) => d.qtd), totAb = round2(soma(A.ps, (p) => soma(p.itens.filter((c) => !c.pago), valorIt)));
   if ($("#ac-nit")) $("#ac-nit").textContent = nAb + (nAb === 1 ? " item" : " itens");
   // Dividir / 2 formas ficam em "Outras opções" (embaixo das formas), não no meio da lista
-  if ($("#ac-mais-bts")) $("#ac-mais-bts").innerHTML = simples ? `<button class="btn ac-dividir" data-a="acDividir">✂ Dividir itens</button>${A.ps.length === 1 ? `<button class="btn ac-dividir ac-d2" data-a="d2Abrir">💵 + 💠 2 formas</button>` : ""}` : "";
+  if ($("#ac-mais-bts")) $("#ac-mais-bts").innerHTML = simples && A.ps.length === 1 ? `<button class="btn ac-dividir ac-d2" data-a="d2Abrir">➗ Separar por valor</button>` : "";
   if (simples) h = `<div class="ac-resumo-it">${A.ps.map((p) => (A.ps.length > 1 ? `<div class="ac-grupo"><b>${rotPed(p)}</b>${p.nome ? " - " + esc(p.nome) : ""}<button class="btn mini" data-a="acTira" data-id="${esc(p.id)}">Tirar</button></div>` : "") + p.itens.filter((c) => !c.pago).map((c) => `<div class="ac-li"><span>${c.qtd}x ${esc(c.nome)}</span><b>${brl(valorIt(c))}</b></div>`).join("")).join("")}<div class="ac-li-tot"><span>Total</span><b>${brl(totAb)}</b></div></div>`;
   else if (A.dividir) h += `<button class="btn ac-dividir" data-a="acJuntarTudo">↩ Voltar pro jeito simples</button>`;
   $("#ac-itens").innerHTML = h; total = round2(total); aberto = round2(aberto);
@@ -2095,42 +2255,74 @@ async function guardarDoces() {
 function aposVenda() { // volta pro campo de busca já pronto pra digitar a próxima comanda
   juntar.clear(); acerto = null; $("#modal").hidden = true; aba = "aberto"; const b = $("#busca"); b.value = ""; ultimoHtml = ""; desenhar(); setTimeout(() => b.focus(), 60);
 }
-// ----- pagar com 2 formas (por valor): ex. marmita R$24 = R$18 no dinheiro + R$6 no Pix -----
-const d2Conta = () => { const A = acerto, D = A.duas, p = A.ps[0], aberto = round2(soma(p.itens.filter((c) => !c.pago), valorIt)), v1 = Math.min(aberto, Math.max(0, parseFloat(String(D.v1).replace(",", ".")) || 0)); return { p, aberto, v1: round2(v1), v2: round2(aberto - v1) }; };
+// ----- SEPARAR POR VALOR (dona 24/11: "o jeito de separar é ruim, separa só por valor") -----
+// Até 4 partes, cada uma com o valor e a forma (Dinheiro, Pix, Crédito, Débito, Refeição ou 📒 Na conta de um cliente).
+// A última parte é sempre "o resto" (calcula sozinha). ÷2 ÷3 ÷4 divide igual. Partes com a mesma forma viram uma só no recebimento.
+const DV_FORMAS = [...FORMAS_PAG, "conta"], dvNome = (f) => (f === "conta" ? "Na conta" : FORMAS[f]), dvIc = (f) => (f === "conta" ? "📒" : FIC[f]);
+const dvNum = (v) => { const n = parseFloat(String(v == null ? "" : v).replace(/[^0-9,.]/g, "").replace(",", ".")); return isNaN(n) ? 0 : round2(n); };
+function dvConta() { // valores de cada parte (a última = o que falta)
+  const A = acerto, D = A.duas, p = A.ps[0], aberto = round2(soma(p.itens.filter((c) => !c.pago), valorIt));
+  const vs = D.partes.map((x, i) => (i < D.partes.length - 1 ? dvNum(x.v) : 0)), soAntes = round2(soma(vs, (v) => v));
+  vs[vs.length - 1] = round2(aberto - soAntes);
+  return { p, aberto, vs, sobra: soAntes > aberto + 0.001 };
+}
 function desenharDuas() {
-  const A = acerto, D = A.duas, { aberto, v2 } = d2Conta();
-  // 2ª forma também pode ser "📒 Na conta" de um cliente (dona 24/11: paga uma parte e o resto vai pra conta de alguém)
-  const tiles = (q, sel) => `<div class="ac-tiles d2-t">${FORMAS_PAG.map((k) => `<button class="btn ac-tile ${sel === k ? "on" : ""}" data-a="d2Forma" data-q="${q}" data-f="${k}"><i>${FIC[k]}</i>${FORMAS[k]}</button>`).join("")}${q === 2 ? `<button class="btn ac-tile ${sel === "conta" ? "on" : ""}" data-a="d2Forma" data-q="2" data-f="conta"><i>📒</i>Na conta</button>` : ""}</div>`;
-  if (D.f2 === "conta" && !clientes.length) carregarClientes().then(() => { if (acerto && acerto.duas) desenharDuas(); });
-  const cliSel = D.f2 === "conta" ? `<label class="d2-val">De quem é a conta?<select id="d2-cli"><option value="">— escolha o cliente —</option>${clientes.filter((c) => c.ativo !== false).sort((a, b) => a.nome.localeCompare(b.nome)).map((c) => `<option value="${esc(c.id)}" ${D.cli === c.id ? "selected" : ""}>${esc(c.nome)}${c.empresa && c.empresa !== c.nome ? " (" + esc(c.empresa) + ")" : ""}</option>`).join("")}</select></label>` : "";
-  $("#ac-itens").innerHTML = `<div class="d2"><div class="d2-tit">Pagar com 2 formas <b>total ${brl(aberto)}</b></div>
-    <div class="d2-passo"><span>1ª forma</span>${tiles(1, D.f1)}<label class="d2-val">Quanto em ${FORMAS[D.f1]}?<span class="cel-rs">R$<input id="d2-v1" inputmode="decimal" autocomplete="off" placeholder="0,00" value="${esc(D.v1)}"></span></label></div>
-    <div class="d2-passo"><span>O resto, <b id="d2-resto">${brl(v2)}</b>, vai em:</span>${tiles(2, D.f2)}${cliSel}</div>
-    <button class="btn ac-dividir" data-a="d2Sair">↩ Voltar pro jeito simples</button></div>`;
+  const A = acerto, D = A.duas, { aberto, vs } = dvConta(), n = D.partes.length;
+  if (D.partes.some((x) => x.f === "conta") && !clientes.length) carregarClientes().then(() => { if (acerto && acerto.duas) desenharDuas(); });
+  const cliSel = (i) => `<select class="dv-cli" data-i="${i}"><option value="">📒 De quem é a conta?</option>${clientes.filter((c) => c.ativo !== false).sort((a, b) => a.nome.localeCompare(b.nome)).map((c) => `<option value="${esc(c.id)}" ${D.cli === c.id ? "selected" : ""}>${esc(c.nome)}${c.empresa && c.empresa !== c.nome ? " (" + esc(c.empresa) + ")" : ""}</option>`).join("")}</select>`;
+  const parte = (x, i) => { const ult = i === n - 1, contaOutra = D.partes.some((y, k) => k !== i && y.f === "conta");
+    return `<div class="dv-parte ${ult ? "dv-ult" : ""}"><div class="dv-top"><b>${i + 1}ª parte</b>${ult ? `<span class="dv-resto">o resto</span><b class="dv-vr" id="dv-resto">${brl(vs[i])}</b>` : `<span class="dv-val">R$<input class="dv-v" data-i="${i}" inputmode="decimal" autocomplete="off" placeholder="0,00" value="${esc(x.v)}"></span>`}${n > 2 ? `<button type="button" class="dv-x" data-a="dvTira" data-i="${i}" title="Tirar esta parte">✕</button>` : ""}</div>
+      <div class="dv-fs">${DV_FORMAS.filter((f) => f !== "conta" || !contaOutra).map((f) => `<button type="button" class="dv-f ${x.f === f ? "on" : ""} ${f === "conta" ? "dv-fc" : ""}" data-a="dvForma" data-i="${i}" data-f="${f}">${dvIc(f)} ${dvNome(f)}</button>`).join("")}</div>${x.f === "conta" ? cliSel(i) : ""}</div>`; };
+  $("#ac-itens").innerHTML = `<div class="dv"><div class="dv-cab"><div><b>Separar por valor</b><small>total ${brl(aberto)}</small></div><div class="dv-igual"><span>Dividir igual:</span>${[2, 3, 4].map((k) => `<button type="button" class="dv-q" data-a="dvIgual" data-n="${k}">÷${k}</button>`).join("")}</div></div>
+    ${D.partes.map(parte).join("")}
+    <div class="dv-pe">${n < 4 ? `<button type="button" class="btn dv-mais" data-a="dvMais">＋ Mais uma parte</button>` : ""}<button type="button" class="btn dv-sair" data-a="d2Sair">↩ Pagar tudo junto</button></div></div>`;
   d2Rodape();
 }
 function d2Rodape() {
-  const D = acerto.duas, { v1, v2 } = d2Conta(), din = D.f1 === "dinheiro" ? v1 : D.f2 === "dinheiro" ? v2 : 0, rec = parseFloat(String($("#ac-rec") ? $("#ac-rec").value : "").replace(",", "."));
-  if ($("#d2-resto")) $("#d2-resto").textContent = brl(v2);
+  const D = acerto.duas, { vs, sobra } = dvConta(), rec = parseFloat(String($("#ac-rec") ? $("#ac-rec").value : "").replace(",", "."));
+  const din = round2(soma(D.partes.map((x, i) => (x.f === "dinheiro" ? vs[i] : 0)), (v) => v)), conta = round2(soma(D.partes.map((x, i) => (x.f === "conta" ? vs[i] : 0)), (v) => v)), agora = round2(soma(vs, (v) => v) - conta);
+  if ($("#dv-resto")) { $("#dv-resto").textContent = brl(vs[vs.length - 1]); $("#dv-resto").classList.toggle("dv-neg", vs[vs.length - 1] <= 0); }
   $("#ac-din").hidden = !(din > 0); $("#ac-tr").textContent = din > 0 && !isNaN(rec) ? (rec >= din ? "Troco: " + brl(rec - din) : "Falta: " + brl(din - rec)) : "";
   $("#ac-rapido").innerHTML = din > 0 ? [din, ...[20, 30, 40, 50, 100].filter((v) => v > din)].map((v, i) => `<button class="btn mini" data-a="acRap" data-v="${v}">${i ? brl(v) : "Valor exato"}</button>`).join("") : "";
-  const naConta = D.f2 === "conta", nomeC = naConta && D.cli ? nomeCli(D.cli) : "";
-  $("#ac-resumo").innerHTML = `<div class="ac-linha"><div class="ac-tot"><small>Receber agora</small><b>${brl(naConta ? v1 : v1 + v2)}</b></div><div class="ac-chips">${v1 > 0 ? `<span class="ac-chip">${FIC[D.f1]} ${FORMAS[D.f1]} ${brl(v1)}</span>` : ""}${v2 > 0 ? `<span class="ac-chip">${naConta ? "📒 Na conta" + (nomeC ? " de " + esc(nomeC) : "") : FIC[D.f2] + " " + FORMAS[D.f2]} ${brl(v2)}</span>` : ""}${!(v1 > 0 && v2 > 0) ? '<span class="ac-chip falta">digite quanto vai na 1ª forma</span>' : ""}${naConta && !D.cli ? '<span class="ac-chip falta">escolha de quem é a conta</span>' : ""}</div></div>`;
-  const ok = v1 > 0 && v2 > 0 && D.f1 !== D.f2 && (!naConta || !!D.cli) && (din <= 0 || isNaN(rec) || rec >= din);
-  $("#ac-ok").disabled = !ok; $("#ac-ok").textContent = naConta ? `Receber ${brl(v1)} e marcar ${brl(v2)} na conta` : rotReceber(v1 + v2);
+  const porF = {}; D.partes.forEach((x, i) => { if (vs[i] > 0) porF[x.f] = round2((porF[x.f] || 0) + vs[i]); });
+  const faltaV = D.partes.slice(0, -1).some((x) => !(dvNum(x.v) > 0)), semCli = D.partes.some((x) => x.f === "conta") && !D.cli;
+  const avisos = [faltaV ? "digite o valor de cada parte" : "", sobra || vs[vs.length - 1] <= 0 ? "as partes passaram do total" : "", semCli ? "escolha de quem é a conta" : ""].filter(Boolean);
+  $("#ac-resumo").innerHTML = `<div class="ac-linha"><div class="ac-tot"><small>Receber agora</small><b>${brl(agora)}</b></div><div class="ac-chips">${Object.entries(porF).map(([f, v]) => `<span class="ac-chip">${dvIc(f)} ${f === "conta" && D.cli ? "Conta de " + esc(nomeCli(D.cli)) : dvNome(f)} ${brl(v)}</span>`).join("")}${avisos.map((t) => `<span class="ac-chip falta">${t}</span>`).join("")}</div></div>`;
+  const ok = !avisos.length && (din <= 0 || isNaN(rec) || rec >= din);
+  $("#ac-ok").disabled = !ok; $("#ac-ok").textContent = conta > 0 ? `Receber ${brl(agora)} e marcar ${brl(conta)} na conta` : rotReceber(agora);
 }
-document.addEventListener("change", (e) => { if (e.target.id === "d2-cli" && acerto && acerto.duas) { acerto.duas.cli = e.target.value; d2Rodape(); } });
-document.addEventListener("input", (e) => { if (e.target.id === "d2-v1" && acerto && acerto.duas) { acerto.duas.v1 = e.target.value; d2Rodape(); } else if (e.target.id === "ac-rec" && acerto && acerto.duas) d2Rodape(); });
-async function receberDuas() {
-  const D = acerto.duas, { p, v1, v2 } = d2Conta(), rec = parseFloat(String($("#ac-rec") ? $("#ac-rec").value : "").replace(",", ".")); $("#ac-ok").disabled = true;
-  const antes = idsPags([p]);
-  const ok = await patch(p.id, { acertarValores: { partes: [{ forma: D.f1, valor: v1 }, D.f2 === "conta" ? { forma: "conta", valor: v2, clienteId: D.cli } : { forma: D.f2, valor: v2 }], recebido: isNaN(rec) ? undefined : rec } });
-  if (ok) { aposVenda(); return depoisDeReceber([p], antes); }
+document.addEventListener("change", (e) => { if (e.target.classList && e.target.classList.contains("dv-cli") && acerto && acerto.duas) { acerto.duas.cli = e.target.value; d2Rodape(); } });
+document.addEventListener("input", (e) => {
+  if (!acerto || !acerto.duas) return;
+  if (e.target.classList && e.target.classList.contains("dv-v")) { acerto.duas.partes[+e.target.dataset.i].v = e.target.value; d2Rodape(); }
+  else if (e.target.id === "ac-rec") d2Rodape();
+});
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-a]"); if (!t || !acerto || !acerto.duas) return; const D = acerto.duas, a = t.dataset.a, i = +t.dataset.i;
+  if (a === "dvForma") { D.partes[i].f = t.dataset.f; if (t.dataset.f !== "conta" && !D.partes.some((x) => x.f === "conta")) D.cli = ""; desenharDuas(); }
+  else if (a === "dvMais" && D.partes.length < 4) { const usadas = new Set(D.partes.map((x) => x.f)); D.partes.push({ f: FORMAS_PAG.find((f) => !usadas.has(f)) || "pix", v: "" }); desenharDuas(); focaParte(D.partes.length - 2); }
+  else if (a === "dvTira" && D.partes.length > 2) { D.partes.splice(i, 1); if (!D.partes.some((x) => x.f === "conta")) D.cli = ""; desenharDuas(); }
+  else if (a === "dvIgual") { const k = +t.dataset.n, { aberto } = dvConta(), cada = Math.floor((aberto / k) * 100) / 100;
+    while (D.partes.length < k) { const usadas = new Set(D.partes.map((x) => x.f)); D.partes.push({ f: FORMAS_PAG.find((f) => !usadas.has(f)) || "pix", v: "" }); }
+    D.partes = D.partes.slice(0, k); D.partes.forEach((x, j) => { x.v = j < k - 1 ? cada.toFixed(2).replace(".", ",") : ""; }); desenharDuas(); }
+});
+const focaParte = (i) => setTimeout(() => { const el = document.querySelector(`.dv-v[data-i="${i}"]`); if (el) { el.focus(); el.select(); } }, 30);
+async function receberDuas(cf) {
+  const D = acerto.duas, { p, vs } = dvConta(), rec = parseFloat(String($("#ac-rec") ? $("#ac-rec").value : "").replace(",", ".")); $("#ac-ok").disabled = true;
+  const cIdx = D.partes.findIndex((x) => x.f === "conta");
+  if (cf && cIdx >= 0) { alert("Com uma parte na conta, o cupom fiscal sai depois, quando a conta for paga. Desmarque o cupom fiscal pra continuar."); $("#ac-ok").disabled = false; return; }
+  const porF = {}; D.partes.forEach((x, i) => { if (x.f !== "conta" && vs[i] > 0) porF[x.f] = round2((porF[x.f] || 0) + vs[i]); }); // mesma forma em 2 partes = 1 recebimento
+  const partes = Object.entries(porF).map(([forma, valor]) => ({ forma, valor })); if (cIdx >= 0) partes.push({ forma: "conta", valor: vs[cIdx], clienteId: D.cli });
+  const antes = idsPags([p]), recebido = isNaN(rec) ? undefined : rec;
+  const ok = partes.length === 1 && cIdx < 0 ? await patch(p.id, { status: "pago", pagamento: partes[0].forma, recebido }) // tudo na mesma forma: pagamento simples
+    : await patch(p.id, { acertarValores: { partes, recebido } });
+  if (ok) { cfAgora = cf || null; aposVenda(); return depoisDeReceber([p], antes); }
   d2Rodape();
 }
 async function receberAcerto() {
   const A = acerto; if (!A) return;
-  if (A.duas) return receberDuas(); $("#ac-ok").disabled = true;
+  const cf = lerCupom(); if (!cupomOk(cf)) return; // cupom fiscal marcado: CPF certo (ou vazio)
+  if (A.duas) return receberDuas(cf); $("#ac-ok").disabled = true;
   const rec = parseFloat(($("#ac-rec").value || "").replace(",", ".")), dl = Object.values(A.doces).filter((d) => d.qtd > 0), grupos = [];
   A.ps.forEach((p) => { const lista = p.itens.filter((x) => !x.pago && A.itens[kIt(p, x)].on).map((x) => ({ iid: x.iid, forma: A.itens[kIt(p, x)].forma, v: valorIt(x) })); if (lista.length) grupos.push({ p, lista }); });
   let novo = null;
@@ -2150,7 +2342,7 @@ async function receberAcerto() {
     const din = round2(soma(g.lista.filter((x) => x.forma === "dinheiro"), (x) => x.v)), recebido = grupos.length === 1 ? (isNaN(rec) ? undefined : rec) : (din > 0 ? din : undefined);
     if (!(await patch(g.p.id, { acertar: g.lista.map((x) => ({ iid: x.iid, forma: x.forma })), recebido }))) { falhou = true; break; }
   }
-  if (!falhou) { aposVenda(); return depoisDeReceber(grupos.map((g) => g.p), antes); }
+  if (!falhou) { cfAgora = cf; aposVenda(); return depoisDeReceber(grupos.map((g) => g.p), antes); }
   await esperaCarregar(); abrirAcerto([...A.ps.map((p) => p.id), ...(novo ? [novo.id] : [])]); // sobrou algo sem receber: reabre só com o que falta
 }
 async function desenharPainel() {
@@ -2252,9 +2444,8 @@ document.addEventListener("click", async (e) => {
   else if (a === "acSet") { acerto.padrao = d.f; acerto.focoDin = d.f === "dinheiro"; Object.values(acerto.itens).forEach((x) => { if (x.on) x.forma = d.f; }); Object.values(acerto.doces).forEach((x) => (x.forma = d.f)); atualizarAcerto(); }
   else if (a === "acTodos") { Object.values(acerto.itens).forEach((x) => (x.on = d.v === "1")); atualizarAcerto(); }
   else if (a === "acOk") receberAcerto();
-  else if (a === "d2Abrir" && acerto) { acerto.duas = { f1: "dinheiro", v1: "", f2: "pix" }; atualizarAcerto(); setTimeout(() => { const i = $("#d2-v1"); if (i) i.focus(); }, 30); }
+  else if (a === "d2Abrir" && acerto) { acerto.duas = { partes: [{ f: "dinheiro", v: "" }, { f: "pix", v: "" }], cli: "" }; atualizarAcerto(); focaParte(0); }
   else if (a === "d2Sair" && acerto) { acerto.duas = null; atualizarAcerto(); }
-  else if (a === "d2Forma" && acerto && acerto.duas) { const D = acerto.duas; if (d.q === "1") { D.f1 = d.f; if (D.f2 === d.f) D.f2 = FORMAS_PAG.find((k) => k !== d.f); } else { D.f2 = d.f; if (D.f1 === d.f) D.f1 = FORMAS_PAG.find((k) => k !== d.f); } atualizarAcerto(); }
   else if (a === "estornarPag") pedirMotivo(d.id, d.pag);
   else if (a === "reimpComp") { const p = pedidos.find((x) => x.id === d.id); if (p) reimprimirComprovante(p); }
   else if (a === "gAbrir") { const v = num("#g-val"); if (!(v >= 0)) return alert("Digite o troco inicial."); gavetaAcao({ acao: "abrir", valor: v }); }
@@ -2477,7 +2668,6 @@ document.addEventListener("click", (e) => {
   else if (a === "juntaRec") abrirAcerto([...juntar]);
   else if (!A) return;
   else if (a === "acJunta") acJuntar();
-  else if (a === "acDividir") acDividir(d.id, d.iid);
   else if (a === "acTira") { if (A.ps.length < 2) return; const p = A.ps.find((x) => x.id === d.id); A.ps = A.ps.filter((x) => x.id !== d.id); if (p) p.itens.forEach((c) => delete A.itens[kIt(p, c)]); atualizarAcerto(); }
   else if (a === "acRap") { $("#ac-rec").value = Number(d.v).toFixed(2).replace(".", ","); atualizarAcerto(); }
   else if (a === "dcAbrir" || a === "dcFechar") { A.picker = a === "dcAbrir" ? !A.picker : false; atualizarAcerto(); if (A.picker) { const b = $("#dc-busca"); if (b) { b.focus(); b.select(); } } }

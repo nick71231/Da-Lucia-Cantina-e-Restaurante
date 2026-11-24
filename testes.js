@@ -1,6 +1,6 @@
 // Testes automáticos do servidor. Rodar:  node testes.js
 // Sobe um servidor de teste numa porta e pasta temporárias (NÃO mexe nos seus dados reais).
-const { spawn } = require("child_process"), fs = require("fs"), os = require("os"), path = require("path");
+const { spawn } = require("child_process"), fs = require("fs"), os = require("os"), path = require("path"), http = require("http");
 const { restaurar } = require("./restaurar");
 const PORTA = 3999, B = "http://localhost:" + PORTA, dir = fs.mkdtempSync(path.join(os.tmpdir(), "totem-teste-"));
 let ok = 0, falhas = 0; const extras = [];
@@ -400,6 +400,62 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
     const se = sobe(3991, dE); await se.pronto; const sa2 = (await reqEm(se.base, "GET", "/api/saude", undefined, "")).j;
     t(sa2.clientes === 1 && fs.readdirSync(dE).some((a) => a.startsWith("pedidos.json.estragado-")), "pedidos.json estragado: liga com o backup (antes ligava vazio e apagava tudo na próxima gravação)");
     se.srv.kill(); }
+
+  console.log("\nCupom fiscal (NFC-e) com uma SEFAZ de mentira");
+  { // certificado de teste (openssl do Git), SEFAZ de mentira em http://localhost:3990, servidor com a configuração fiscal
+    const osl = ["C:\\Program Files\\Git\\usr\\bin\\openssl.exe", "C:\\Program Files\\Git\\mingw64\\bin\\openssl.exe"].find((x) => fs.existsSync(x));
+    if (!osl) { falhas++; console.log("  FALHOU cupom fiscal: não achei o openssl (Git) pra criar o certificado de teste"); }
+    else {
+      const dF = fs.mkdtempSync(path.join(os.tmpdir(), "totem-fiscal-")), { execFileSync } = require("child_process");
+      execFileSync(osl, ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", path.join(dF, "k.pem"), "-out", path.join(dF, "c.pem"), "-days", "30", "-subj", "/CN=TESTE:20128902000115"], { stdio: "ignore" });
+      execFileSync(osl, ["pkcs12", "-export", "-inkey", path.join(dF, "k.pem"), "-in", path.join(dF, "c.pem"), "-out", path.join(dF, "t.p12"), "-passout", "pass:senha123"], { stdio: "ignore" });
+      fs.writeFileSync(path.join(dF, "fiscal.json"), JSON.stringify({ cnpj: "20128902000115", cscId: "000001", csc: "CSC-TESTE", serie: 2, ambiente: 2, numeros: {}, emit: { CNPJ: "20128902000115", xNome: "RESTAURANTE TESTE", xLgr: "AV TESTE", nro: "1", xBairro: "CENTRO", cMun: "3508603", xMun: "CACHOEIRA PAULISTA", UF: "SP", CEP: "12630000", IE: "235000000000", CRT: "1" } }));
+      const recebidas = []; let nProt = 135000000000000;
+      const sefaz = http.createServer((q, s) => { let b = ""; q.on("data", (d) => (b += d)); q.on("end", () => {
+        recebidas.push({ url: q.url, b }); const ch = (b.match(/Id="NFe(\d{44})"/) || b.match(/<chNFe>(\d{44})/) || [])[1];
+        const corpo = /NFeStatusServico4/.test(q.url) ? "<retConsStatServ><cStat>107</cStat><xMotivo>Servico em Operacao</xMotivo></retConsStatServ>"
+          : /NFeAutorizacao4/.test(q.url) ? (/<nNF>3<\/nNF>/.test(b) ? "<retEnviNFe><cStat>104</cStat><protNFe versao=\"4.00\"><infProt><cStat>539</cStat><xMotivo>Duplicidade de NF-e</xMotivo></infProt></protNFe></retEnviNFe>"
+            : `<retEnviNFe><cStat>104</cStat><xMotivo>Lote processado</xMotivo><protNFe versao="4.00"><infProt><tpAmb>2</tpAmb><chNFe>${ch}</chNFe><dhRecbto>2026-11-24T12:00:00-03:00</dhRecbto><nProt>${++nProt}</nProt><cStat>100</cStat><xMotivo>Autorizado o uso da NF-e</xMotivo></infProt></protNFe></retEnviNFe>`)
+          : /NFeRecepcaoEvento4/.test(q.url) ? `<retEnvEvento><cStat>128</cStat><retEvento><infEvento><cStat>135</cStat><xMotivo>Evento registrado</xMotivo><nProt>${++nProt}</nProt></infEvento></retEvento></retEnvEvento>` : "<x><cStat>999</cStat></x>";
+        s.writeHead(200, { "Content-Type": "application/soap+xml" }); s.end(`<soap:Envelope><soap:Body><nfeResultMsg>${corpo}</nfeResultMsg></soap:Body></soap:Envelope>`); }); }).listen(3990);
+      const sf = sobe(3989, dF, { SEFAZ_TESTE: "http://localhost:3990/ws/" }); await sf.pronto;
+      const adm = (await reqEm(sf.base, "POST", "/api/login", { role: "admin", pin: "12345" }, "")).j.token, cxT = (await reqEm(sf.base, "POST", "/api/login", { role: "caixa", pin: "2222" }, "")).j.token;
+      const p12 = fs.readFileSync(path.join(dF, "t.p12")).toString("base64");
+      const certErr = await reqEm(sf.base, "POST", "/api/fiscal/certificado", { pfx: p12, senha: "errada" }, adm), certCx = await reqEm(sf.base, "POST", "/api/fiscal/certificado", { pfx: p12, senha: "senha123" }, cxT);
+      const cert = await reqEm(sf.base, "POST", "/api/fiscal/certificado", { pfx: p12, senha: "senha123" }, adm);
+      t(certErr.s === 400 && /senha errada/.test(certErr.j.erro) && certCx.s === 403 && cert.s === 200 && /20128902000115/.test(cert.j.nome) && !fs.readdirSync(dF).some((a) => /\.p12$/.test(a) && a !== "t.p12"), "certificado: senha errada recusa, só o admin instala, a senha e o .pfx não ficam guardados");
+      const st = await reqEm(sf.base, "POST", "/api/fiscal/sefaz", {}, cxT);
+      t(st.s === 200 && st.j.ok && st.j.cStat === "107", "testar conexão com a SEFAZ: em operação");
+      const cm = (await reqEm(sf.base, "POST", "/api/balanca", { comanda: 50, valor: 31.2, peso: 520, uid: "nf1" }, cxT)).j;
+      await reqEm(sf.base, "POST", "/api/balanca", { comanda: 50, valor: 6, nome: "Coca-Cola Lata", uid: "nf2" }, cxT);
+      const aberto = await reqEm(sf.base, "POST", "/api/fiscal/emitir", { ids: [cm.id] }, cxT);
+      const it = (await reqEm(sf.base, "GET", "/api/pedidos?dia=" + hoje, undefined, cxT)).j.find((x) => x.id === cm.id).itens;
+      await reqEm(sf.base, "PATCH", "/api/pedidos/" + cm.id, { acertar: it.map((c) => ({ iid: c.iid, forma: "dinheiro" })), recebido: 50 }, cxT);
+      const cpfRuim = await reqEm(sf.base, "POST", "/api/fiscal/emitir", { ids: [cm.id], cpf: "11111111111" }, cxT);
+      const nf = await reqEm(sf.base, "POST", "/api/fiscal/emitir", { ids: [cm.id], cpf: "529.982.247-25", modo: "discriminado" }, cxT), env = recebidas.filter((x) => /NFeAutorizacao4/.test(x.url)).pop();
+      t(aberto.s === 409 && cpfRuim.s === 400 && nf.s === 200 && nf.j.numero === 1 && nf.j.serie === 2 && nf.j.chave.length === 44 && nf.j.prot && nf.j.cpf === "52998224725"
+        && /<CPF>52998224725<\/CPF>/.test(env.b) && /<det nItem="2">[\s\S]*<CFOP>5405<\/CFOP>/.test(env.b) && /<tPag>01<\/tPag><vPag>50.00<\/vPag>[\s\S]*<vTroco>12.80<\/vTroco>/.test(env.b) && /<vNF>37.20<\/vNF>/.test(env.b),
+        "emitir: só pedido pago, CPF conferido; nº 1 série 2 autorizado (prato kg + coca lata 5405, dinheiro 50 com troco 12,80)");
+      const xmls = fs.readdirSync(path.join(dF, "nfce", "homologacao", hoje.slice(0, 7)));
+      const dup = await reqEm(sf.base, "POST", "/api/fiscal/emitir", { ids: [cm.id] }, cxT), ped = (await reqEm(sf.base, "GET", "/api/pedidos?dia=" + hoje, undefined, cxT)).j.find((x) => x.id === cm.id);
+      t(xmls.includes(nf.j.chave + "-procNFe.xml") && dup.s === 409 && ped.nfce && ped.nfce.numero === 1, "a nota fica guardada (XML autorizado) e o pedido não ganha 2 cupons");
+      const est = await reqEm(sf.base, "PATCH", "/api/pedidos/" + cm.id, { estornarTudo: true, motivo: "teste de estorno" }, cxT);
+      t(est.s === 409 && /cancele o cupom/.test(est.j.erro), "pedido com cupom não estorna antes de cancelar o cupom");
+      const c2 = (await reqEm(sf.base, "POST", "/api/balanca", { comanda: 51, valor: 24, uid: "nf3" }, cxT)).j;
+      await reqEm(sf.base, "PATCH", "/api/pedidos/" + c2.id, { acertar: c2.itens.map((c) => ({ iid: c.iid, forma: "pix" })) }, cxT);
+      const s2 = await reqEm(sf.base, "POST", "/api/fiscal/emitir", { ids: [c2.id], modo: "simples" }, cxT), env2 = recebidas.filter((x) => /NFeAutorizacao4/.test(x.url)).pop();
+      t(s2.s === 200 && s2.j.numero === 2 && (env2.b.match(/<det /g) || []).length === 1 && /<xProd>NOTA FISCAL EMITIDA EM AMBIENTE DE HOMOLOGACAO/.test(env2.b) && /<tPag>17<\/tPag>/.test(env2.b), "modo simples: 1 linha só; Pix = tPag 17; nº 2");
+      const c3 = (await reqEm(sf.base, "POST", "/api/balanca", { comanda: 52, valor: 10, uid: "nf4" }, cxT)).j;
+      await reqEm(sf.base, "PATCH", "/api/pedidos/" + c3.id, { acertar: c3.itens.map((c) => ({ iid: c.iid, forma: "debito" })) }, cxT);
+      const s3 = await reqEm(sf.base, "POST", "/api/fiscal/emitir", { ids: [c3.id] }, cxT);
+      t(s3.s === 200 && s3.j.numero === 4, "número já usado na SEFAZ (duplicidade no nº 3): pula sozinho pro 4");
+      const cc = await reqEm(sf.base, "POST", "/api/fiscal/cancelar", { id: cm.id, motivo: "curto" }, cxT), cOk = await reqEm(sf.base, "POST", "/api/fiscal/cancelar", { id: cm.id, motivo: "Cliente desistiu da compra" }, cxT);
+      const ev = recebidas.filter((x) => /NFeRecepcaoEvento4/.test(x.url)).pop(), est2 = await reqEm(sf.base, "PATCH", "/api/pedidos/" + cm.id, { estornarTudo: true, motivo: "teste de estorno" }, cxT);
+      t(cc.s === 502 && cOk.s === 200 && cOk.j.status === "cancelada" && /<tpEvento>110111<\/tpEvento>/.test(ev.b) && /<nProt>/.test(ev.b) && est2.s === 200, "cancelar o cupom (motivo com 15+ letras); depois o estorno do pedido funciona");
+      t((await reqEm(sf.base, "GET", "/fiscal.js", undefined, "")).s === 403 && (await reqEm(sf.base, "GET", "/dados/fiscal.json", undefined, "")).s === 403, "fiscal.js e a configuração fiscal não são entregues pela rede");
+      sf.srv.kill(); sefaz.close();
+    }
+  }
 
   console.log("\nProteção contra adivinhar senha");
   for (let i = 0; i < 5; i++) await req("POST", "/api/login", { role: "balanca", pin: "9999" }, "");

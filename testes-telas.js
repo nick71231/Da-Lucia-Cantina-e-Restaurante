@@ -100,12 +100,9 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
   t(lista1.find((p) => p.nome === "Beto").status === "pago" && lista1.find((p) => p.nome === "Beto").pagamentos[0].forma === "pix", "pedido do Beto recebido no pix pela tela");
   await clica(w, '[data-a="receber"]'); // agora é a comanda 36 (3 itens)
   t(w.document.querySelectorAll(".ac-li").length === 3, "comanda 36 lista os 3 itens");
-  await clica(w, '[data-a="acDividir"]'); t(w.document.querySelectorAll(".ac-item").length === 3, "Dividir abre os 3 itens pra escolher um por um");
-  await clica(w, '[data-a="acItem"]'); await clica(w, '[data-a="acSet"][data-f="dinheiro"]');
-  const rec = w.document.querySelector("#ac-rec"); rec.value = "300"; rec.dispatchEvent(new w.Event("input", { bubbles: true })); await dorme(150);
-  await clica(w, "#ac-ok"); await dorme(400);
-  const c36 = (await api("GET", "/api/pedidos?dia=" + hojeISO, undefined, cx)).find((p) => p.tipo === "balanca" && p.numero === 36);
-  t(c36.status === "aguardando" && c36.pagamentos.length === 1 && c36.itens.filter((c) => c.pago).length === 2, "acerto parcial: 2 itens pagos em dinheiro, 1 continua em aberto");
+  // dona 24/11: separar é só por valor (o "Dividir itens" saiu); a comanda 36 continua aberta pros testes da balança
+  t(!w.document.querySelector('[data-a="acDividir"]') && /Separar por valor/.test(texto(w, "#ac-mais-bts")), "separar: só por valor (sem o 'Dividir itens')");
+  await clica(w, '[data-a="fechar"]');
   const sem = await abre("/caixa.html"); t(!sem.document.querySelector("#gate").hidden, "sem login o caixa mostra a tela de senha"); sem.close();
   { // motoboy (pente fino 23/11): o "tem que trazer em dinheiro" segue o que está RECEBIDO no caixa, não só o que o cliente escolheu no site
     const ent = (n, v, pag, gs, extra) => ({ id: "d" + n, tipo: "delivery", numero: n, entrega: "entrega", entregador: "Kevin", valor: v, pagPrevisto: pag, status: gs.length ? "pago" : "aguardando", itens: [{ iid: "i" + n, preco: v - 5, qtd: 1 }, { iid: "t" + n, tipo: "taxa", preco: 5, qtd: 1 }], pagamentos: gs, ...extra });
@@ -117,9 +114,10 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
   }
   { // 2 formas com o resto NA CONTA (dona 24/11): a tela mostra "Na conta", pede o cliente e o botão diz o que vai acontecer
     const cmT = await api("POST", "/api/balanca", { comanda: 881, valor: 24, uid: "tcp1" }, bl); await clica(w, '[data-aba="aberto"]'); await dorme(1200);
-    w.eval("abrirAcerto")(cmT.id); await dorme(300); await clica(w, '[data-a="d2Abrir"]'); await clica(w, '[data-a="d2Forma"][data-q="2"][data-f="conta"]'); await dorme(400);
-    const v1 = w.document.querySelector("#d2-v1"); v1.value = "14"; v1.dispatchEvent(new w.Event("input", { bubbles: true }));
-    const sel = w.document.querySelector("#d2-cli"), op = sel && [...sel.options].find((o) => o.textContent.includes("Elza"));
+    w.eval("abrirAcerto")(cmT.id); await dorme(300); await clica(w, '[data-a="d2Abrir"]'); await clica(w, '[data-a="dvForma"][data-i="1"][data-f="conta"]'); await dorme(400);
+    const v1 = w.document.querySelector('.dv-v[data-i="0"]'); v1.value = "14"; v1.dispatchEvent(new w.Event("input", { bubbles: true }));
+    t(/R\$\s*10,00/.test(texto(w, "#dv-resto")), "separar por valor: a última parte é o resto (R$ 24 - 14 = R$ 10)");
+    const sel = w.document.querySelector(".dv-cli"), op = sel && [...sel.options].find((o) => o.textContent.includes("Elza"));
     const bloqueado = w.document.querySelector("#ac-ok").disabled;
     if (op) { sel.value = op.value; sel.dispatchEvent(new w.Event("change", { bubbles: true })); }
     const bt = w.document.querySelector("#ac-ok");
@@ -127,6 +125,14 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
     await clica(w, "#ac-ok"); await dorme(800);
     const cm2 = (await api("GET", "/api/pedidos?dia=" + hojeISO, undefined, cx)).find((p) => p.id === cmT.id);
     t(cm2 && cm2.status === "conta", "2 formas com conta: a comanda fica 'na conta' com o resto");
+    // ÷3: divide igual entre 3 pessoas (dinheiro, pix, crédito); o centavo que sobra vai na última
+    const cmI = await api("POST", "/api/balanca", { comanda: 882, valor: 50, uid: "tcp2" }, bl); await clica(w, '[data-aba="aberto"]'); await w.eval("carregar")(); await dorme(300);
+    w.eval("abrirAcerto")(cmI.id); await dorme(300); await clica(w, '[data-a="d2Abrir"]'); await clica(w, '[data-a="dvIgual"][data-n="3"]'); await dorme(300);
+    const vals = [...w.document.querySelectorAll(".dv-v")].map((x) => x.value), resto = texto(w, "#dv-resto"), bt3 = w.document.querySelector("#ac-ok");
+    t(vals.join() === "16,66,16,66" && /16,68/.test(resto) && !bt3.disabled, "÷3: R$ 50 vira 16,66 + 16,66 + 16,68 (" + vals.join(" / ") + " / " + resto + ")");
+    await clica(w, "#ac-ok"); await dorme(800);
+    const cmI2 = (await api("GET", "/api/pedidos?dia=" + hojeISO, undefined, cx)).find((p) => p.id === cmI.id), fs3 = (cmI2.pagamentos || []).map((g) => g.forma + " " + g.valor).sort().join(", ");
+    t(cmI2.status === "pago" && fs3 === "credito 16.68, dinheiro 16.66, pix 16.66", "÷3 recebido: " + fs3);
   }
   { // Fechamento: marmita/lançamento que foi direto pra conta (sem pedido "na conta") entra no "Marcado na conta" (23/11 mostrava 289 em vez de 589)
     const elza = (await api("GET", "/api/clientes", undefined, cx)).find((x) => x.nome === "Elza");

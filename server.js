@@ -120,6 +120,7 @@ db.pedidos.forEach((p) => (p.itens || []).forEach((c) => { c.iid = c.iid || uid(
 const chaveDe = (id) => { const c = db.clientes.find((x) => x.id === id); return c && c.empresa ? "e:" + c.empresa : "c:" + id; };
 db.pagamentos.forEach((x) => { if (!x.chave && x.clienteId) x.chave = chaveDe(x.clienteId); });
 Object.keys(db.enviados).forEach((k) => { const [m, id] = [k.slice(0, 7), k.slice(8)]; if (!/^[ce]:/.test(id)) { delete db.enviados[k]; db.enviados[m + "|" + chaveDe(id)] = true; } });
+const fiscal = require("./fiscal")({ DIR_DADOS }); // cupom fiscal (NFC-e) direto na SEFAZ-SP
 const ARQ_CFG = path.join(DIR_DADOS, "config.json");           // cópia das configurações do totem (cardápio, produtos, cores...)
 let cfg = {};
 try { cfg = JSON.parse(fs.readFileSync(ARQ_CFG, "utf8")); } catch (e) {}
@@ -174,7 +175,7 @@ const papelDe = (req) => { const t = tokenDe(req), s = t && sessoes[sha(t)]; ret
 function nivelRota(m, p) { // quem pode o quê (0 = qualquer um)
   if (!p.startsWith("/api/") || p === "/api/login" || p === "/api/saude") return 0;
   if ((p === "/api/pedidos" && m === "POST") || (p === "/api/imprimir" && m === "POST") || (p === "/api/config" && m === "GET")) return 0; // totem do cliente
-  if (p === "/api/config" || p === "/api/senhas") return 3;
+  if (p === "/api/config" || p === "/api/senhas" || p === "/api/fiscal/certificado" || p === "/api/fiscal/ambiente") return 3; // certificado e produção x teste: só o admin
   if (p === "/api/balanca" || (p === "/api/pedidos" && m === "GET") || (/^\/api\/pedidos\//.test(p) && m === "PATCH")) return 1;
   return 2; // caixa: clientes, contas, pagamentos, gaveta, backup...
 }
@@ -595,6 +596,36 @@ async function tratar(req, res) {
       .filter((x) => x.valor > 0).sort((a, b) => a.dia.localeCompare(b.dia));
     return json(res, 200, out);
   }
+  // ---------- CUPOM FISCAL (NFC-e) - ver fiscal.js ----------
+  if (p === "/api/fiscal" && req.method === "GET") return json(res, 200, fiscal.status());
+  if (p === "/api/fiscal/certificado" && req.method === "POST") { // admin: escolhe o .pfx/.p12 e digita a senha (a senha não fica guardada)
+    const b = await corpo(req, 300e3);
+    try { return json(res, 200, { ok: true, ...fiscal.instalarCertificado(Buffer.from(String(b.pfx || ""), "base64"), String(b.senha || "")), status: fiscal.status() }); }
+    catch (e) { return json(res, 400, { erro: e.message }); }
+  }
+  if (p === "/api/fiscal/ambiente" && req.method === "POST") { const b = await corpo(req); try { return json(res, 200, fiscal.mudarAmbiente(Number(b.ambiente))); } catch (e) { return json(res, 400, { erro: e.message }); } }
+  if (p === "/api/fiscal/sefaz" && req.method === "POST") { try { return json(res, 200, await fiscal.statusSefaz()); } catch (e) { return json(res, 502, { erro: e.message }); } }
+  if (p === "/api/fiscal/emitir" && req.method === "POST") { // { ids: [pedidos pagos], cpf, modo: "discriminado" | "simples" }
+    const b = await corpo(req), ids = [...new Set((Array.isArray(b.ids) ? b.ids : [b.id]).map(String))].slice(0, 10), peds = ids.map((id) => db.pedidos.find((x) => x.id === id));
+    if (!peds.length || peds.some((x) => !x)) return json(res, 404, { erro: "pedido não encontrado" });
+    if (peds.some((x) => x.status !== "pago")) return json(res, 409, { erro: "o cupom fiscal sai só de pedido já pago (todo recebido)" });
+    const ja = peds.find((x) => x.nfce && x.nfce.status === "autorizada"); if (ja) return json(res, 409, { erro: "esse pedido já tem cupom fiscal (nº " + ja.nfce.numero + ")", nfce: ja.nfce });
+    if (b.cpf && !fiscal.cpfOk(b.cpf)) return json(res, 400, { erro: "CPF inválido" });
+    try {
+      const nf = await fiscal.emitir(peds, { cpf: b.cpf || "", modo: b.modo === "simples" ? "simples" : "discriminado" }, peds.flatMap(pagsDe));
+      peds.forEach((x) => (x.nfce = { ...nf, pedidos: ids, modo: b.modo === "simples" ? "simples" : "discriminado" })); await gravar();
+      return json(res, 200, peds[0].nfce);
+    } catch (e) { console.error("cupom fiscal: " + e.message); return json(res, 502, { erro: e.message }); }
+  }
+  if (p === "/api/fiscal/cancelar" && req.method === "POST") { // cancela o cupom na SEFAZ (até 30 min depois de emitido)
+    const b = await corpo(req), ped = db.pedidos.find((x) => x.id === String(b.id || ""));
+    if (!ped || !ped.nfce || ped.nfce.status !== "autorizada") return json(res, 404, { erro: "esse pedido não tem cupom fiscal ativo" });
+    try {
+      const c = await fiscal.cancelar(ped.nfce, b.motivo), ch = ped.nfce.chave;
+      db.pedidos.forEach((x) => { if (x.nfce && x.nfce.chave === ch) x.nfce = { ...x.nfce, ...c, status: "cancelada" }; }); await gravar();
+      return json(res, 200, ped.nfce);
+    } catch (e) { return json(res, 502, { erro: e.message }); }
+  }
   if (p === "/api/fechamento-zap" && req.method === "GET") { // texto do fechamento do dia que vai pro WhatsApp da dona (pra conferir)
     const d = String(url.searchParams.get("dia") || hoje()); if (!/^\d{4}-\d\d-\d\d$/.test(d)) return json(res, 400, { erro: "dia inválido" });
     return json(res, 200, { ...textoFechamento(d), tel: rz.tel, hora: rz.hora, ultimo: rz.ultimo });
@@ -840,6 +871,8 @@ async function tratar(req, res) {
     const ped = db.pedidos.find((x) => x.id === m[1]);
     if (!ped) return json(res, 404, { erro: "pedido não encontrado" });
     const u = await corpo(req);
+    // pedido com cupom fiscal ativo: estornar/cancelar só depois de cancelar o cupom na SEFAZ (senão a venda some e a nota continua valendo)
+    if ((u.estornarPagamento !== undefined || u.estornarTudo || u.status === "cancelado") && ped.nfce && ped.nfce.status === "autorizada") return json(res, 409, { erro: "esse pedido tem cupom fiscal (nº " + ped.nfce.numero + "): cancele o cupom antes (botão Cancelar cupom)" });
     if (u.virarComanda) { u.paraComanda = 10000 + Number(ped.numero); u.criar = true; } // marmitex do totem vira comanda "M" (número 10000+pedido: nunca bate com cartão físico)
     if (u.entregador !== undefined) {                            // qual motoboy levou essa entrega (fechamento por motoboy)
       if (req.papel === "balanca") return json(res, 403, { erro: "sem permissão" });
@@ -982,7 +1015,7 @@ async function tratar(req, res) {
     await gravar(); return json(res, 200, ped);
   }
   const alvo = p === "/" ? "/index.html" : p, nome = path.basename(alvo), ext = path.extname(alvo).toLowerCase(), arq = path.resolve(PUB, "." + alvo);
-  const liberado = tipos[ext] && (ext !== ".json" || nome.startsWith("manifest")) && nome !== "server.js" && nome !== "testes.js" && !nome.startsWith(".") && arq.startsWith(PUB + path.sep) && !arq.startsWith(DIR_DADOS + path.sep);
+  const liberado = tipos[ext] && (ext !== ".json" || nome.startsWith("manifest")) && nome !== "server.js" && nome !== "testes.js" && nome !== "fiscal.js" && !nome.startsWith(".") && arq.startsWith(PUB + path.sep) && !arq.startsWith(DIR_DADOS + path.sep);
   if (!liberado) { res.writeHead(403); return res.end(); }
   fs.readFile(arq, (e, data) => {
     if (e) { res.writeHead(404); return res.end("Nao encontrado"); }
