@@ -277,14 +277,43 @@ module.exports = function criarFiscal({ DIR_DADOS }) {
     return out.sort((a, b) => a.serie - b.serie || a.numero - b.numero);
   }
   function contadora(tel) { const cfg = ler() || {}; if (tel !== undefined) { cfg.contadora = { tel: String(tel).replace(/\D/g, "").slice(0, 13) }; salvar(cfg); } return (cfg.contadora || {}).tel || ""; }
-  function zipDoMes(mes) {
-    const ns = notasDoMes(mes), br = (v) => Number(v).toFixed(2).replace(".", ",");
-    const csv = "﻿" + [["Número", "Série", "Emissão", "Valor (R$)", "Situação", "CPF", "Chave de acesso", "Protocolo", "Observação"].join(";"),
-      ...ns.map((n) => [n.numero, n.serie, String(n.dhEmi || "").slice(0, 19).replace("T", " "), br(n.valor), n.canc ? "CANCELADA" : "AUTORIZADA", n.cpf, "'" + n.chave, "'" + n.prot, '"' + String(n.obs || "").replace(/"/g, "'") + '"'].join(";"))].join("\r\n");
-    const files = [{ nome: "resumo-" + mes + ".csv", dados: Buffer.from(csv, "utf8") }, ...ns.flatMap((n) => [{ nome: "autorizadas/" + path.basename(n.arq), dados: fs.readFileSync(n.arq) }, ...(n.canc ? [{ nome: "cancelamentos/" + path.basename(n.canc), dados: fs.readFileSync(n.canc) }] : [])])];
-    const aut = ns.filter((n) => !n.canc);
-    return { zip: zipar(files), qtd: ns.length, autorizadas: aut.length, canceladas: ns.length - aut.length, total: Math.round(aut.reduce((s, n) => s + n.valor, 0) * 100) / 100 };
+  // notas do ViaVale (mesmo CNPJ, neste computador): NFC-e série 1, NF-e (empresas) e cancelamentos - a contadora confere tudo junto (dona 24/11)
+  function viavaleDoMes(mes) {
+    const cfg = ler() || {}, base = path.join(process.env.VIAVALE_DOCS || "C:\\SistemaNuvem\\Documentos", String(cfg.cnpj || "")), aamm = mes.replace("-", "");
+    const notas = [], eventos = [], canc = new Set();
+    const anda = (dir) => { if (!fs.existsSync(dir)) return; for (const f of fs.readdirSync(dir, { withFileTypes: true })) { const p = path.join(dir, f.name); if (f.isDirectory()) { anda(p); continue; } if (!/\.xml$/i.test(f.name)) continue;
+      let x; try { x = fs.readFileSync(p, "utf8"); } catch (e) { continue; }
+      if (/<tpEvento>110111</.test(x)) { if (/<cStat>(135|155)</.test(x)) { canc.add(tag(x, "chNFe")); eventos.push({ arq: p }); } continue; } // cancelamento homologado
+      const ch = (x.match(/Id="NFe(\d{44})"/) || [])[1]; if (!ch) continue;
+      const dest = tag(x, "dest") || "", prot = tag(x, "protNFe") || "";
+      notas.push({ arq: p, chave: ch, modelo: ch.slice(20, 22), serie: Number(tag(x, "serie")), numero: Number(tag(x, "nNF")), dhEmi: tag(x, "dhEmi"), valor: Number(tag(x, "vNF")) || 0, doc: tag(dest, "CNPJ") || tag(dest, "CPF") || "", nomeDest: tag(dest, "xNome") || "", prot: tag(prot, "nProt") || "", autorizada: tag(prot, "cStat") === "100" || tag(prot, "cStat") === "150" }); } };
+    for (const tipo of ["NFCe", "NFe"]) anda(path.join(base, tipo, aamm));
+    notas.forEach((n) => (n.cancelada = canc.has(n.chave)));
+    return { notas: notas.sort((a, b) => a.modelo.localeCompare(b.modelo) || a.serie - b.serie || a.numero - b.numero), eventos };
   }
-  return { status, instalarCertificado, statusSefaz, emitir, cancelar, mudarAmbiente, notasDoMes, zipDoMes, contadora, classe, cpfOk, _montar: montar, _assinar: assinar };
+  function resumoDoMes(mes) {
+    const nos = notasDoMes(mes), vv = viavaleDoMes(mes), c2s = (v) => Math.round(v * 100) / 100;
+    const vale = (n) => n.autorizada && !n.cancelada, nfce = vv.notas.filter((n) => n.modelo === "65"), nfe = vv.notas.filter((n) => n.modelo === "55"), aut = nos.filter((n) => !n.canc);
+    return { nos, vv, caixa: { qtd: aut.length, canceladas: nos.length - aut.length, total: c2s(aut.reduce((s, n) => s + n.valor, 0)) },
+      viavaleNfce: { qtd: nfce.filter(vale).length, canceladas: nfce.filter((n) => n.cancelada).length, total: c2s(nfce.filter(vale).reduce((s, n) => s + n.valor, 0)) },
+      viavaleNfe: { qtd: nfe.filter(vale).length, canceladas: nfe.filter((n) => n.cancelada).length, total: c2s(nfe.filter(vale).reduce((s, n) => s + n.valor, 0)) } };
+  }
+  function zipDoMes(mes) {
+    const R = resumoDoMes(mes), br = (v) => Number(v).toFixed(2).replace(".", ","), dh = (v) => String(v || "").slice(0, 19).replace("T", " "), q = (v) => '"' + String(v || "").replace(/"/g, "'") + '"';
+    const cab = ["Origem", "Modelo", "Série", "Número", "Emissão", "Valor (R$)", "Situação", "CPF/CNPJ", "Destinatário", "Chave de acesso", "Protocolo", "Observação"].join(";");
+    const lin = [
+      ...R.nos.map((n) => ["Caixa (Da Lúcia)", "NFC-e", n.serie, n.numero, dh(n.dhEmi), br(n.valor), n.canc ? "CANCELADA" : "AUTORIZADA", n.cpf, "", "'" + n.chave, "'" + n.prot, q(n.obs)].join(";")),
+      ...R.vv.notas.map((n) => ["ViaVale", n.modelo === "55" ? "NF-e" : "NFC-e", n.serie, n.numero, dh(n.dhEmi), br(n.valor), n.cancelada ? "CANCELADA" : n.autorizada ? "AUTORIZADA" : "SEM AUTORIZAÇÃO", n.doc, q(n.nomeDest), "'" + n.chave, "'" + n.prot, ""].join(";")),
+    ];
+    const tot = ["", "TOTAIS (autorizadas, sem as canceladas)", "", "", "", "", "", "", "", "", "", ""].join(";"), t = (nome, x) => [nome, "", "", x.qtd + " nota(s)", "", br(x.total), x.canceladas ? x.canceladas + " cancelada(s)" : "", "", "", "", "", ""].join(";");
+    const csv = "\ufeff" + [cab, ...lin, "", tot, t("Caixa - NFC-e", R.caixa), t("ViaVale - NFC-e", R.viavaleNfce), t("ViaVale - NF-e", R.viavaleNfe)].join("\r\n");
+    const files = [{ nome: "resumo-" + mes + ".csv", dados: Buffer.from(csv, "utf8") },
+      ...R.nos.flatMap((n) => [{ nome: "caixa-nfce/autorizadas/" + path.basename(n.arq), dados: fs.readFileSync(n.arq) }, ...(n.canc ? [{ nome: "caixa-nfce/cancelamentos/" + path.basename(n.canc), dados: fs.readFileSync(n.canc) }] : [])]),
+      ...R.vv.notas.map((n) => ({ nome: (n.modelo === "55" ? "viavale-nfe/" : "viavale-nfce/") + path.basename(n.arq), dados: fs.readFileSync(n.arq) })),
+      ...R.vv.eventos.map((e) => ({ nome: "viavale-cancelamentos/" + path.basename(e.arq), dados: fs.readFileSync(e.arq) }))];
+    return { zip: zipar(files), qtd: R.nos.length + R.vv.notas.length, caixa: R.caixa, viavaleNfce: R.viavaleNfce, viavaleNfe: R.viavaleNfe,
+      autorizadas: R.caixa.qtd, canceladas: R.caixa.canceladas, total: R.caixa.total }; // (autorizadas/canceladas/total = do caixa, como antes)
+  }
+  return { status, instalarCertificado, statusSefaz, emitir, cancelar, mudarAmbiente, notasDoMes, resumoDoMes, zipDoMes, contadora, classe, cpfOk, _montar: montar, _assinar: assinar };
 };
 module.exports.classe = classe; module.exports.cpfOk = cpfOk; module.exports.CLASSES = CLASSES;

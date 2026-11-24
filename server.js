@@ -625,7 +625,7 @@ async function tratar(req, res) {
   }
   // notas do mês pra contadora: resumo, ZIP pra baixar e envio pelo WhatsApp (robô)
   if (p === "/api/fiscal/notas" && req.method === "GET") {
-    try { const ns = fiscal.notasDoMes(String(url.searchParams.get("mes") || hoje().slice(0, 7))), aut = ns.filter((n) => !n.canc); return json(res, 200, { qtd: ns.length, autorizadas: aut.length, canceladas: ns.length - aut.length, total: cents(aut.reduce((s, n) => s + n.valor, 0)), contadora: fiscal.contadora() }); }
+    try { const R = fiscal.resumoDoMes(String(url.searchParams.get("mes") || hoje().slice(0, 7))); return json(res, 200, { caixa: R.caixa, viavaleNfce: R.viavaleNfce, viavaleNfe: R.viavaleNfe, qtd: R.nos.length + R.vv.notas.length, autorizadas: R.caixa.qtd, canceladas: R.caixa.canceladas, total: R.caixa.total, contadora: fiscal.contadora() }); }
     catch (e) { return json(res, 400, { erro: e.message }); }
   }
   if (p === "/api/fiscal/notas-zip" && req.method === "GET") {
@@ -636,13 +636,15 @@ async function tratar(req, res) {
     const b = await corpo(req), mes = String(b.mes || ""), tel = String(b.tel || "").replace(/\D/g, "");
     if (tel.length < 10) return json(res, 400, { erro: "digite o WhatsApp da contadora com DDD" });
     let z; try { z = fiscal.zipDoMes(mes); } catch (e) { return json(res, 400, { erro: e.message }); }
-    if (!z.qtd) return json(res, 400, { erro: "nenhuma nota emitida pelo caixa em " + mes.split("-").reverse().join("/") });
+    if (!z.qtd) return json(res, 400, { erro: "nenhuma nota emitida em " + mes.split("-").reverse().join("/") });
     fiscal.contadora(tel);
     const dirZ = path.join(DIR_DADOS, "nfce", "zips"); fs.mkdirSync(dirZ, { recursive: true });
     const arq = path.join(dirZ, `Notas fiscais ${mes} - Da Lucia.zip`); fs.writeFileSync(arq, z.zip);
-    const [aa, mm] = mes.split("-"), texto = `🧾 *Notas fiscais (NFC-e) - Da Lúcia Cantina e Restaurante*\nCNPJ 20.128.902/0001-15 · ${mm}/${aa}\n\n${z.autorizadas} cupom(ns) autorizado(s) · R$ ${z.total.toFixed(2).replace(".", ",")}${z.canceladas ? `\n${z.canceladas} cancelado(s)` : ""}\n\nNo ZIP: os XML (autorizadas e cancelamentos) e o resumo em planilha 👇`;
+    const [aa, mm] = mes.split("-"), r$ = (v) => "R$ " + Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const li = (t, x) => `• ${t}: ${x.qtd} nota(s) · ${r$(x.total)}${x.canceladas ? ` (+ ${x.canceladas} cancelada(s))` : ""}`;
+    const texto = `🧾 *Notas fiscais - Da Lúcia Cantina e Restaurante*\nCNPJ 20.128.902/0001-15 · ${mm}/${aa}\n\n${[z.caixa.qtd || z.caixa.canceladas ? li("Cupons do caixa (NFC-e)", z.caixa) : "", z.viavaleNfce.qtd || z.viavaleNfce.canceladas ? li("Cupons do ViaVale (NFC-e)", z.viavaleNfce) : "", z.viavaleNfe.qtd || z.viavaleNfe.canceladas ? li("Notas do ViaVale (NF-e)", z.viavaleNfe) : ""].filter(Boolean).join("\n")}\n\nNo ZIP: todos os XML (autorizadas e cancelamentos) separados por origem, e o resumo em planilha 👇`;
     filaWhats.push({ id: "contadora-" + mes + "-" + Date.now(), tel: tel.startsWith("55") ? tel.slice(2) : tel, texto, arquivo: arq, quando: Date.now() }); filaWhats = filaWhats.slice(-200);
-    await gravarArquivo(ARQ_WHATS, filaWhats); return json(res, 200, { ok: true, qtd: z.qtd, autorizadas: z.autorizadas, canceladas: z.canceladas, total: z.total });
+    await gravarArquivo(ARQ_WHATS, filaWhats); return json(res, 200, { ok: true, qtd: z.qtd, autorizadas: z.autorizadas, canceladas: z.canceladas, total: z.total, caixa: z.caixa, viavaleNfce: z.viavaleNfce, viavaleNfe: z.viavaleNfe });
   }
   if (p === "/api/fiscal/cancelar" && req.method === "POST") { // cancela o cupom na SEFAZ (até 30 min depois de emitido)
     const b = await corpo(req), ped = db.pedidos.find((x) => x.id === String(b.id || ""));
