@@ -191,7 +191,8 @@ body.tec-on .modal.lado > .caixa-modal { max-height: none; height: calc(100vh - 
 input.cf-ruim { border-color: #d9534f !important; background: #fff5f5 !important; }
 .cf-seg { display: inline-flex; gap: 4px; background: #f3ede6; padding: 3px; border-radius: 12px; }
 .cf-seg .btn { border: 0 !important; background: transparent !important; box-shadow: none !important; color: #7a5a48; }
-.cf-seg .btn.on { background: #fff !important; box-shadow: 0 1px 3px rgba(0,0,0,.14) !important; color: #2b1710; font-weight: 700; }
+.cf-seg .btn.on { background: #fff !important; box-shadow: 0 1px 3px rgba(0,0,0,.14) !important; color: #2b1710 !important; font-weight: 700; }
+.cf-op[hidden], .cf-msg[hidden] { display: none !important; } /* o display:flex não pode vencer o "hidden" (o CPF só aparece com o cupom marcado) */
 .cf-st { display: grid; gap: 6px; margin: 6px 0 4px; }
 .cf-li { display: grid; grid-template-columns: 26px 118px 1fr; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: #f7f2ec; }
 .cf-li.ok { background: #e9f6ec; } .cf-li.ruim { background: #fde0e0; } .cf-li em { font-style: normal; color: #4a2f22; } .cf-li small { color: #7a5a48; }
