@@ -422,8 +422,15 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
       const adm = (await reqEm(sf.base, "POST", "/api/login", { role: "admin", pin: "12345" }, "")).j.token, cxT = (await reqEm(sf.base, "POST", "/api/login", { role: "caixa", pin: "2222" }, "")).j.token;
       const p12 = fs.readFileSync(path.join(dF, "t.p12")).toString("base64");
       const certErr = await reqEm(sf.base, "POST", "/api/fiscal/certificado", { pfx: p12, senha: "errada" }, adm), certCx = await reqEm(sf.base, "POST", "/api/fiscal/certificado", { pfx: p12, senha: "senha123" }, cxT);
+      // certificado no formato ANTIGO (RC2-40, como o A1 da loja - 24/11 a senha certa dava "senha errada"): precisa abrir também
+      const ucrt = "C:\\Program Files\\Git\\ucrt64\\bin\\openssl.exe";
+      if (fs.existsSync(ucrt)) {
+        execFileSync(ucrt, ["pkcs12", "-export", "-legacy", "-inkey", path.join(dF, "k.pem"), "-in", path.join(dF, "c.pem"), "-out", path.join(dF, "legado.p12"), "-passout", "pass:senha123"], { stdio: "ignore", env: { ...process.env, OPENSSL_MODULES: "C:\\Program Files\\Git\\ucrt64\\lib\\ossl-modules" } });
+        const leg = fs.readFileSync(path.join(dF, "legado.p12")).toString("base64"), lOk = await reqEm(sf.base, "POST", "/api/fiscal/certificado", { pfx: leg, senha: "senha123" }, adm), lErr = await reqEm(sf.base, "POST", "/api/fiscal/certificado", { pfx: leg, senha: "outra" }, adm);
+        t(lOk.s === 200 && lErr.s === 400 && /senha errada/.test(lErr.j.erro), "certificado no formato antigo (RC2-40): abre com a senha certa e diz 'senha errada' só quando é");
+      } else { falhas++; console.log("  FALHOU certificado antigo: não achei o openssl ucrt64 do Git"); }
       const cert = await reqEm(sf.base, "POST", "/api/fiscal/certificado", { pfx: p12, senha: "senha123" }, adm);
-      t(certErr.s === 400 && /senha errada/.test(certErr.j.erro) && certCx.s === 403 && cert.s === 200 && /20128902000115/.test(cert.j.nome) && !fs.readdirSync(dF).some((a) => /\.p12$/.test(a) && a !== "t.p12"), "certificado: senha errada recusa, só o admin instala, a senha e o .pfx não ficam guardados");
+      t(certErr.s === 400 && /senha errada/.test(certErr.j.erro) && certCx.s === 403 && cert.s === 200 && /20128902000115/.test(cert.j.nome) && !fs.readdirSync(dF).some((a) => /\.p12$/.test(a) && a !== "t.p12" && a !== "legado.p12"), "certificado: senha errada recusa, só o admin instala, a senha e o .pfx não ficam guardados");
       const st = await reqEm(sf.base, "POST", "/api/fiscal/sefaz", {}, cxT);
       t(st.s === 200 && st.j.ok && st.j.cStat === "107", "testar conexão com a SEFAZ: em operação");
       const cm = (await reqEm(sf.base, "POST", "/api/balanca", { comanda: 50, valor: 31.2, peso: 520, uid: "nf1" }, cxT)).j;

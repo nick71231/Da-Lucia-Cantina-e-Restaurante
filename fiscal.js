@@ -79,20 +79,31 @@ module.exports = function criarFiscal({ DIR_DADOS }) {
     return certCache;
   }
   // ---------- certificado: a dona escolhe o .pfx/.p12 e digita a senha; vira PEM aqui (a senha não fica guardada) ----------
-  function acharOpenssl() {
-    for (const p of [process.env.OPENSSL, "C:\\Program Files\\Git\\usr\\bin\\openssl.exe", "C:\\Program Files\\Git\\mingw64\\bin\\openssl.exe", "C:\\Program Files (x86)\\Git\\usr\\bin\\openssl.exe"]) if (p && fs.existsSync(p)) return p;
-    return "openssl";
+  // OpenSSL: primeiro o "ucrt64" do Git, que traz o módulo "legacy" (24/11: o certificado A1 da loja usa criptografia antiga
+  // RC2-40; o openssl do usr/bin não acha o legacy.dll rodando como SYSTEM e a senha certa dava "senha errada")
+  function opensslCandidatos() {
+    return [process.env.OPENSSL, "C:\\Program Files\\Git\\ucrt64\\bin\\openssl.exe", "C:\\Program Files\\Git\\mingw64\\bin\\openssl.exe", "C:\\Program Files\\Git\\usr\\bin\\openssl.exe", "C:\\Program Files (x86)\\Git\\usr\\bin\\openssl.exe"].filter((p) => p && fs.existsSync(p));
   }
   function instalarCertificado(pfx, senha) {
     const cfg = ler(); if (!cfg) throw new Error("falta a configuração fiscal (dados/fiscal.json)");
     const tmp = path.join(DIR_DADOS, "cert-" + Date.now() + ".p12"); fs.writeFileSync(tmp, pfx);
-    let out = "";
+    let out = "", erros = [];
     try {
-      for (const extra of [[], ["-legacy"]]) {
-        try { out = execFileSync(acharOpenssl(), ["pkcs12", "-in", tmp, "-nodes", "-passin", "env:SENHA_PFX", ...extra], { env: { ...process.env, SENHA_PFX: String(senha || "") }, stdio: ["ignore", "pipe", "pipe"], timeout: 20000 }).toString(); if (/PRIVATE KEY/.test(out)) break; } catch (e) { out = ""; }
+      const bins = opensslCandidatos(); if (!bins.length) throw new Error("não achei o OpenSSL (vem junto com o Git) pra abrir o certificado");
+      for (const bin of bins) {
+        const mods = path.join(path.dirname(path.dirname(bin)), "lib", "ossl-modules"), env = { ...process.env, SENHA_PFX: String(senha || ""), ...(fs.existsSync(mods) ? { OPENSSL_MODULES: mods } : {}) };
+        for (const extra of [[], ["-legacy"]]) {
+          try { out = execFileSync(bin, ["pkcs12", "-in", tmp, "-nodes", "-passin", "env:SENHA_PFX", ...extra], { env, stdio: ["ignore", "pipe", "pipe"], timeout: 20000 }).toString(); if (/PRIVATE KEY/.test(out)) break; }
+          catch (e) { out = ""; erros.push(String(e.stderr || e.message).split(/\r?\n/).find((l) => l.trim()) || e.message); }
+        }
+        if (/PRIVATE KEY/.test(out)) break;
       }
     } finally { try { fs.unlinkSync(tmp); } catch (e) {} }
-    if (!/PRIVATE KEY/.test(out)) throw new Error("senha errada ou arquivo não é um certificado A1 (.pfx/.p12)");
+    if (!/PRIVATE KEY/.test(out)) {
+      console.error("certificado: não abriu -> " + erros.join(" | "));
+      if (erros.some((x) => /mac verify|invalid password|bad decrypt/i.test(x))) throw new Error("senha errada (confira maiúsculas e minúsculas)");
+      throw new Error("não consegui abrir o certificado: " + (erros[erros.length - 1] || "arquivo inválido") + ". Confira se é o arquivo .pfx/.p12 do certificado A1");
+    }
     const key = (out.match(/-----BEGIN (?:RSA )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA )?PRIVATE KEY-----/) || [])[0];
     const certs = out.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g) || [];
     const ko = crypto.createPrivateKey(key), meu = certs.map((c) => new crypto.X509Certificate(c)).find((x) => x.checkPrivateKey(ko));
