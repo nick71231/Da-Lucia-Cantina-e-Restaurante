@@ -822,7 +822,7 @@ function recsPer(P, a, b) {
   const k = a + "|" + b, c = recCache[k];
   if (!c || Date.now() - c.t > 4000) { if (!c || !c.indo) { recCache[k] = { ...(c || {}), indo: true, t: (c && c.t) || 0 }; aut("/api/recebimentos?de=" + a + "&ate=" + b).then((r) => (r.ok ? r.json() : null)).then((v) => { const mudou = v && JSON.stringify(v) !== JSON.stringify((recCache[k] || {}).v); recCache[k] = { v: v || (recCache[k] || {}).v, t: Date.now(), indo: false }; if (mudou && (aba === "fechamento")) { ultimoHtml = ""; desenhar(); } }).catch(() => { recCache[k] = { ...(recCache[k] || {}), indo: false, t: Date.now() }; }); } }
   if (recCache[k] && recCache[k].v) return recCache[k].v;
-  return P.flatMap((p) => pagsDe(p).map((g) => ({ ...g, dia: g.dia || p.dia }))).filter((g) => g.dia >= a && g.dia <= b);
+  return P.flatMap((p) => pagsDe(p).map((g) => ({ ...g, dia: g.dia || p.dia, pedidoId: p.id, tipo: p.tipo || "totem", entrega: p.tipo === "delivery" ? (p.entrega === "retirada" ? "retirada" : "entrega") : undefined }))).filter((g) => g.dia >= a && g.dia <= b);
 }
 // MARCADO NA CONTA no período (pente fino 23/11): pedidos "na conta" + o que foi pra conta SEM ser pedido na conta (marmita do
 // WhatsApp que chega em R$0 e vai pra conta do cliente, lançamento à mão). Antes o Fechamento/Painel deixava esses de fora (23/11: 289 x 589).
@@ -846,6 +846,10 @@ function fechamento() {
   const formas = Object.keys(FORMAS).filter((f) => FORMAS_PAG.includes(f) || recs.some((g) => g.forma === f)).map((f) => ({ f, n: recs.filter((g) => g.forma === f).length, v: round2(por(f)) })).sort((x, y) => y.v - x.v), mx = Math.max(1, ...formas.map((x) => x.v));
   const porC = Object.keys(PAGFORMAS).map((f) => [f, round2(soma(CP.filter((g) => g.forma === f), (g) => g.valor))]).filter(([, v]) => v > 0);
   const linhaR = (ic, t, v, sub, cls) => `<div class="fx-li ${cls || ""}"><span class="fx-ic">${ic}</span><div><b>${t}</b>${sub ? `<small>${sub}</small>` : ""}</div><strong>${v}</strong></div>`;
+  // SALÃO x ENTREGA x RETIRADA (dona 24/11): quanto entrou por cada canal (pela data do recebimento, igual ao total)
+  const canal = (g) => (g.tipo === "delivery" ? (g.entrega === "retirada" ? "retirada" : "entrega") : "salao");
+  const CAN = [["salao", "🍽️", "Salão", "balança, totem e garçom"], ["entrega", "🛵", "Delivery (entrega)", "site e WhatsApp"], ["retirada", "🏃", "Retirada", "site e WhatsApp"]].map(([k, ic, t, sub]) => { const rs = recs.filter((g) => canal(g) === k); return { k, ic, t, sub, v: round2(soma(rs, (g) => g.valor)), n: new Set(rs.map((g) => g.pedidoId)).size }; });
+  const boxCanal = `<div class="gv-box"><h4>Salão, entrega e retirada</h4>${CAN.map((c) => linhaR(c.ic, c.t, brl(c.v), c.n + " pedido(s) · " + pct(c.v, totV) + " · " + c.sub)).join("")}</div>`;
   return `<div class="fx-hero"><div class="fx-total"><small>Total recebido ${qd}</small><b>${brl(totV + totC)}</b><span>vendas ${brl(totV)}${totC ? " + contas " + brl(totC) : ""}</span>
       <div class="fx-acoes"><button class="btn" data-a="zapResumo" title="Abre o WhatsApp com o resumo e também deixa ele copiado">📲 Enviar resumo</button><button class="btn" data-a="csv">⬇ CSV</button><button class="btn" data-a="backup">💾 Backup</button></div></div>
     <div class="ct-stats fx-mini"><div class="ok"><small>Pedidos pagos</small><b>${pagos}</b><span>ticket médio ${brl(pagos ? soma(P.filter((p) => p.status === "pago"), (p) => p.valor) / pagos : 0)}</span></div><div class="${ab.length ? "dev" : ""}"><small>Em aberto</small><b>${ab.length}</b><span>${brl(vAb)} a receber</span></div>
@@ -858,6 +862,7 @@ function fechamento() {
         ${linhaR("📝", "Marcado na conta " + qd, brl(nc.v), txtNaConta(nc) + " · vão ser cobrados depois")}
         ${(() => { const pb = pagBoys[a + "|" + b] || [], v = round2(soma(pb, (x) => x.valor)); if (!pb.length) return ""; const por = {}; pb.forEach((x) => (por[x.entregador] = round2((por[x.entregador] || 0) + x.valor))); return linhaR("🛵", "Pago aos motoboys", "− " + brl(v), Object.entries(por).map(([n, x]) => n + " " + brl(x)).join(" · ") + (unico ? " · saiu da gaveta" : ""), "dev"); })()}
         ${est.length ? linhaR("↩️", "Estornos", brl(soma(est, (x) => x.valor)), est.length + " devolução(ões)", "dev") : ""}</div></div>
+    ${boxCanal}
     ${CP.length ? `<div class="gv-box"><h4>Contas recebidas ${qd}</h4><div class="tl">${CP.slice().sort((x, y) => String(x.data).localeCompare(String(y.data))).map((p) => `<div class="tl-it pag" style="cursor:default"><span class="tl-dia"><b>${dataBR(p.data).slice(0, 5)}</b></span><div class="tl-txt"><b>${esc(nomeChave(p.chave))}</b><span>${PAGFORMAS[p.forma] || esc(p.forma || "")}${p.refeicoes ? " · " + String(p.refeicoes).replace(".", ",") + " ref." : ""}</span></div><b class="tl-v">${brl(p.valor)}</b><span></span></div>`).join("")}</div></div>` : ""}`;
 }
 function csv() {

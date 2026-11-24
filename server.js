@@ -525,7 +525,10 @@ function textoFechamento(dia) {
   const contas = soma(R.contasRecebidas), g = R.gaveta || {}, dow = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"][new Date(dia + "T12:00:00").getDay()];
   const L = [`📊 *Fechamento Da Lúcia — ${dia.slice(8)}/${dia.slice(5, 7)} (${dow})*`, "", `💰 *Total recebido: ${b(tot + contas)}*`];
   Object.entries(fo).sort((x, y) => y[1] - x[1]).forEach(([k, v]) => L.push(`   ${NF[k] || k}: ${b(v)}`));
-  L.push("", `🍽️ Salão: ${R.pedidos.salao} pedidos · ${b(sal)}`, `🛵 Delivery: ${R.pedidos.delivery} pedidos · ${b(del)}${R.taxasEntrega ? ` (taxas ${b(R.taxasEntrega)})` : ""}`);
+  // delivery separado em ENTREGA e RETIRADA (dona 24/11), pela data do recebimento (igual ao total)
+  const dl = { entrega: { v: 0, ids: new Set() }, retirada: { v: 0, ids: new Set() } };
+  for (const x of db.pedidos) if (x.tipo === "delivery") for (const g of pagsDe(x)) if ((g.dia || x.dia) === dia && g.valor > 0) { const k = x.entrega === "retirada" ? "retirada" : "entrega"; dl[k].v = cents(dl[k].v + g.valor); dl[k].ids.add(x.id); }
+  L.push("", `🍽️ Salão: ${R.pedidos.salao} pedidos · ${b(sal)}`, `🛵 Entrega: ${dl.entrega.ids.size} pedidos · ${b(dl.entrega.v)}${R.taxasEntrega ? ` (taxas ${b(R.taxasEntrega)})` : ""}`, `🏃 Retirada: ${dl.retirada.ids.size} pedidos · ${b(dl.retirada.v)}`);
   if (R.naConta) L.push(`📒 Marcado na conta: ${b(R.naConta)}`);
   if (contas) L.push(`📥 Contas recebidas: ${b(contas)}`);
   if (g.motoboys) L.push(`🛵 Pago aos motoboys: ${b(g.motoboys)}`);
@@ -585,7 +588,7 @@ async function tratar(req, res) {
     const de = String(url.searchParams.get("de") || ""), ate = String(url.searchParams.get("ate") || de);
     if (!/^\d{4}-\d\d-\d\d$/.test(de) || !/^\d{4}-\d\d-\d\d$/.test(ate)) return json(res, 400, { erro: "período inválido" });
     const out = [];
-    for (const x of db.pedidos) for (const g of pagsDe(x)) { const d = g.dia || x.dia; if (d >= de && d <= ate && g.valor > 0) out.push({ forma: g.forma, valor: g.valor, dia: d, quando: g.quando || x.quando, pedidoId: x.id, pedidoDia: x.dia, tipo: x.tipo || "totem", numero: x.numero }); }
+    for (const x of db.pedidos) for (const g of pagsDe(x)) { const d = g.dia || x.dia; if (d >= de && d <= ate && g.valor > 0) out.push({ forma: g.forma, valor: g.valor, dia: d, quando: g.quando || x.quando, pedidoId: x.id, pedidoDia: x.dia, tipo: x.tipo || "totem", numero: x.numero, entrega: x.tipo === "delivery" ? (x.entrega === "retirada" ? "retirada" : "entrega") : undefined }); }
     return json(res, 200, out);
   }
   if (p === "/api/lancamentos" && req.method === "GET") { // tudo que foi marcado em conta no período (inclui marmita do WhatsApp e lançado à mão): o Fechamento soma
