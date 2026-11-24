@@ -144,7 +144,7 @@ module.exports = function criarFiscal({ DIR_DADOS }) {
   }
   // ---------- monta a NFC-e ----------
   // ped(s): pedidos já PAGOS; modo "discriminado" (cada item) ou "simples" (1 linha REFEICAO com o total); cpf opcional
-  function montar(peds, { cpf, modo }, pags, cfg, amb, serie, nNF) {
+  function montar(peds, { cpf, modo, obs }, pags, cfg, amb, serie, nNF) { // obs: observação livre no cupom (ex.: "Cupom referente ao dia 09/11/2026")
     const tab = (k) => ({ ...CLASSES[k], ...((cfg.tabela || {})[k] || {}) }), E = cfg.emit;
     let linhas;
     const itens = peds.flatMap((p) => p.itens || []).filter((c) => c.preco * (c.qtd || 1) > 0);
@@ -182,11 +182,11 @@ module.exports = function criarFiscal({ DIR_DADOS }) {
       + `<total><ICMSTot><vBC>0.00</vBC><vICMS>0.00</vICMS><vICMSDeson>0.00</vICMSDeson><vFCP>0.00</vFCP><vBCST>0.00</vBCST><vST>0.00</vST><vFCPST>0.00</vFCPST><vFCPSTRet>0.00</vFCPSTRet><vProd>${f2(total)}</vProd><vFrete>0.00</vFrete><vSeg>0.00</vSeg><vDesc>0.00</vDesc><vII>0.00</vII><vIPI>0.00</vIPI><vIPIDevol>0.00</vIPIDevol><vPIS>0.00</vPIS><vCOFINS>0.00</vCOFINS><vOutro>0.00</vOutro><vNF>${f2(total)}</vNF><vTotTrib>${f2(vTotTrib)}</vTotTrib></ICMSTot>`
       + `<IBSCBSTot><vBCIBSCBS>${f2(total)}</vBCIBSCBS><gIBS><gIBSUF><vDif>0.00</vDif><vDevTrib>0.00</vDevTrib><vIBSUF>${f2(vIBS)}</vIBSUF></gIBSUF><gIBSMun><vDif>0.00</vDif><vDevTrib>0.00</vDevTrib><vIBSMun>0.00</vIBSMun></gIBSMun><vIBS>${f2(vIBS)}</vIBS><vCredPres>0.00</vCredPres><vCredPresCondSus>0.00</vCredPresCondSus></gIBS><gCBS><vDif>0.00</vDif><vDevTrib>0.00</vDevTrib><vCBS>${f2(vCBS)}</vCBS><vCredPres>0.00</vCredPres><vCredPresCondSus>0.00</vCredPresCondSus></gCBS></IBSCBSTot></total>`
       + `<transp><modFrete>9</modFrete></transp><pag>${pag}</pag>`
-      + `<infAdic><infAdFisco>Documento emitido por ME ou EPP optante pelo simples nacional. nao gera permissao de credito fiscal IPI, ISS E ICMS.</infAdFisco><infCpl>Trib aprox R$ ${f2(c2(vTotTrib / 2))} Fed, R$ ${f2(vTotTrib - c2(vTotTrib / 2))} Est Fonte IBPT</infCpl></infAdic></infNFe>`;
+      + `<infAdic><infAdFisco>Documento emitido por ME ou EPP optante pelo simples nacional. nao gera permissao de credito fiscal IPI, ISS E ICMS.</infAdFisco><infCpl>${obs ? esc(semAc(obs)).slice(0, 300) + " | " : ""}Trib aprox R$ ${f2(c2(vTotTrib / 2))} Fed, R$ ${f2(vTotTrib - c2(vTotTrib / 2))} Est Fonte IBPT</infCpl></infAdic></infNFe>`;
     const hash = crypto.createHash("sha1").update(`${chave}|2|${amb}|${Number(cfg.cscId)}${cfg.csc}`).digest("hex").toUpperCase();
     const qr = `${WS[amb].qr}?p=${chave}|2|${amb}|${Number(cfg.cscId)}|${hash}`;
     const nfe = `<NFe xmlns="${NS}">${inf}<infNFeSupl><qrCode>${qr}</qrCode><urlChave>${WS[amb].consulta}</urlChave></infNFeSupl>${assinar(inf, "NFe" + chave)}</NFe>`;
-    return { nfe, chave, qr, total, vTotTrib, linhas: linhas.map((l) => ({ ...l, xProd: tab(l.k).xProd, cProd: tab(l.k).cProd })), pagL: Object.entries(porF).map(([f, v]) => ({ forma: f, valor: v })), troco, cpf: cpfL };
+    return { nfe, chave, qr, total, vTotTrib, obs: obs || undefined, linhas: linhas.map((l) => ({ ...l, xProd: tab(l.k).xProd, cProd: tab(l.k).cProd })), pagL: Object.entries(porF).map(([f, v]) => ({ forma: f, valor: v })), troco, cpf: cpfL };
   }
   // ---------- emitir (uma de cada vez: a numeração não pode repetir) ----------
   let fila = Promise.resolve();
@@ -208,6 +208,7 @@ module.exports = function criarFiscal({ DIR_DADOS }) {
       }
       const prot = tag(r, "protNFe"), cs = tag(prot || "", "cStat") || tag(r, "cStat"), mot = tag(prot || "", "xMotivo") || tag(r, "xMotivo");
       if (cs === "100" || cs === "150") return guardar(m, { nProt: tag(prot, "nProt"), dhRecbto: tag(prot, "dhRecbto") }, amb, serie, nNF, "<protNFe versao=\"4.00\">" + prot + "</protNFe>");
+      console.error("cupom fiscal nº " + nNF + " série " + serie + ": " + (cs || "?") + " - " + (mot || "")); // fica no log (logs/erros.log) pra conferir depois
       if (cs === "539" || cs === "204") continue; // número já usado (ex.: emitido em outro lugar): vai pro próximo
       if (!["217"].includes(cs)) { const atual = ler(); if (atual && Number(atual.numeros[amb]) === nNF + 1) { atual.numeros[amb] = nNF; salvar(atual); } } // rejeitado: o número não foi usado, fica pro próximo cupom
       throw new Error("SEFAZ recusou o cupom: " + (cs || "?") + " - " + (mot || "sem motivo"));
@@ -222,7 +223,7 @@ module.exports = function criarFiscal({ DIR_DADOS }) {
   function guardar(m, prot, amb, serie, nNF, protXml) {
     const dir = path.join(PASTA, amb === 1 ? "producao" : "homologacao", new Date().toLocaleDateString("en-CA").slice(0, 7)); fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, m.chave + "-procNFe.xml"), `<?xml version="1.0" encoding="UTF-8"?><nfeProc versao="4.00" xmlns="${NS}">${m.nfe}${protXml || ""}</nfeProc>`);
-    return { amb, serie, numero: nNF, chave: m.chave, prot: prot && prot.nProt, dhAut: prot && prot.dhRecbto, quando: Date.now(), valor: m.total, cpf: m.cpf || undefined, qr: m.qr, urlChave: WS[amb].consulta, vTotTrib: m.vTotTrib, linhas: m.linhas, pagL: m.pagL, troco: m.troco, status: "autorizada" };
+    return { amb, serie, numero: nNF, chave: m.chave, prot: prot && prot.nProt, dhAut: prot && prot.dhRecbto, quando: Date.now(), valor: m.total, cpf: m.cpf || undefined, qr: m.qr, urlChave: WS[amb].consulta, vTotTrib: m.vTotTrib, linhas: m.linhas, pagL: m.pagL, troco: m.troco, obs: m.obs, status: "autorizada" };
   }
   // ---------- cancelar (até 30 min depois, motivo com 15+ letras) ----------
   async function cancelar(nf, motivo) {

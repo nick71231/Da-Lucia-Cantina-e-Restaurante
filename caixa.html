@@ -1889,6 +1889,7 @@ function cupomL(nf) { // DANFE NFC-e (layout do manual da SEFAZ, resumido pra bo
   L.push({ hr: 1 }, { e: "Qtd. total de itens", d: String((nf.linhas || []).length) }, { e: "VALOR TOTAL R$", d: v(nf.valor), b: 1, s: "alta" }, { e: "FORMA DE PAGAMENTO", d: "VALOR PAGO R$", b: 1 });
   (nf.pagL || []).forEach((p) => L.push({ e: PG[p.forma] || p.forma, d: v(p.valor) }));
   if (nf.troco > 0) L.push({ e: "Troco R$", d: v(nf.troco) });
+  if (nf.obs) L.push({ hr: 1 }, { t: nf.obs, a: "c", b: 1 }); // observação do cupom (ex.: "Cupom referente ao dia 09/11/2026")
   L.push({ hr: 1 }, { t: "Consulte pela Chave de Acesso em", a: "c", b: 1 }, { t: nf.urlChave, a: "c" }, { t: String(nf.chave).replace(/(\d{4})(?=\d)/g, "$1 "), a: "c" }, { hr: 1 });
   L.push({ t: nf.cpf ? "CONSUMIDOR - CPF: " + cpfFmt(nf.cpf) : "CONSUMIDOR NAO IDENTIFICADO", a: "c", b: 1 });
   L.push({ t: "NFC-e n " + String(nf.numero).padStart(9, "0") + "  Serie " + String(nf.serie).padStart(3, "0"), a: "c", b: 1 }, { t: dt(nf.quando), a: "c" });

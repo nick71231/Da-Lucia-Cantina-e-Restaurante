@@ -191,6 +191,9 @@ function backup() { // uma cópia por dia (guarda as últimas 30)
     const dir = path.join(DIR_DADOS, "backups"), dia = hoje(); fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, "pedidos-" + dia + ".json"), JSON.stringify(db)); fs.writeFileSync(path.join(dir, "config-" + dia + ".json"), JSON.stringify(cfg));
     if (process.env.BACKUP_EXTRA) { // cópia extra (pendrive, pasta do Drive/OneDrive...)
+      // notas fiscais (XML autorizados e cancelamentos): têm que ser guardadas 5 anos -> cópia no OneDrive também (só copia o que ainda não está lá)
+      try { const de = path.join(DIR_DADOS, "nfce"), para = path.join(process.env.BACKUP_EXTRA, "notas-fiscais"); const copia = (a, b) => { if (!fs.existsSync(a)) return; for (const f of fs.readdirSync(a, { withFileTypes: true })) { const x = path.join(a, f.name), y = path.join(b, f.name); if (f.isDirectory()) copia(x, y); else if (!fs.existsSync(y) || /avulsos\.json$/.test(f.name)) { fs.mkdirSync(b, { recursive: true }); fs.copyFileSync(x, y); } } }; copia(de, para); }
+      catch (e) { console.error("cópia das notas fiscais falhou:", e.message); }
       try { const ex = process.env.BACKUP_EXTRA; fs.mkdirSync(ex, { recursive: true }); ["pedidos-", "config-"].forEach((pre) => { fs.copyFileSync(path.join(dir, pre + dia + ".json"), path.join(ex, pre + dia + ".json")); fs.readdirSync(ex).filter((a) => a.startsWith(pre) && a.endsWith(".json")).sort().slice(0, -30).forEach((a) => fs.unlinkSync(path.join(ex, a))); }); } // na nuvem também só os últimos 30 dias (não lota o OneDrive)
       catch (e) { console.error("cópia extra do backup falhou:", e.message); }
     }
