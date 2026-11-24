@@ -19,18 +19,20 @@ const HOMOLOG_XPROD = "NOTA FISCAL EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALO
 // (pesquisa 24/11/2026: refrigerante e cerveja continuam na ST em SP; água saiu da ST em 01/07/2026 - Portaria SRE 9/2026).
 // O contador pode mudar qualquer linha em dados/fiscal.json -> "tabela": { "refri_lata": { "CFOP": "..." } }
 const CLASSES = {
-  refeicao: { cProd: "REF", xProd: "REFEICAO", NCM: "21069090", CFOP: "5102", CSOSN: "102" },
-  marmitex: { cProd: "MTX", xProd: "MARMITEX", NCM: "21069090", CEST: "1710100", CFOP: "5102", CSOSN: "102" },
-  entrega: { cProd: "ENTREGA", xProd: "TAXA DE ENTREGA", NCM: "21069090", CEST: "1710100", CFOP: "5102", CSOSN: "102" },
+  // contadora 24/11: refeição pronta/marmitex = 2106.90.90, CFOP 5101 (produção do próprio restaurante), CSOSN 102, SEM CEST (CEST é só pra item com ST)
+  refeicao: { cProd: "REF", xProd: "REFEICAO", NCM: "21069090", CFOP: "5101", CSOSN: "102" },
+  marmitex: { cProd: "MTX", xProd: "MARMITEX", NCM: "21069090", CFOP: "5101", CSOSN: "102" },
+  entrega: { cProd: "ENTREGA", xProd: "TAXA DE ENTREGA", NCM: "21069090", CFOP: "5101", CSOSN: "102" },
   refri_lata: { cProd: "REFRILATA", xProd: "REFRIGERANTE EM LATA", NCM: "22021000", CEST: "0301002", CFOP: "5405", CSOSN: "500" },
   refri_600: { cProd: "REFRI600", xProd: "REFRIGERANTE 600ML", NCM: "22021000", CEST: "0301001", CFOP: "5405", CSOSN: "500" },
   refri_2l: { cProd: "REFRI2L", xProd: "REFRIGERANTE 2 LITROS", NCM: "22021000", CEST: "0301001", CFOP: "5405", CSOSN: "500" },
   refri: { cProd: "REFRI", xProd: "REFRIGERANTE", NCM: "22021000", CEST: "0301100", CFOP: "5405", CSOSN: "500" },
   agua: { cProd: "AGUA", xProd: "AGUA MINERAL", NCM: "22011000", CFOP: "5102", CSOSN: "102" },
   suco: { cProd: "SUCONATURAL", xProd: "SUCO NATURAL", NCM: "20098913", CFOP: "5102", CSOSN: "102" },
-  bebida: { cProd: "BEBIDA", xProd: "BEBIDA NAO ALCOOLICA", NCM: "22029900", CFOP: "5102", CSOSN: "102" },
+  bebida: { cProd: "BEBIDA", xProd: "BEBIDA NAO ALCOOLICA", NCM: "22029900", CFOP: "5102", CSOSN: "102" }, // Del Valle (néctar) - contadora 24/11
+  cha: { cProd: "CHA", xProd: "CHA PRONTO (ICE TEA)", NCM: "22021000", CEST: "1711200", CFOP: "5102", CSOSN: "102" }, // Ice Tea - contadora 24/11
   cerveja: { cProd: "CERVEJA", xProd: "CERVEJA LONG NECK", NCM: "22030000", CEST: "0302101", CFOP: "5405", CSOSN: "500" },
-  sorvete: { cProd: "SORVETE", xProd: "SORVETE", NCM: "21050010", CFOP: "5102", CSOSN: "102" },
+  sorvete: { cProd: "SORVETE", xProd: "SORVETE", NCM: "21050010", CEST: "2300100", CFOP: "5102", CSOSN: "102" }, // contadora 24/11: saiu da ST em 01/07/2026
   doce: { cProd: "DOCE", xProd: "SOBREMESA", NCM: "21069090", CFOP: "5102", CSOSN: "102" },
 };
 const semAc = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -44,7 +46,8 @@ function classe(c) {
     if (/long neck|cerveja|heineken|budweiser|brahma|skol|stella|corona|amstel|spaten|original/.test(n)) return "cerveja";
     if (/\bagua\b/.test(n) && !/tonica/.test(n)) return "agua";
     if (/\bsuco\b/.test(n) && !/del valle/.test(n)) return "suco";
-    if (/del valle|ice tea|\bcha\b|gatorade|isoton|energ|nectar/.test(n)) return "bebida";
+    if (/ice tea|\bcha\b|\bmate\b/.test(n)) return "cha";
+    if (/del valle|gatorade|isoton|energ|nectar/.test(n)) return "bebida";
     if (/\blata\b/.test(n)) return "refri_lata";
     if (/600|\bpet\b/.test(n)) return "refri_600";
     if (/\b2 ?l\b|2 litros/.test(n)) return "refri_2l";
