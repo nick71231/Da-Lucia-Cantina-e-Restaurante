@@ -248,7 +248,7 @@ function pedidoDoSite(s) { // converte o pedido do site pro formato do caixa (o 
   const p = { id: quando + "-d" + numero, uid: "site:" + s.token, siteToken: s.token, tipo: "delivery", numero, dia: /^\d{4}-\d\d-\d\d$/.test(s.dia || "") ? s.dia : hoje(), quando,
     nome: t(s.nome, 40), telefone: t(s.telefone, 15), entrega: s.tipo_entrega === "entrega" ? "entrega" : "retirada",
     endereco: e ? { rua: t(e.rua, 80), numero: t(e.numero, 10), bairro: t(e.bairro, 50), complemento: t(e.complemento, 60) } : null,
-    pagPrevisto: t(s.forma_pagamento, 20), cartaoTipo: ["credito", "debito", "refeicao"].includes(s.cartao_tipo) ? s.cartao_tipo : undefined, trocoPara: Number(s.troco_para) > 0 ? cents(Number(s.troco_para)) : null, obsPedido: t(s.obs, 200),
+    pagPrevisto: t(s.forma_pagamento, 20), cartaoTipo: ["credito", "debito", "refeicao"].includes(s.cartao_tipo) ? s.cartao_tipo : undefined, trocoPara: Number(s.troco_para) > 0 ? cents(Number(s.troco_para)) : null, obsPedido: t(s.obs, 520),
     itens, status: "aguardando", pagamento: null };
   p.valor = cents(itens.reduce((x, c) => x + c.preco * c.qtd, 0)); p.unidades = itens.reduce((x, c) => x + c.qtd, 0);
   if (Math.abs(p.valor - (Number(s.total) || 0)) > 0.01) console.error(`delivery: D${numero} somou ${p.valor} mas o site diz ${s.total}`);
