@@ -268,6 +268,10 @@ function clienteDoPedido(p) {
   const pri = nb.split(" ")[0]; l = ativos.filter((c) => /marmit|mta/.test(semAcS(c.nome)) && nomeBase(c.nome).split(" ")[0] === pri); // só o 1º nome, entre os clientes de marmita
   return l.length === 1 ? l[0] : null;
 }
+// bebida que SEMPRE vai junto com a marmita de alguns clientes, cobrada na conta (dona 25/11): Madeireira = 2 marmitex com 1 refri 600ml
+// (R$ 6), 3 ou mais com 1 refri 2L (R$ 8); 1 marmitex vai sem. O robô põe "+ 1 REFRI ..." na observação pra cozinha.
+const BEBIDA_FIXA = [{ empresa: /^madei?re?i?ra$/i, porQtd: (n) => (n >= 3 ? { nome: "refri 2L", preco: 8 } : n === 2 ? { nome: "refri 600ml", preco: 6 } : null) }];
+function bebidaDaConta(cli, n) { const r = BEBIDA_FIXA.find((x) => x.empresa.test(semAcS(cli.empresa).trim())); return r ? r.porQtd(n) : null; }
 function contaDoPedido(p) { // cliente com conta pra um pedido "na conta": telefone; senão o nome do cliente (ou da empresa) dentro do nome do pedido. Tem que dar 1 só.
   const ativos = db.clientes.filter((c) => c.ativo !== false), fim = (t) => String(t || "").replace(/\D/g, "").slice(-8), tel = fim(p.telefone);
   if (tel.length === 8) { const l = ativos.filter((x) => telsCli(x.telefone).includes(tel)); if (l.length === 1) return l[0]; }
@@ -295,9 +299,9 @@ function pagarDoSite(p) {
       return;
     }
     if (cli) {
-      const n = marm.reduce((s, c) => s + c.qtd, 0), valor = cents((Number(cli.valorRefeicao) || 0) * n);
+      const n = marm.reduce((s, c) => s + c.qtd, 0), beb = bebidaDaConta(cli, n), valor = cents((Number(cli.valorRefeicao) || 0) * n + (beb ? beb.preco : 0));
       if (!cli.telefone && p.telefone) cli.telefone = p.telefone; // da próxima vez acha direto pelo telefone
-      if (valor > 0) { db.lancamentos.push({ id: uid("l"), clienteId: cli.id, dia: p.dia, qtd: 0, valor, obs: `${n}x marmita ${brl2(cli.valorRefeicao)} (WhatsApp) - pedido ${p.entrega === "retirada" ? "R" : "E"}${p.numero}`.slice(0, 120), pedidoId: p.id }); p.contaCliente = cli.id; }
+      if (valor > 0) { db.lancamentos.push({ id: uid("l"), clienteId: cli.id, dia: p.dia, qtd: 0, valor, obs: `${n}x marmita ${brl2(cli.valorRefeicao)}${beb ? " + " + beb.nome + " " + brl2(beb.preco) : ""} (WhatsApp) - pedido ${p.entrega === "retirada" ? "R" : "E"}${p.numero}`.slice(0, 120), pedidoId: p.id }); p.contaCliente = cli.id; }
     }
     if (p.valor === 0 && (!marm.length || p.contaCliente)) { p.status = "pago"; p.pagamento = "marmita"; p.pagoEm = Date.now(); p.pagoAuto = true; }
     return;

@@ -311,6 +311,14 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   const m61a = d61 ? await reqEm(sd.base, "PATCH", "/api/pedidos/" + d61.id, { status: "conta", clienteId: cLu.id }, tkD) : { s: 0 };
   const m61 = d61 ? await reqEm(sd.base, "PATCH", "/api/pedidos/" + d61.id, { status: "conta", clienteId: cLu.id, precoMarmita: 45 }, tkD) : { s: 0, j: {} };
   t(m61a.s === 409 && m61.s === 200 && m61.j.valor === 45, "cliente sem valor de refeição: a marmita vai pra conta com o valor que o caixa digitou");
+  { // Madeireira (dona 25/11): marmita R$ 17 do cadastro + o refri de sempre na conta (2 = refri 600ml R$ 6; 3 = refri 2L R$ 8; 1 = sem)
+    const mad = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "MAURICIO", empresa: "MADEREIRA", modo: "refeicao", valorRefeicao: 17, telefone: "(12) 99146-0285" }, tkD)).j;
+    const mt = (tok, n, q) => ({ ...PS, token: tok, numero: n, nome: "Maurício - Madeireira - MARMITA", telefone: "12991460285", tipo_entrega: "retirada", endereco: null, forma_pagamento: "conta", subtotal: 0, taxa_entrega: 0, total: 0, obs: q === 2 ? "[WhatsApp] + 1 REFRI 600ML" : "[WhatsApp] + 1 REFRI 2L", itens: [{ nome: "Marmita", preco: 0, qtd: q, grupos: [] }] });
+    extraSite.push(mt("99999999-1111-3333-4444-555555555555", 71, 2), mt("99999999-2222-3333-4444-555555555555", 72, 3));
+    await dorme(1600);
+    const ct = (await reqEm(sd.base, "GET", "/api/contas", undefined, tkD)).j.lancamentos.filter((l) => l.clienteId === mad.id);
+    t(ct.some((l) => l.valor === 40 && /2x marmita.* \+ refri 600ml/.test(l.obs)) && ct.some((l) => l.valor === 59 && /3x marmita.* \+ refri 2L/.test(l.obs)), "Madeireira: 2 marmitex = R$ 40 (com refri 600ml) e 3 = R$ 59 (com refri 2L) na conta");
+  }
   { // pedido "na conta" do robô: marca sozinho pelo telefone cadastrado ou pelo nome (empresa) que deu no pedido
     const der = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "DER", empresa: "DER" }, tkD)).j, gi = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "GILDA", telefone: "(12) 98111-2233" }, tkD)).j;
     const it = [{ nome: "Marmitex - R$22,00", preco: 22, qtd: 1, grupos: [] }];
