@@ -534,20 +534,20 @@ function textoFechamento(dia) {
   if (g.motoboys) L.push(`🛵 Pago aos motoboys: ${b(g.motoboys)}`);
   if (g.sangrias) L.push(`➖ Retiradas da gaveta: ${b(g.sangrias)}`);
   if (R.cancelados) L.push(`❌ Cancelados: ${R.cancelados}`);
-  if (cupomDiaUlt.dia === dia && (cupomDiaUlt.emitidos.length || cupomDiaUlt.erro)) { L.push(""); cupomDiaUlt.emitidos.forEach((c) => L.push(`🧾 Cupom fiscal cartão/Pix${c.dia !== dia ? " (vendas de " + c.dia.slice(8) + "/" + c.dia.slice(5, 7) + ")" : ""}: nº ${c.numero} · ${b(c.valor)} (${c.qtd} vendas)`)); if (cupomDiaUlt.erro) L.push("⚠️ Cupom fiscal do dia não saiu: " + cupomDiaUlt.erro); }
+  if (cupomDiaUlt.dia === dia && (cupomDiaUlt.emitidos.length || cupomDiaUlt.erro)) { L.push(""); if (cupomDiaUlt.emitidos.length) L.push(`🧾 Cupons fiscais automáticos (cartão/Pix): ${cupomDiaUlt.emitidos.length} · ${b(cupomDiaUlt.emitidos.reduce((s, c) => s + c.valor, 0))}`); if (cupomDiaUlt.erro) L.push("⚠️ Cupom fiscal do dia não saiu: " + cupomDiaUlt.erro); }
   if (abertos.length) L.push("", `⚠️ *Ficou em aberto hoje: ${abertos.length} · ${b(vAb)}*`);
   L.push("", g.fechamento ? `💵 Gaveta fechada: contado ${b(g.fechamento.contado)} · ${Math.abs(g.fechamento.diferenca || 0) < 0.01 ? "bateu ✅" : (g.fechamento.diferenca > 0 ? "sobrou " : "faltou ") + b(Math.abs(g.fechamento.diferenca)) + " ⚠️"}`
     : g.esperado != null ? `💵 Gaveta: deve ter ${b(g.esperado)} (ainda não foi fechada)` : "💵 Gaveta não foi aberta hoje");
   return { texto: L.join("\n"), movimento: tot + contas + R.pedidos.salao + R.pedidos.delivery > 0 };
 }
-// ----- CUPOM FISCAL AUTOMÁTICO DO DIA (dona 25/11): a partir das 15h, 1 cupom por dia de venda, com o total das vendas pagas SÓ em
-// crédito/débito/Pix (venda com dinheiro, vale ou conta fica de fora) que não tiraram cupom na hora. Liga/desliga no 🧾 do caixa (admin).
-// O pedido ganha "nfceDia" (a chave do cupom) e não entra de novo. Venda depois das 15h vai no cupom do dia seguinte (referente ao dia dela).
+// ----- CUPOM FISCAL AUTOMÁTICO (dona 25/11): a partir das 15h, 1 cupom POR VENDA (cada item discriminado, igual ao do caixa) pras vendas pagas
+// SÓ em crédito/débito/Pix (venda com dinheiro, vale ou conta fica de fora) que não tiraram cupom na hora. Liga/desliga no 🧾 do caixa (admin).
+// O cupom fica no pedido (p.nfce, como o tirado na hora). Venda depois das 15h sai no dia seguinte (com "Venda do dia ..." no cupom).
 let cupomDiaRodando = false, cupomDiaUlt = { dia: "", tentativa: 0, emitidos: [], erro: null };
 function pedidosCupomDia(cd) {
   const formas = new Set(cd.formas || []), hj = hoje(), porDia = {};
   for (const p of db.pedidos) {
-    if (p.status !== "pago" || !p.dia || p.dia < cd.desde || p.dia > hj || p.nfceDia || (p.nfce && p.nfce.status === "autorizada")) continue;
+    if (p.status !== "pago" || !p.dia || p.dia < cd.desde || p.dia > hj || p.nfceDia || p.nfce) continue; // p.nfce: já tem cupom (ou teve e foi cancelado: não tira de novo sozinho)
     const pg = pagsDe(p); if (!pg.length || !pg.every((g) => formas.has(g.forma) && g.valor > 0)) continue;
     const itens = cents((p.itens || []).reduce((s, c) => s + c.preco * (c.qtd || 1), 0)), recebido = cents(pg.reduce((s, g) => s + g.valor, 0));
     if (!(itens > 0) || Math.abs(itens - recebido) > 0.009) continue; // desconto/diferença: o cupom não fecharia
@@ -558,20 +558,20 @@ function pedidosCupomDia(cd) {
 async function cupomDoDia(forcar) {
   const cd = fiscal.cupomDia(); if (!cd.ativo || !cd.desde || cupomDiaRodando) return null;
   const hj = hoje(); if (!forcar && (new Date().getHours() < cd.hora || (cupomDiaUlt.dia === hj && (!cupomDiaUlt.erro || Date.now() - cupomDiaUlt.tentativa < 30 * 60e3)))) return null; // 1x por dia; se deu erro tenta de novo a cada 30 min
-  cupomDiaRodando = true; const feitos = [], erros = [];
+  cupomDiaRodando = true; const feitos = [], erros = []; let semSefaz = 0;
   try {
     const porDia = pedidosCupomDia(cd);
-    for (const dia of Object.keys(porDia).sort()) {
-      const peds = porDia[dia], ref = dia.split("-").reverse().join("/");
+    for (const dia of Object.keys(porDia).sort()) for (const p of porDia[dia].sort((a, b) => (a.quando || 0) - (b.quando || 0))) {
+      if (semSefaz >= 3) break; // SEFAZ fora do ar: para e tenta de novo daqui a 30 min
       try {
-        const nf = await fiscal.emitir(peds, { modo: "simples", obs: "Vendas cartao/Pix do dia " + ref }, peds.flatMap(pagsDe));
-        peds.forEach((x) => (x.nfceDia = { chave: nf.chave, numero: nf.numero, serie: nf.serie, amb: nf.amb })); await gravar();
-        feitos.push({ dia, numero: nf.numero, valor: nf.valor, qtd: peds.length, chave: nf.chave });
-        console.log("cupom do dia " + ref + ": nº " + nf.numero + " R$ " + nf.valor + " (" + peds.length + " vendas)");
-      } catch (e) { erros.push(ref + ": " + e.message); console.error("cupom do dia " + ref + ": " + e.message); }
+        const nf = await fiscal.emitir([p], { modo: "discriminado", obs: dia !== hj ? "Venda do dia " + dia.split("-").reverse().join("/") : "" }, pagsDe(p));
+        p.nfce = { ...nf, pedidos: [p.id], modo: "discriminado", auto: true }; await gravar(); semSefaz = 0;
+        feitos.push({ dia, numero: nf.numero, valor: nf.valor, chave: nf.chave, pedido: p.id });
+      } catch (e) { if (/SEFAZ não respondeu|sem conexão/.test(e.message)) semSefaz++; erros.push(rotuloPed(p) + ": " + e.message); console.error("cupom automático " + rotuloPed(p) + " (" + dia + "): " + e.message); }
     }
   } finally { cupomDiaRodando = false; }
-  cupomDiaUlt = { dia: hj, tentativa: Date.now(), emitidos: [...(cupomDiaUlt.dia === hj ? cupomDiaUlt.emitidos : []), ...feitos], erro: erros.length ? erros.join(" | ") : null };
+  if (feitos.length) console.log("cupom automático: " + feitos.length + " cupons, R$ " + cents(feitos.reduce((s, c) => s + c.valor, 0)));
+  cupomDiaUlt = { dia: hj, tentativa: Date.now(), emitidos: [...(cupomDiaUlt.dia === hj ? cupomDiaUlt.emitidos : []), ...feitos], erro: erros.length ? erros.length + " venda(s) sem cupom - " + erros.slice(0, 3).join(" | ") : null };
   return cupomDiaUlt;
 }
 async function mandarFechamento() {
@@ -695,7 +695,7 @@ async function tratar(req, res) {
     let l; try { l = fiscal.listarNotas(String(url.searchParams.get("mes") || hoje().slice(0, 7))); } catch (e) { return json(res, 400, { erro: e.message }); }
     const ped = {}; db.pedidos.forEach((x) => { if (x.nfce && x.nfce.chave) ped[x.nfce.chave] = x; });
     const dia = {}; db.pedidos.forEach((x) => { if (x.nfceDia) dia[x.nfceDia.chave] = (dia[x.nfceDia.chave] || 0) + 1; });
-    return json(res, 200, l.map((n) => ({ ...n, pedido: ped[n.chave] ? { id: ped[n.chave].id, rot: rotuloPed(ped[n.chave]) } : undefined, vendasDia: dia[n.chave] || undefined })));
+    return json(res, 200, l.map((n) => ({ ...n, pedido: ped[n.chave] ? { id: ped[n.chave].id, rot: rotuloPed(ped[n.chave]), auto: !!ped[n.chave].nfce.auto || undefined } : undefined, vendasDia: dia[n.chave] || undefined })));
   }
   if (p === "/api/fiscal/nota" && req.method === "GET") { const n = fiscal.notaCompleta(String(url.searchParams.get("chave") || "")); return n ? json(res, 200, n) : json(res, 404, { erro: "nota não encontrada" }); }
   if (p === "/api/fiscal/xml" && req.method === "GET") { // baixar o XML (o autorizado; ?canc=1 = o do cancelamento)

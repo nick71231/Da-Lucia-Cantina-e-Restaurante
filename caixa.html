@@ -1952,7 +1952,7 @@ async function modalFiscal() { // botão 🧾 no topo: certificado, teste x prod
       <input type="file" id="cf-arq" accept=".pfx,.p12" style="width:100%"><input type="password" id="cf-senha" placeholder="Senha do certificado" autocomplete="new-password" style="width:100%;margin-top:8px">
       <button class="btn" data-a="cfInstalar" style="margin-top:8px">🔐 Instalar certificado</button>
       <h4 style="margin-top:18px">Ambiente</h4><div class="cf-seg">${[[2, "🧪 Teste"], [1, "✅ Produção"]].map(([k, t]) => `<button type="button" class="btn mini ${S.ambiente === k ? "on" : ""}" data-a="cfAmb" data-v="${k}">${t}</button>`).join("")}</div>
-      <h4 style="margin-top:18px">🤖 Cupom automático do cartão e Pix</h4><p class="det-obs" style="margin:0 0 6px">Todo dia às ${(S.cupomDia || {}).hora || 15}h sai 1 cupom com o total das vendas pagas só em crédito, débito ou Pix que não tiraram cupom na hora. Venda com dinheiro ou vale fica de fora.</p>
+      <h4 style="margin-top:18px">🤖 Cupom automático do cartão e Pix</h4><p class="det-obs" style="margin:0 0 6px">Todo dia às ${(S.cupomDia || {}).hora || 15}h sai 1 cupom pra cada venda paga só em crédito, débito ou Pix que não tirou cupom na hora. Venda com dinheiro ou vale fica de fora.</p>
       <div class="cf-seg">${[[0, "Desligado"], [1, "🤖 Ligado"]].map(([k, t]) => `<button type="button" class="btn mini ${!!(S.cupomDia || {}).ativo === !!k ? "on" : ""}" data-a="cdLiga" data-v="${k}">${t}</button>`).join("")}</div>
       ${(S.cupomDia || {}).ativo ? `<p class="det-obs" id="cd-pend" style="margin:6px 0">…</p><button class="btn mini" data-a="cdAgora">🧾 Emitir agora</button>` : ""}`
       : `<p class="det-obs">Só o administrador instala o certificado e muda o ambiente.</p>`}
@@ -2060,7 +2060,7 @@ function ntDesenhar() {
   const c = vale.filter((n) => n.modelo === "65"), e = vale.filter((n) => n.modelo === "55");
   $("#nt-tot").innerHTML = `<div><span>🧾 Cupons</span><b>${c.length} · ${brl(soma(c))}</b></div><div><span>📄 NF-e</span><b>${e.length} · ${brl(soma(e))}</b></div><div><span>Total</span><b>${brl(soma(vale))}</b></div>`;
   el.innerHTML = l.length ? l.map((n) => {
-    const tp = n.modelo === "55" ? "📄 NF-e" : "🧾 Cupom", quem = n.nome ? esc(n.nome) + (n.doc ? " · " + docFmt(n.doc) : "") : n.doc ? "CPF " + docFmt(n.doc) : n.vendasDia ? `Cartão/Pix do dia · ${n.vendasDia} vendas` : n.pedido ? esc(n.pedido.rot) : "Consumidor";
+    const tp = n.modelo === "55" ? "📄 NF-e" : "🧾 Cupom", quem = n.nome ? esc(n.nome) + (n.doc ? " · " + docFmt(n.doc) : "") : n.doc ? "CPF " + docFmt(n.doc) : n.pedido ? esc(n.pedido.rot) + (n.pedido.auto ? " · 🤖 automático" : "") : n.vendasDia ? `Cartão/Pix do dia · ${n.vendasDia} vendas` : "Consumidor";
     const st = n.situacao === "cancelada" ? '<em class="nt-st ruim">cancelada</em>' : n.situacao !== "autorizada" ? `<em class="nt-st ruim">${esc(n.situacao)}</em>` : n.amb === 2 ? '<em class="nt-st">teste</em>' : '<em class="nt-st ok">autorizada</em>';
     return `<div class="nt-li ${n.situacao === "cancelada" ? "canc" : ""}"><div class="nt-tp">${tp}<small>${n.origem === "viavale" ? "ViaVale" : "Caixa"}</small></div>
       <div class="nt-info"><b>nº ${n.numero} <small>série ${n.serie}</small></b><span>${dhFmt(n.dhEmi)} · ${quem}</span></div>
@@ -2208,16 +2208,16 @@ document.addEventListener("click", async (e) => {
   }
   if (a === "cdLiga") {
     const on = t.dataset.v === "1";
-    if (on && !confirm("Ligar o cupom fiscal automático?\n\nTodo dia às " + ((fiscalSt.cupomDia || {}).hora || 15) + "h sai 1 cupom com o total das vendas pagas só em crédito, débito ou Pix que não tiraram cupom na hora (a partir de hoje).")) return;
+    if (on && !confirm("Ligar o cupom fiscal automático?\n\nTodo dia às " + ((fiscalSt.cupomDia || {}).hora || 15) + "h sai 1 cupom pra cada venda paga só em crédito, débito ou Pix que não tirou cupom na hora (a partir de hoje).")) return;
     try { const r = await aut("/api/fiscal/cupom-dia", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ativo: on }) }); if (!r.ok) return cfMsg("✕ Não mudou.", "ruim"); await modalFiscal(); cfMsg(on ? "✅ Cupom automático ligado." : "Cupom automático desligado.", "ok"); } catch (er) { cfMsg("✕ Sem conexão com o servidor.", "ruim"); }
     return;
   }
   if (a === "cdAgora") {
-    if (!confirm("Emitir AGORA o cupom das vendas no cartão/Pix que ainda não têm cupom?")) return;
+    if (!confirm("Emitir AGORA os cupons das vendas no cartão/Pix que ainda não têm cupom?")) return;
     t.disabled = true; cfMsg("⏳ Emitindo…");
     try { const r = await aut("/api/fiscal/cupom-dia", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rodar: true }) }), j = await r.json().catch(() => ({})); t.disabled = false;
       const em = (j.resultado || {}).emitidos || [], err = (j.resultado || {}).erro;
-      cfMsg(r.ok ? (err ? "⚠ " + esc(err) : em.length ? "✓ " + em.map((c) => `Cupom nº ${c.numero} · ${brl(c.valor)} (${c.qtd} vendas)`).join("<br>") : "Nada pendente.") : "✕ " + esc(j.erro || "não deu"), r.ok && !err ? "ok" : "ruim"); cdStatus();
+      cfMsg(r.ok ? (err ? "⚠ " + esc(err) : em.length ? `✓ ${em.length} cupom(ns) · ${brl(em.reduce((s, c) => s + c.valor, 0))}` : "Nada pendente.") : "✕ " + esc(j.erro || "não deu"), r.ok && !err ? "ok" : "ruim"); cdStatus();
     } catch (er) { t.disabled = false; cfMsg("✕ Sem conexão com o servidor.", "ruim"); }
   }
 });
@@ -2227,7 +2227,7 @@ async function cdStatus() {
   if (sessionStorage.getItem("caixaRole") !== "admin") { el.textContent = ""; return; }
   try { const r = await aut("/api/fiscal/cupom-dia", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }), j = await r.json(); if (!r.ok || !j.cupomDia.ativo) { el.textContent = ""; return; }
     const u = j.ultimo || {}, pend = j.pendentes || [];
-    el.innerHTML = (pend.length ? "Esperando o próximo cupom: " + pend.map((p) => `${p.dia.slice(8)}/${p.dia.slice(5, 7)} · ${p.qtd} vendas · ${brl(p.valor)}`).join(" | ") : "Nenhuma venda esperando cupom.")
+    el.innerHTML = (pend.length ? "Esperando cupom: " + pend.map((p) => `${p.dia.slice(8)}/${p.dia.slice(5, 7)} · ${p.qtd} vendas · ${brl(p.valor)}`).join(" | ") : "Nenhuma venda esperando cupom.")
       + (u.erro ? `<br><b style="color:#a50f14">Último erro: ${esc(u.erro)}</b>` : "");
   } catch (e) {}
 }
