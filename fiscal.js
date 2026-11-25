@@ -69,7 +69,7 @@ const agoraSP = () => new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 1
 const cpfOk = (v) => { const s = String(v || "").replace(/\D/g, ""); if (s.length !== 11 || /^(\d)\1+$/.test(s)) return false; for (const t of [9, 10]) { let soma = 0; for (let i = 0; i < t; i++) soma += Number(s[i]) * (t + 1 - i); const d = ((soma * 10) % 11) % 10; if (d !== Number(s[t])) return false; } return true; };
 const cnpjOk = (v) => { const s = String(v || "").replace(/\D/g, ""); if (s.length !== 14 || /^(\d)\1+$/.test(s)) return false; const dv = (n) => { let soma = 0, p = n - 7; for (let i = 0; i < n; i++) { soma += Number(s[i]) * p--; if (p < 2) p = 9; } const r = soma % 11; return r < 2 ? 0 : 11 - r; }; return dv(12) === Number(s[12]) && dv(13) === Number(s[13]); };
 const dv11 = (s) => { let soma = 0, p = 2; for (let i = s.length - 1; i >= 0; i--) { soma += Number(s[i]) * p; p = p === 9 ? 2 : p + 1; } const r = soma % 11; return r < 2 ? 0 : 11 - r; };
-const TPAG = { dinheiro: "01", credito: "03", debito: "04", refeicao: "11", pix: "17", cartao: "99" };
+const TPAG = { dinheiro: "01", credito: "03", debito: "04", loja: "05", refeicao: "11", pix: "17", cartao: "99" }; // loja = crédito loja (venda na conta/fiado, paga depois)
 
 // ZIP simples (deflate, nomes em UTF-8), sem biblioteca: pras notas do mês da contadora
 const zlib = require("zlib");
@@ -412,7 +412,7 @@ module.exports = function criarFiscal({ DIR_DADOS }) {
     return null;
   }
   // a nota inteira a partir do XML (pra reimprimir o cupom na bobina e montar a DANFE da NF-e), no mesmo formato que o caixa guarda
-  const TPAG_INV = { "01": "dinheiro", "03": "credito", "04": "debito", "11": "refeicao", "15": "boleto", "16": "deposito", "17": "pix", "18": "transferencia", "90": "prazo", "99": "cartao" };
+  const TPAG_INV = { "01": "dinheiro", "03": "credito", "04": "debito", "05": "loja", "11": "refeicao", "15": "boleto", "16": "deposito", "17": "pix", "18": "transferencia", "90": "prazo", "99": "cartao" };
   function notaCompleta(chave) {
     const A = acharXml(chave); if (!A) return null;
     const x = fs.readFileSync(A.arq, "utf8"), n = lerNota(A.arq); if (!n) return null;

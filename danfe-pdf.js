@@ -7,7 +7,7 @@ const DADOS = process.env.DADOS_DIR || path.join(__dirname, "dados");
 const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const brl = (v) => Number(v || 0).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 const dt = (ms) => { const d = new Date(ms); return d.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }) + " " + d.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" }); };
-const PG = { dinheiro: "Dinheiro", credito: "Cartão de Crédito", debito: "Cartão de Débito", refeicao: "Vale Refeição", pix: "PIX", cartao: "Cartão" };
+const PG = { dinheiro: "Dinheiro", credito: "Cartão de Crédito", debito: "Cartão de Débito", loja: "Crédito Loja", refeicao: "Vale Refeição", pix: "PIX", cartao: "Cartão" };
 
 function cupomHtml(nf, E, logo) {
   const cnpj = String(E.CNPJ || "").replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
