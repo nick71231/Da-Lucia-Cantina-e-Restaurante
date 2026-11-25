@@ -1122,13 +1122,15 @@ async function tratar(req, res) {
       abertos.forEach((c) => { const v = cents(Number(donoDe(c).valorRefeicao) || 0) || digitado; if (/^marmita$/i.test(c.nome) && !(c.preco > 0) && v > 0) { c.preco = v; mudouPreco = true; } });
       // empresa com preço combinado (Madeireira, dona 25/11): marmitex do totem/balança marcada na conta de alguém da empresa vale o preço
       // do cadastro da empresa (R$ 17) e o refri de sempre entra junto (2 = refri 600ml R$ 6, 3+ = refri 2L R$ 8) - ver BEBIDA_FIXA
-      if (!grupos && BEBIDA_FIXA.some((x) => x.empresa.test(semAcS(cli.empresa).trim()))) {
+      // (a tela do caixa sempre manda a "divisao", mesmo com 1 pessoa só: vale quando é tudo de 1 cliente)
+      const umCli = !grupos || Object.keys(grupos).length === 1;
+      if (umCli && BEBIDA_FIXA.some((x) => x.empresa.test(semAcS(cli.empresa).trim()))) {
         const emp = semAcS(cli.empresa).trim(), precoEmp = Math.max(0, ...db.clientes.filter((y) => semAcS(y.empresa).trim() === emp).map((y) => Number(y.valorRefeicao) || 0));
         const mx = abertos.filter((c) => c.tipo !== "bebida" && /marmit/i.test(c.nome || ""));
         if (precoEmp > 0 && mx.length) {
           mx.forEach((c) => { if (c.preco !== precoEmp) { c.precoOriginal = c.precoOriginal || c.preco; c.preco = precoEmp; c.nome = String(c.nome).replace(/R\$\s*\d+(?:[.,]\d{2})?/, "R$" + precoEmp.toFixed(2).replace(".", ",")); mudouPreco = true; } });
           const n = mx.reduce((t, c) => t + (c.qtd || 1), 0), beb = bebidaDaConta(cli, n);
-          if (beb && !ped.itens.some((c) => c.bebidaFixa)) { const it = { iid: uid("i"), nome: beb.nome.replace(/^refri/, "Refrigerante"), tipo: "bebida", preco: beb.preco, qtd: 1, bebidaFixa: true }; ped.itens.push(it); abertos.push(it); mudouPreco = true; }
+          if (beb && !ped.itens.some((c) => c.bebidaFixa)) { const it = { iid: uid("i"), nome: beb.nome.replace(/^refri/, "Refrigerante"), tipo: "bebida", preco: beb.preco, qtd: 1, bebidaFixa: true }; ped.itens.push(it); abertos.push(it); if (grupos) grupos[cli.id].push(it); mudouPreco = true; }
         }
       }
       if (mudouPreco) ped.valor = cents(ped.itens.reduce((t, c) => t + valorItem(c), 0));

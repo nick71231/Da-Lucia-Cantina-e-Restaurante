@@ -322,7 +322,8 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
   { // Madeireira pediu no TOTEM (marmitex R$ 22): marcar na conta do ALEMÃO (mesma empresa) = 2 x R$ 17 + refri 600ml R$ 6 = R$ 40 (dona 25/11)
     const ale = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "ALEMÃO", empresa: "MADEREIRA" }, tkD)).j;
     const tp = (await reqEm(sd.base, "POST", "/api/pedidos", { uid: "mad-totem", nome: "Madereira", itens: [{ nome: "Marmitex - R$22,00", preco: 22, qtd: 2 }] }, "")).j;
-    const mk = await reqEm(sd.base, "PATCH", "/api/pedidos/" + tp.id, { status: "conta", clienteId: ale.id }, tkD), ct = (await reqEm(sd.base, "GET", "/api/contas", undefined, tkD)).j;
+    const iid0 = tp.itens[0].iid; // igual à tela do caixa: manda a "divisao" (quem leva cada item), mesmo com 1 pessoa só
+    const mk = await reqEm(sd.base, "PATCH", "/api/pedidos/" + tp.id, { status: "conta", clienteId: ale.id, divisao: [{ iid: iid0, clienteId: ale.id }] }, tkD), ct = (await reqEm(sd.base, "GET", "/api/contas", undefined, tkD)).j;
     const its = (mk.j.itens || []).map((c) => c.nome + ":" + c.preco + "x" + c.qtd).join(" | ");
     t(mk.s === 200 && mk.j.status === "conta" && mk.j.valor === 40 && /Marmitex - R\$17,00:17x2/.test(its) && /Refrigerante 600ml:6x1/.test(its) && ct.lancamentos.some((l) => l.clienteId === ale.id && l.pedidoId === tp.id && l.valor === 40), "Madeireira no totem: na conta do Alemão vira 2 x R$ 17 + refri 600ml R$ 6 = R$ 40 (" + its + ")");
     const outro = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "OUTRO CLIENTE" }, tkD)).j, tp2 = (await reqEm(sd.base, "POST", "/api/pedidos", { uid: "out-totem", nome: "Fulano", itens: [{ nome: "Marmitex - R$22,00", preco: 22, qtd: 2 }] }, "")).j;
