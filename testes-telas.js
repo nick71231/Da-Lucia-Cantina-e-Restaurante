@@ -121,8 +121,21 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
   await clica(w, '[data-a="receber"]'); // agora é a comanda 36 (3 itens)
   t(w.document.querySelectorAll(".ac-li").length === 3, "comanda 36 lista os 3 itens");
   // dona 24/11: separar é só por valor (o "Dividir itens" saiu); a comanda 36 continua aberta pros testes da balança
-  t(!w.document.querySelector('[data-a="acDividir"]') && /Separar por valor/.test(texto(w, "#ac-mais-bts")), "separar: só por valor (sem o 'Dividir itens')");
+  t(!w.document.querySelector('[data-a="acDividir"]') && /Separar por valor/.test(texto(w, "#ac-mais-bts")) && /Receber só alguns itens/.test(texto(w, "#ac-mais-bts")), "outras opções: receber só alguns itens e separar por valor (sem o 'Dividir itens' antigo)");
   await clica(w, '[data-a="fechar"]');
+  { // dona 25/11: comanda 9 com 2 pratos, recebe só um; o outro fica em aberto
+    const c9 = await api("POST", "/api/balanca", { comanda: 9, valor: 24.79, peso: 400, uid: "c9a" }, cx); await api("POST", "/api/balanca", { comanda: 9, valor: 28.04, peso: 450, uid: "c9b" }, cx);
+    await dorme(300); w.eval("cachePed = {}; carregar()"); await dorme(800);
+    w.eval("abrirAcerto")(c9.id); await dorme(300);
+    await clica(w, '[data-a="acEscolher"]');
+    const chks = [...w.document.querySelectorAll('[data-a="acItem"]')];
+    t(chks.length === 2 && chks.every((b) => b.classList.contains("on")) && !w.document.querySelector('[data-a="acForma"]') && /continua em aberto/.test(texto(w, "#ac-itens")), "receber só alguns itens: um quadradinho por prato (todos marcados), sem forma por item");
+    chks[1].click(); await dorme(300); await clica(w, '.ac-tile[data-f="debito"]'); await clica(w, "#ac-ok"); await dorme(600);
+    const p9 = (await api("GET", "/api/pedidos?dia=" + new Date().toLocaleDateString("en-CA"), undefined, cx)).find((p) => p.id === c9.id);
+    t(p9.status === "aguardando" && p9.itens.filter((c) => c.pago).length === 1 && p9.itens.find((c) => c.pago).preco === 24.79 && p9.pagamentos.length === 1 && p9.pagamentos[0].valor === 24.79 && p9.pagamentos[0].forma === "debito",
+      "recebeu só o prato de R$ 24,79 no débito; a comanda 9 continua aberta com o de R$ 28,04");
+    const fb = w.document.querySelector("#comp-bar .btn:last-child"); if (fb && !w.document.querySelector("#comp-bar").hidden) fb.click(); await dorme(200);
+  }
   const sem = await abre("/caixa.html"); t(!sem.document.querySelector("#gate").hidden, "sem login o caixa mostra a tela de senha"); sem.close();
   { // motoboy (pente fino 23/11): o "tem que trazer em dinheiro" segue o que está RECEBIDO no caixa, não só o que o cliente escolheu no site
     const ent = (n, v, pag, gs, extra) => ({ id: "d" + n, tipo: "delivery", numero: n, entrega: "entrega", entregador: "Kevin", valor: v, pagPrevisto: pag, status: gs.length ? "pago" : "aguardando", itens: [{ iid: "i" + n, preco: v - 5, qtd: 1 }, { iid: "t" + n, tipo: "taxa", preco: 5, qtd: 1 }], pagamentos: gs, ...extra });

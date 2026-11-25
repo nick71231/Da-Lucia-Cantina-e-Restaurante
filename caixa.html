@@ -689,6 +689,7 @@ main #aviso-gav, #app > #aviso-gav { width: calc(100% - 56px); }
 .ac-tile i { font-style: normal; font-size: 1.5rem; line-height: 1; }
 .ac-tile.on { background: #fff; border-color: var(--verde); color: #16793a; box-shadow: 0 0 0 4px rgba(31,154,69,.14); }
 @media (max-width: 560px) { .ac-tiles { grid-template-columns: repeat(3, 1fr); } }
+.ac-esc-dica { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: #fff7e8; color: #7a4a00 !important; } .ac-mais-bts .ac-esc, #ac-mais-bts .ac-esc { margin-bottom: 6px; }
 .ac-resumo-it { padding: 2px 0 6px; } .ac-li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 2px; border-bottom: 1px solid #f5ede4; } .ac-li b { font-family: var(--num); white-space: nowrap; }
 .d2 { display: flex; flex-direction: column; gap: 12px; padding: 4px 0; } .d2-tit { font-weight: 700; display: flex; justify-content: space-between; } .d2-passo > span { display: block; font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 6px; } .d2-passo > span b { color: var(--tinta); } .d2-val { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-weight: 600; } .d2-val .cel-rs input { width: 110px; font-size: 1.2rem !important; } .ac-d2 { margin-top: 6px; }
 .ac-dividir { width: 100%; margin-top: 10px; min-height: 46px; background: transparent; border: 1px dashed #d9c3ab; box-shadow: none; color: #7a5a48; font-weight: 600; }
@@ -2456,7 +2457,7 @@ function atualizarAcerto() {
     if (A.ps.length > 1) h += `<div class="ac-grupo"><b>${rotPed(p)}</b>${p.nome ? " - " + esc(p.nome) : ""}<button class="btn mini" data-a="acTira" data-id="${esc(p.id)}">Tirar</button></div>`;
     h += ab.map((c) => { const k = kIt(p, c), s = A.itens[k]; if (s.on) conta(valorIt(c), s.forma); else aberto += valorIt(c);
       return `<div class="ac-item ${s.on ? "on" : ""}"><button class="ac-chk ${s.on ? "on" : ""}" data-a="acItem" data-i="${esc(k)}">${s.on ? "✓" : ""}</button>
-      <span class="ac-nome"><b>${c.qtd}x ${esc(c.nome)}</b>${(c.grupos || []).length ? `<small>${esc((c.grupos || []).flatMap((g) => g.itens).join(", "))}</small>` : ""}</span><b class="ac-val">${brl(valorIt(c))}</b>${bts(k, s.forma, !s.on)}</div>`; }).join("")
+      <span class="ac-nome"><b>${c.qtd}x ${esc(c.nome)}</b>${(c.grupos || []).length ? `<small>${esc((c.grupos || []).flatMap((g) => g.itens).join(", "))}</small>` : ""}</span><b class="ac-val">${brl(valorIt(c))}</b>${A.escolher ? "" : bts(k, s.forma, !s.on)}</div>`; }).join("")
       + (pg.length ? `<p class="dica">Já pagos: ${pg.map((c) => esc(c.nome) + " (" + (FORMAS[c.pago.forma] || c.pago.forma) + ")").join("; ")}</p>` : "");
   });
   const dl = Object.values(A.doces);
@@ -2465,13 +2466,14 @@ function atualizarAcerto() {
       <span class="ac-nome"><b>${esc(d.nome)}</b><small>${brl(d.preco)} cada</small></span><b class="ac-val">${brl(d.preco * d.qtd)}</b>${bts("d|" + d.nome, d.forma, false)}</div>`; }).join("");
   // jeito simples: tudo marcado com a mesma forma -> a lista vira um resumo; "Dividir" abre item por item
   const todosOn = Object.values(A.itens).every((x) => x.on), formas = new Set([...Object.values(A.itens).filter((x) => x.on).map((x) => x.forma), ...dl.map((d) => d.forma)]);
-  const simples = !A.dividir && todosOn && !dl.length && formas.size <= 1;
+  const simples = !A.dividir && !A.escolher && todosOn && !dl.length && formas.size <= 1;
   document.querySelectorAll(".ac-tile").forEach((b) => b.classList.toggle("on", !sem && formas.size === 1 && formas.has(b.dataset.f))); // acende quando tudo que vai ser pago está nessa forma (também com bebida/doce e no Dividir)
   const nAb = soma(A.ps, (p) => p.itens.filter((c) => !c.pago).length) + soma(dl, (d) => d.qtd), totAb = round2(soma(A.ps, (p) => soma(p.itens.filter((c) => !c.pago), valorIt)));
   if ($("#ac-nit")) $("#ac-nit").textContent = nAb + (nAb === 1 ? " item" : " itens");
   // Dividir / 2 formas ficam em "Outras opções" (embaixo das formas), não no meio da lista
-  if ($("#ac-mais-bts")) $("#ac-mais-bts").innerHTML = simples && A.ps.length === 1 ? `<button class="btn ac-dividir ac-d2" data-a="d2Abrir">➗ Separar por valor</button>` : "";
+  if ($("#ac-mais-bts")) $("#ac-mais-bts").innerHTML = simples ? (nAb >= 2 ? `<button class="btn ac-dividir ac-esc" data-a="acEscolher">☑ Receber só alguns itens</button>` : "") + (A.ps.length === 1 ? `<button class="btn ac-dividir ac-d2" data-a="d2Abrir">➗ Separar por valor</button>` : "") : ""; // dona 25/11: receber só parte da comanda (o resto fica em aberto)
   if (simples) h = `<div class="ac-resumo-it">${A.ps.map((p) => (A.ps.length > 1 ? `<div class="ac-grupo"><b>${rotPed(p)}</b>${p.nome ? " - " + esc(p.nome) : ""}<button class="btn mini" data-a="acTira" data-id="${esc(p.id)}">Tirar</button></div>` : "") + p.itens.filter((c) => !c.pago).map((c) => `<div class="ac-li"><span>${c.qtd}x ${esc(c.nome)}</span><b>${brl(valorIt(c))}</b></div>`).join("")).join("")}<div class="ac-li-tot"><span>Total</span><b>${brl(totAb)}</b></div></div>`;
+  else if (A.escolher) h = `<p class="dica ac-esc-dica">Marque só o que vai pagar agora. O que ficar desmarcado continua em aberto pra receber depois.</p>` + h + `<button class="btn ac-dividir" data-a="acJuntarTudo">↩ Receber tudo</button>`;
   else if (A.dividir) h += `<button class="btn ac-dividir" data-a="acJuntarTudo">↩ Voltar pro jeito simples</button>`;
   $("#ac-itens").innerHTML = h; total = round2(total); aberto = round2(aberto);
   const din = round2(tot.dinheiro || 0), rec = parseFloat(String($("#ac-rec") ? $("#ac-rec").value : "").replace(",", "."));
@@ -2734,7 +2736,7 @@ function modalExtrato(k) {
 }
 document.addEventListener("click", async (e) => {
   const t = e.target.closest("[data-a]"); if (!t) return; const d = t.dataset, a = d.a;
-  if (a === "acItem") { acerto.itens[d.i].on = !acerto.itens[d.i].on; atualizarAcerto(); }
+  if (a === "acItem") { const it = acerto.itens[d.i]; it.on = !it.on; if (it.on && acerto.padrao) it.forma = acerto.padrao; atualizarAcerto(); }
   else if (a === "acForma") { if (d.i.startsWith("d|")) acerto.doces[d.i.slice(2)].forma = d.f; else acerto.itens[d.i].forma = d.f; atualizarAcerto(); }
   else if (a === "acSet") { acerto.padrao = d.f; acerto.focoDin = d.f === "dinheiro"; Object.values(acerto.itens).forEach((x) => { if (x.on) x.forma = d.f; }); Object.values(acerto.doces).forEach((x) => (x.forma = d.f)); atualizarAcerto(); }
   else if (a === "acTodos") { Object.values(acerto.itens).forEach((x) => (x.on = d.v === "1")); atualizarAcerto(); }
@@ -2852,7 +2854,8 @@ document.addEventListener("click", (e) => {
   else if (a === "pcDigitado") { const n = ($("#pc-num").value || "").trim(); if (!/^\d{1,4}$/.test(n) || !+n) return alert("Digite o número da comanda."); porNaComanda(d.id, n); }
   else if (a === "sugIgnora") { sugIgnoradas.add(d.k); ultimoHtml = ""; desenhar(); }
   else if (a === "acDividir" && acerto) { acerto.dividir = true; atualizarAcerto(); }
-  else if (a === "acJuntarTudo" && acerto) { acerto.dividir = false; Object.values(acerto.itens).forEach((x) => { x.on = true; x.forma = acerto.padrao || ""; }); Object.values(acerto.doces).forEach((x) => (x.forma = acerto.padrao || "")); atualizarAcerto(); }
+  else if (a === "acEscolher" && acerto) { acerto.escolher = true; atualizarAcerto(); }
+  else if (a === "acJuntarTudo" && acerto) { acerto.dividir = false; acerto.escolher = false; Object.values(acerto.itens).forEach((x) => { x.on = true; x.forma = acerto.padrao || ""; }); Object.values(acerto.doces).forEach((x) => (x.forma = acerto.padrao || "")); atualizarAcerto(); }
 });
 document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.id === "pc-num") { const b = document.querySelector('[data-a="pcDigitado"]'); if (b) b.click(); } });
 
