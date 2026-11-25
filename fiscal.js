@@ -227,7 +227,7 @@ module.exports = function criarFiscal({ DIR_DADOS }) {
     const cfg = ler(); if (!cfg || !cfg.csc) throw new Error("cupom fiscal não configurado");
     if (!cert()) throw new Error("falta instalar o certificado (Caixa → 🧾 Nota fiscal → senha do certificado)");
     const amb = cfg.ambiente === 1 ? 1 : 2, serie = Number(cfg.serie) || 2; cfg.numeros = cfg.numeros || {};
-    for (let tent = 0; tent < 3; tent++) {
+    for (let tent = 0; tent < 20; tent++) {
       const nNF = Number(cfg.numeros[amb]) || 1, m = montar(peds, opts, pags, cfg, amb, serie, nNF);
       cfg.numeros[amb] = nNF + 1; salvar(cfg); // reserva o número antes de mandar (nunca dois cupons com o mesmo número)
       let r;
@@ -245,7 +245,7 @@ module.exports = function criarFiscal({ DIR_DADOS }) {
       if (!["217"].includes(cs)) { const atual = ler(); if (atual && Number(atual.numeros[amb]) === nNF + 1) { atual.numeros[amb] = nNF; salvar(atual); } } // rejeitado: o número não foi usado, fica pro próximo cupom
       throw new Error("SEFAZ recusou o cupom: " + (cs || "?") + " - " + (mot || "sem motivo"));
     }
-    throw new Error("a SEFAZ recusou 3 números seguidos (já usados)");
+    throw new Error("a SEFAZ recusou 20 números seguidos (já usados por outro emissor nessa série)");
   }
   async function consultar(amb, chave) {
     const r = await soap(amb, "NFeConsultaProtocolo4", "nfeConsultaNF", `<consSitNFe xmlns="${NS}" versao="4.00"><tpAmb>${amb}</tpAmb><xServ>CONSULTAR</xServ><chNFe>${chave}</chNFe></consSitNFe>`, String(chave).slice(20, 22) === "55" ? 55 : 65);
@@ -324,7 +324,7 @@ module.exports = function criarFiscal({ DIR_DADOS }) {
     const cfg = ler(); if (!cfg || !cfg.emit) throw new Error("nota fiscal não configurada");
     if (!cert()) throw new Error("falta instalar o certificado (Caixa → 🧾 → senha do certificado)");
     const dest = limparDest(d.dest), amb = cfg.ambiente === 1 ? 1 : 2, N = nfeCfg(cfg), serie = N.serie, obs = String(d.obs || "").trim().slice(0, 300);
-    for (let tent = 0; tent < 3; tent++) {
+    for (let tent = 0; tent < 20; tent++) {
       const nNF = Number(N.numeros[amb]) || 1, m = montarNFe({ ...d, dest, obs }, cfg, amb, serie, nNF);
       N.numeros[amb] = nNF + 1; salvar(cfg); // reserva o número antes de mandar
       let r;
@@ -351,7 +351,7 @@ module.exports = function criarFiscal({ DIR_DADOS }) {
       if (cs !== "217") { const atual = ler(), A = atual && nfeCfg(atual); if (A && Number(A.numeros[amb]) === nNF + 1) { A.numeros[amb] = nNF; salvar(atual); } } // recusada: o número volta
       throw new Error("SEFAZ recusou a NF-e: " + (cs || "?") + " - " + (mot || "sem motivo"));
     }
-    throw new Error("a SEFAZ recusou 3 números seguidos (já usados)");
+    throw new Error("a SEFAZ recusou 20 números seguidos (já usados por outro emissor nessa série)");
   }
   function guardarNFe(m, prot, amb, serie, nNF, protXml, dest, obs) {
     const dir = path.join(PASTA_NFE, amb === 1 ? "producao" : "homologacao", new Date().toLocaleDateString("en-CA").slice(0, 7)); fs.mkdirSync(dir, { recursive: true });
