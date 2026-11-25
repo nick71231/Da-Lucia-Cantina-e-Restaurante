@@ -175,7 +175,7 @@ const papelDe = (req) => { const t = tokenDe(req), s = t && sessoes[sha(t)]; ret
 function nivelRota(m, p) { // quem pode o quê (0 = qualquer um)
   if (!p.startsWith("/api/") || p === "/api/login" || p === "/api/saude") return 0;
   if ((p === "/api/pedidos" && m === "POST") || (p === "/api/imprimir" && m === "POST") || (p === "/api/config" && m === "GET")) return 0; // totem do cliente
-  if (p === "/api/config" || p === "/api/senhas" || p === "/api/fiscal/certificado" || p === "/api/fiscal/ambiente") return 3; // certificado e produção x teste: só o admin
+  if (p === "/api/config" || p === "/api/senhas" || p === "/api/fiscal/certificado" || p === "/api/fiscal/ambiente" || p === "/api/fiscal/cupom-dia") return 3; // certificado e produção x teste: só o admin
   if (p === "/api/balanca" || (p === "/api/pedidos" && m === "GET") || (/^\/api\/pedidos\//.test(p) && m === "PATCH")) return 1;
   return 2; // caixa: clientes, contas, pagamentos, gaveta, backup...
 }
@@ -192,7 +192,7 @@ function backup() { // uma cópia por dia (guarda as últimas 30)
     fs.writeFileSync(path.join(dir, "pedidos-" + dia + ".json"), JSON.stringify(db)); fs.writeFileSync(path.join(dir, "config-" + dia + ".json"), JSON.stringify(cfg));
     if (process.env.BACKUP_EXTRA) { // cópia extra (pendrive, pasta do Drive/OneDrive...)
       // notas fiscais (XML autorizados e cancelamentos): têm que ser guardadas 5 anos -> cópia no OneDrive também (só copia o que ainda não está lá)
-      try { const de = path.join(DIR_DADOS, "nfce"), para = path.join(process.env.BACKUP_EXTRA, "notas-fiscais"); const copia = (a, b) => { if (!fs.existsSync(a)) return; for (const f of fs.readdirSync(a, { withFileTypes: true })) { const x = path.join(a, f.name), y = path.join(b, f.name); if (f.isDirectory()) copia(x, y); else if (!fs.existsSync(y) || /avulsos\.json$/.test(f.name)) { fs.mkdirSync(b, { recursive: true }); fs.copyFileSync(x, y); } } }; copia(de, para); }
+      try { const para = path.join(process.env.BACKUP_EXTRA, "notas-fiscais"); const copia = (a, b) => { if (!fs.existsSync(a)) return; for (const f of fs.readdirSync(a, { withFileTypes: true })) { const x = path.join(a, f.name), y = path.join(b, f.name); if (f.isDirectory()) copia(x, y); else if (!fs.existsSync(y) || /(avulsos|notas|empresas)\.json$/.test(f.name)) { fs.mkdirSync(b, { recursive: true }); fs.copyFileSync(x, y); } } }; copia(path.join(DIR_DADOS, "nfce"), para); copia(path.join(DIR_DADOS, "nfe"), path.join(para, "nfe")); }
       catch (e) { console.error("cópia das notas fiscais falhou:", e.message); }
       try { const ex = process.env.BACKUP_EXTRA; fs.mkdirSync(ex, { recursive: true }); ["pedidos-", "config-"].forEach((pre) => { fs.copyFileSync(path.join(dir, pre + dia + ".json"), path.join(ex, pre + dia + ".json")); fs.readdirSync(ex).filter((a) => a.startsWith(pre) && a.endsWith(".json")).sort().slice(0, -30).forEach((a) => fs.unlinkSync(path.join(ex, a))); }); } // na nuvem também só os últimos 30 dias (não lota o OneDrive)
       catch (e) { console.error("cópia extra do backup falhou:", e.message); }
@@ -534,12 +534,48 @@ function textoFechamento(dia) {
   if (g.motoboys) L.push(`🛵 Pago aos motoboys: ${b(g.motoboys)}`);
   if (g.sangrias) L.push(`➖ Retiradas da gaveta: ${b(g.sangrias)}`);
   if (R.cancelados) L.push(`❌ Cancelados: ${R.cancelados}`);
+  if (cupomDiaUlt.dia === dia && (cupomDiaUlt.emitidos.length || cupomDiaUlt.erro)) { L.push(""); cupomDiaUlt.emitidos.forEach((c) => L.push(`🧾 Cupom fiscal cartão/Pix${c.dia !== dia ? " (vendas de " + c.dia.slice(8) + "/" + c.dia.slice(5, 7) + ")" : ""}: nº ${c.numero} · ${b(c.valor)} (${c.qtd} vendas)`)); if (cupomDiaUlt.erro) L.push("⚠️ Cupom fiscal do dia não saiu: " + cupomDiaUlt.erro); }
   if (abertos.length) L.push("", `⚠️ *Ficou em aberto hoje: ${abertos.length} · ${b(vAb)}*`);
   L.push("", g.fechamento ? `💵 Gaveta fechada: contado ${b(g.fechamento.contado)} · ${Math.abs(g.fechamento.diferenca || 0) < 0.01 ? "bateu ✅" : (g.fechamento.diferenca > 0 ? "sobrou " : "faltou ") + b(Math.abs(g.fechamento.diferenca)) + " ⚠️"}`
     : g.esperado != null ? `💵 Gaveta: deve ter ${b(g.esperado)} (ainda não foi fechada)` : "💵 Gaveta não foi aberta hoje");
   return { texto: L.join("\n"), movimento: tot + contas + R.pedidos.salao + R.pedidos.delivery > 0 };
 }
+// ----- CUPOM FISCAL AUTOMÁTICO DO DIA (dona 25/11): a partir das 15h, 1 cupom por dia de venda, com o total das vendas pagas SÓ em
+// crédito/débito/Pix (venda com dinheiro, vale ou conta fica de fora) que não tiraram cupom na hora. Liga/desliga no 🧾 do caixa (admin).
+// O pedido ganha "nfceDia" (a chave do cupom) e não entra de novo. Venda depois das 15h vai no cupom do dia seguinte (referente ao dia dela).
+let cupomDiaRodando = false, cupomDiaUlt = { dia: "", tentativa: 0, emitidos: [], erro: null };
+function pedidosCupomDia(cd) {
+  const formas = new Set(cd.formas || []), hj = hoje(), porDia = {};
+  for (const p of db.pedidos) {
+    if (p.status !== "pago" || !p.dia || p.dia < cd.desde || p.dia > hj || p.nfceDia || (p.nfce && p.nfce.status === "autorizada")) continue;
+    const pg = pagsDe(p); if (!pg.length || !pg.every((g) => formas.has(g.forma) && g.valor > 0)) continue;
+    const itens = cents((p.itens || []).reduce((s, c) => s + c.preco * (c.qtd || 1), 0)), recebido = cents(pg.reduce((s, g) => s + g.valor, 0));
+    if (!(itens > 0) || Math.abs(itens - recebido) > 0.009) continue; // desconto/diferença: o cupom não fecharia
+    (porDia[p.dia] = porDia[p.dia] || []).push(p);
+  }
+  return porDia;
+}
+async function cupomDoDia(forcar) {
+  const cd = fiscal.cupomDia(); if (!cd.ativo || !cd.desde || cupomDiaRodando) return null;
+  const hj = hoje(); if (!forcar && (new Date().getHours() < cd.hora || (cupomDiaUlt.dia === hj && (!cupomDiaUlt.erro || Date.now() - cupomDiaUlt.tentativa < 30 * 60e3)))) return null; // 1x por dia; se deu erro tenta de novo a cada 30 min
+  cupomDiaRodando = true; const feitos = [], erros = [];
+  try {
+    const porDia = pedidosCupomDia(cd);
+    for (const dia of Object.keys(porDia).sort()) {
+      const peds = porDia[dia], ref = dia.split("-").reverse().join("/");
+      try {
+        const nf = await fiscal.emitir(peds, { modo: "simples", obs: "Vendas cartao/Pix do dia " + ref }, peds.flatMap(pagsDe));
+        peds.forEach((x) => (x.nfceDia = { chave: nf.chave, numero: nf.numero, serie: nf.serie, amb: nf.amb })); await gravar();
+        feitos.push({ dia, numero: nf.numero, valor: nf.valor, qtd: peds.length, chave: nf.chave });
+        console.log("cupom do dia " + ref + ": nº " + nf.numero + " R$ " + nf.valor + " (" + peds.length + " vendas)");
+      } catch (e) { erros.push(ref + ": " + e.message); console.error("cupom do dia " + ref + ": " + e.message); }
+    }
+  } finally { cupomDiaRodando = false; }
+  cupomDiaUlt = { dia: hj, tentativa: Date.now(), emitidos: [...(cupomDiaUlt.dia === hj ? cupomDiaUlt.emitidos : []), ...feitos], erro: erros.length ? erros.join(" | ") : null };
+  return cupomDiaUlt;
+}
 async function mandarFechamento() {
+  await cupomDoDia().catch((e) => console.error("cupom do dia: " + e.message)); // antes do resumo, pra ele já contar o cupom
   const dia = hoje(); if (!rz.tel || rz.ultimo === dia || new Date().getHours() < (Number(rz.hora) || 15)) return;
   const { texto, movimento } = textoFechamento(dia); rz.ultimo = dia;
   if (movimento) { filaWhats.push({ id: "fechamento-" + dia, tel: String(rz.tel).replace(/\D/g, ""), texto, quando: Date.now() }); filaWhats = filaWhats.slice(-200); await gravarArquivo(ARQ_WHATS, filaWhats).catch(() => {}); console.log("fechamento do dia na fila do WhatsApp (" + rz.tel + ")"); }
@@ -625,7 +661,7 @@ async function tratar(req, res) {
   }
   // notas do mês pra contadora: resumo, ZIP pra baixar e envio pelo WhatsApp (robô)
   if (p === "/api/fiscal/notas" && req.method === "GET") {
-    try { const R = fiscal.resumoDoMes(String(url.searchParams.get("mes") || hoje().slice(0, 7))); return json(res, 200, { caixa: R.caixa, viavaleNfce: R.viavaleNfce, viavaleNfe: R.viavaleNfe, qtd: R.nos.length + R.vv.notas.length, autorizadas: R.caixa.qtd, canceladas: R.caixa.canceladas, total: R.caixa.total, contadora: fiscal.contadora() }); }
+    try { const R = fiscal.resumoDoMes(String(url.searchParams.get("mes") || hoje().slice(0, 7))); return json(res, 200, { caixa: R.caixa, caixaNfe: R.caixaNfe, viavaleNfce: R.viavaleNfce, viavaleNfe: R.viavaleNfe, qtd: R.nos.length + R.nfe.length + R.vv.notas.length, autorizadas: R.caixa.qtd, canceladas: R.caixa.canceladas, total: R.caixa.total, contadora: fiscal.contadora() }); }
     catch (e) { return json(res, 400, { erro: e.message }); }
   }
   if (p === "/api/fiscal/notas-zip" && req.method === "GET") {
@@ -642,9 +678,47 @@ async function tratar(req, res) {
     const arq = path.join(dirZ, `Notas fiscais ${mes} - Da Lucia.zip`); fs.writeFileSync(arq, z.zip);
     const [aa, mm] = mes.split("-"), r$ = (v) => "R$ " + Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const li = (t, x) => `• ${t}: ${x.qtd} nota(s) · ${r$(x.total)}${x.canceladas ? ` (+ ${x.canceladas} cancelada(s))` : ""}`;
-    const texto = `🧾 *Notas fiscais - Da Lúcia Cantina e Restaurante*\nCNPJ 20.128.902/0001-15 · ${mm}/${aa}\n\n${[z.caixa.qtd || z.caixa.canceladas ? li("Cupons do caixa (NFC-e)", z.caixa) : "", z.viavaleNfce.qtd || z.viavaleNfce.canceladas ? li("Cupons do ViaVale (NFC-e)", z.viavaleNfce) : "", z.viavaleNfe.qtd || z.viavaleNfe.canceladas ? li("Notas do ViaVale (NF-e)", z.viavaleNfe) : ""].filter(Boolean).join("\n")}\n\nNo ZIP: todos os XML (autorizadas e cancelamentos) separados por origem, e o resumo em planilha 👇`;
+    const texto = `🧾 *Notas fiscais - Da Lúcia Cantina e Restaurante*\nCNPJ 20.128.902/0001-15 · ${mm}/${aa}\n\n${[z.caixa.qtd || z.caixa.canceladas ? li("Cupons do caixa (NFC-e)", z.caixa) : "", z.caixaNfe.qtd || z.caixaNfe.canceladas ? li("Notas do caixa (NF-e)", z.caixaNfe) : "", z.viavaleNfce.qtd || z.viavaleNfce.canceladas ? li("Cupons do ViaVale (NFC-e)", z.viavaleNfce) : "", z.viavaleNfe.qtd || z.viavaleNfe.canceladas ? li("Notas do ViaVale (NF-e)", z.viavaleNfe) : ""].filter(Boolean).join("\n")}\n\nNo ZIP: todos os XML (autorizadas e cancelamentos) separados por origem, e o resumo em planilha 👇`;
     filaWhats.push({ id: "contadora-" + mes + "-" + Date.now(), tel: tel.startsWith("55") ? tel.slice(2) : tel, texto, arquivo: arq, quando: Date.now() }); filaWhats = filaWhats.slice(-200);
-    await gravarArquivo(ARQ_WHATS, filaWhats); return json(res, 200, { ok: true, qtd: z.qtd, autorizadas: z.autorizadas, canceladas: z.canceladas, total: z.total, caixa: z.caixa, viavaleNfce: z.viavaleNfce, viavaleNfe: z.viavaleNfe });
+    await gravarArquivo(ARQ_WHATS, filaWhats); return json(res, 200, { ok: true, qtd: z.qtd, autorizadas: z.autorizadas, canceladas: z.canceladas, total: z.total, caixa: z.caixa, caixaNfe: z.caixaNfe, viavaleNfce: z.viavaleNfce, viavaleNfe: z.viavaleNfe });
+  }
+  if (p === "/api/fiscal/nfe" && req.method === "POST") { // NF-e pra empresa: { dest: {...}, itens: [{ k, xProd, qtd, un }], forma, obs }
+    const b = await corpo(req, 100e3);
+    try { const nf = await fiscal.emitirNFe({ dest: b.dest, itens: Array.isArray(b.itens) ? b.itens.slice(0, 100) : [], forma: String(b.forma || ""), obs: b.obs }); return json(res, 200, nf); }
+    catch (e) { console.error("NF-e: " + e.message); return json(res, /inválid|falta|não achei|por enquanto|pelo menos|demais/.test(e.message) ? 400 : 502, { erro: e.message }); }
+  }
+  if (p === "/api/fiscal/empresas" && req.method === "GET") return json(res, 200, fiscal.empresas());
+  if (p === "/api/fiscal/cadastro" && req.method === "GET") { // dados da empresa na SEFAZ-SP pelo CNPJ
+    try { const c = await fiscal.cadastro(url.searchParams.get("doc")); return json(res, 200, c || { naoAchou: true }); } catch (e) { return json(res, e.semResposta ? 502 : 400, { erro: e.message }); }
+  }
+  if (p === "/api/fiscal/lista" && req.method === "GET") { // todas as notas do mês (cupons e NF-e, daqui e do ViaVale)
+    let l; try { l = fiscal.listarNotas(String(url.searchParams.get("mes") || hoje().slice(0, 7))); } catch (e) { return json(res, 400, { erro: e.message }); }
+    const ped = {}; db.pedidos.forEach((x) => { if (x.nfce && x.nfce.chave) ped[x.nfce.chave] = x; });
+    const dia = {}; db.pedidos.forEach((x) => { if (x.nfceDia) dia[x.nfceDia.chave] = (dia[x.nfceDia.chave] || 0) + 1; });
+    return json(res, 200, l.map((n) => ({ ...n, pedido: ped[n.chave] ? { id: ped[n.chave].id, rot: rotuloPed(ped[n.chave]) } : undefined, vendasDia: dia[n.chave] || undefined })));
+  }
+  if (p === "/api/fiscal/nota" && req.method === "GET") { const n = fiscal.notaCompleta(String(url.searchParams.get("chave") || "")); return n ? json(res, 200, n) : json(res, 404, { erro: "nota não encontrada" }); }
+  if (p === "/api/fiscal/xml" && req.method === "GET") { // baixar o XML (o autorizado; ?canc=1 = o do cancelamento)
+    const A = fiscal.acharXml(String(url.searchParams.get("chave") || "")), arq = A && (url.searchParams.get("canc") ? A.canc : A.arq);
+    if (!arq) return json(res, 404, { erro: "XML não encontrado" });
+    res.writeHead(200, { "Content-Type": "application/xml", "Content-Disposition": `attachment; filename="${path.basename(arq)}"`, "Cache-Control": "no-store" }); return res.end(fs.readFileSync(arq));
+  }
+  if (p === "/api/fiscal/cupom-dia" && req.method === "POST") { // { ativo, hora } liga/desliga; { rodar: true } emite agora
+    const b = await corpo(req);
+    if (b.ativo !== undefined || b.hora !== undefined) fiscal.cupomDia({ ativo: b.ativo, hora: b.hora });
+    const r = b.rodar ? await cupomDoDia(true) : null;
+    return json(res, 200, { cupomDia: fiscal.cupomDia(), resultado: r, pendentes: (() => { const cd = fiscal.cupomDia(); if (!cd.ativo) return null; const pd = pedidosCupomDia(cd); return Object.keys(pd).map((d) => ({ dia: d, qtd: pd[d].length, valor: cents(pd[d].reduce((s, x) => s + x.valor, 0)) })); })(), ultimo: cupomDiaUlt });
+  }
+  if (p === "/api/fiscal/cancelar-nota" && req.method === "POST") { // cancelar pela chave (lista de notas): cupom avulso/do dia ou NF-e
+    const b = await corpo(req), ch = String(b.chave || ""), n = fiscal.notaCompleta(ch);
+    if (!n || n.origem !== "caixa" || n.status !== "autorizada") return json(res, 404, { erro: "essa nota não está ativa (ou é do ViaVale: cancele por lá)" });
+    try {
+      const c = await fiscal.cancelar({ amb: n.amb, chave: ch, prot: n.prot, quando: n.quando }, b.motivo);
+      db.pedidos.forEach((x) => { if (x.nfce && x.nfce.chave === ch) x.nfce = { ...x.nfce, ...c, status: "cancelada" }; if (x.nfceDia && x.nfceDia.chave === ch) x.nfceDia.cancelada = true; }); await gravar();
+      if (n.modelo === "55") fiscal.marcarCanceladaNFe(ch, c);
+      const av = path.join(DIR_DADOS, "nfce", "avulsos.json"); try { const l = JSON.parse(fs.readFileSync(av, "utf8")), a = l.find((x) => x.chave === ch); if (a) { Object.assign(a, c, { status: "cancelada" }); fs.writeFileSync(av, JSON.stringify(l, null, 1)); } } catch (e) {}
+      return json(res, 200, { ...n, ...c, status: "cancelada", situacao: "cancelada" });
+    } catch (e) { return json(res, 502, { erro: e.message }); }
   }
   if (p === "/api/fiscal/cancelar" && req.method === "POST") { // cancela o cupom na SEFAZ (até 30 min depois de emitido)
     const b = await corpo(req), ped = db.pedidos.find((x) => x.id === String(b.id || ""));

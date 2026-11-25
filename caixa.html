@@ -198,6 +198,25 @@ input.cf-ruim { border-color: #d9534f !important; background: #fff5f5 !important
 .cf-li.ok { background: #e9f6ec; } .cf-li.ruim { background: #fde0e0; } .cf-li em { font-style: normal; color: #4a2f22; } .cf-li small { color: #7a5a48; }
 .cf-msg { margin-top: 12px; padding: 12px 14px; border-radius: 14px; font-weight: 600; background: #fff3d6; color: #7a3b00; }
 .cf-msg.ok { background: #e9f6ec; color: #16793a; } .cf-msg.ruim { background: #fde0e0; color: #a50f14; }
+/* notas fiscais (lista) e NF-e pra empresa */
+.caixa-modal:has(.cm-largo) { width: min(940px, 98vw); }
+.nt-topo { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 8px; } .nt-topo input { flex: 1 1 180px; min-width: 0; } .nt-topo input[type=month] { flex: 0 0 170px; }
+.nt-filtros { margin-bottom: 8px; }
+.nt-tot { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; } .nt-tot div { flex: 1 1 140px; padding: 8px 12px; border-radius: 12px; background: #f7f2ec; display: flex; flex-direction: column; } .nt-tot span { font-size: .78rem; color: #7a5a48; } .nt-tot b { font: 800 1rem var(--num); }
+.nt-lista { display: grid; gap: 6px; }
+.nt-li { display: grid; grid-template-columns: 82px 1fr auto auto; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid #eadfd3; border-radius: 12px; background: #fff; }
+.nt-li.canc { opacity: .62; } .nt-li.canc .nt-v b { text-decoration: line-through; }
+.nt-tp { font-weight: 700; font-size: .85rem; display: flex; flex-direction: column; } .nt-tp small, .nt-info small { font-weight: 500; color: #7a5a48; font-size: .75rem; }
+.nt-info { display: flex; flex-direction: column; min-width: 0; } .nt-info span { font-size: .82rem; color: #4a2f22; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nt-v { display: flex; flex-direction: column; align-items: flex-end; } .nt-v b { font: 800 1rem var(--num); }
+.nt-st { font-style: normal; font-size: .7rem; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: #fff1cc; color: #7a4a00; } .nt-st.ok { background: #e9f6ec; color: #16793a; } .nt-st.ruim { background: #fde0e0; color: #a50f14; }
+.nt-bts { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 700px) { .nt-li { grid-template-columns: 1fr auto; } .nt-bts { grid-column: 1 / -1; justify-content: flex-start; } }
+.nfe-g { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; align-items: center; } .nfe-g .nfe-l2 { grid-column: span 2; } .nfe-g #nfe-busca { grid-column: 1 / -1; }
+.nfe-chk { font-size: .85rem; color: #4a2f22; } .nfe-chk input { width: 18px; height: 18px; }
+.nfe-it { display: grid; grid-template-columns: 1.2fr 1.4fr 80px 100px 100px 40px; gap: 6px; align-items: center; margin-bottom: 6px; } .nfe-it b { text-align: right; font: 700 .95rem var(--num); }
+@media (max-width: 700px) { .nfe-g { grid-template-columns: 1fr; } .nfe-g .nfe-l2 { grid-column: auto; } .nfe-it { grid-template-columns: 1fr 1fr; } }
+.nfe-tot { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding: 12px 14px; border-radius: 14px; background: #f7f2ec; } .nfe-tot b { font: 800 1.4rem var(--num); }
 .cf-aviso { background: #fff1cc; color: #7a4a00; padding: 8px 12px; border-radius: 12px; font-weight: 600; margin: 0 0 8px; }
 .cf-canc { font-size: .8rem; color: #a50f14; }
 .cf-ct { display: flex; gap: 8px; flex-wrap: wrap; } .cf-ct input { flex: 1 1 160px; min-width: 0; padding: 9px 12px; border: 1px solid #e2d6c9; border-radius: 10px; font: inherit; }
@@ -694,7 +713,7 @@ nav { flex-wrap: wrap; }
   <div class="area">
   <div class="topo-fixo"><header><h1 id="titulo-aba">Em aberto</h1>
     <div class="filtros"><input id="busca" placeholder="Buscar nº ou nome"><input id="dia" type="date"></div>
-    <div class="hd-dir"><span id="status">...</span><button class="btn mini" data-a="parado" id="btn-parado" title="Aviso de pedido parado">⏱</button><button class="btn mini" data-a="somCx" id="som-cx" title="Som de pedido novo">🔔</button><button class="btn mini" data-a="cfConfig" title="Cupom fiscal (NFC-e)">🧾</button><button class="btn mini" data-a="impCx" title="Impressora do caixa">🖨</button></div>
+    <div class="hd-dir"><span id="status">...</span><button class="btn mini" data-a="parado" id="btn-parado" title="Aviso de pedido parado">⏱</button><button class="btn mini" data-a="somCx" id="som-cx" title="Som de pedido novo">🔔</button><button class="btn mini" data-a="notas" title="Notas fiscais emitidas (cupons e NF-e)">📄</button><button class="btn mini" data-a="cfConfig" title="Cupom fiscal (NFC-e)">🧾</button><button class="btn mini" data-a="impCx" title="Impressora do caixa">🖨</button></div>
   </header></div>
   <main id="lista"></main>
   </div>
@@ -1932,15 +1951,18 @@ async function modalFiscal() { // botão 🧾 no topo: certificado, teste x prod
     ${adm ? `<h4>Certificado digital A1</h4><p class="det-obs" style="margin:0 0 6px">Escolha o arquivo do certificado (.pfx ou .p12) e digite a senha. A senha não fica guardada em lugar nenhum.</p>
       <input type="file" id="cf-arq" accept=".pfx,.p12" style="width:100%"><input type="password" id="cf-senha" placeholder="Senha do certificado" autocomplete="new-password" style="width:100%;margin-top:8px">
       <button class="btn" data-a="cfInstalar" style="margin-top:8px">🔐 Instalar certificado</button>
-      <h4 style="margin-top:18px">Ambiente</h4><div class="cf-seg">${[[2, "🧪 Teste"], [1, "✅ Produção"]].map(([k, t]) => `<button type="button" class="btn mini ${S.ambiente === k ? "on" : ""}" data-a="cfAmb" data-v="${k}">${t}</button>`).join("")}</div>`
+      <h4 style="margin-top:18px">Ambiente</h4><div class="cf-seg">${[[2, "🧪 Teste"], [1, "✅ Produção"]].map(([k, t]) => `<button type="button" class="btn mini ${S.ambiente === k ? "on" : ""}" data-a="cfAmb" data-v="${k}">${t}</button>`).join("")}</div>
+      <h4 style="margin-top:18px">🤖 Cupom automático do cartão e Pix</h4><p class="det-obs" style="margin:0 0 6px">Todo dia às ${(S.cupomDia || {}).hora || 15}h sai 1 cupom com o total das vendas pagas só em crédito, débito ou Pix que não tiraram cupom na hora. Venda com dinheiro ou vale fica de fora.</p>
+      <div class="cf-seg">${[[0, "Desligado"], [1, "🤖 Ligado"]].map(([k, t]) => `<button type="button" class="btn mini ${!!(S.cupomDia || {}).ativo === !!k ? "on" : ""}" data-a="cdLiga" data-v="${k}">${t}</button>`).join("")}</div>
+      ${(S.cupomDia || {}).ativo ? `<p class="det-obs" id="cd-pend" style="margin:6px 0">…</p><button class="btn mini" data-a="cdAgora">🧾 Emitir agora</button>` : ""}`
       : `<p class="det-obs">Só o administrador instala o certificado e muda o ambiente.</p>`}
-    <h4 style="margin-top:18px">📤 Notas para a contadora</h4><p class="det-obs" style="margin:0 0 6px">Todo mês, pra conferência: os arquivos (XML) de todas as notas do CNPJ (cupons do caixa + cupons e notas do ViaVale, com os cancelamentos) e um resumo em planilha, num ZIP.</p>
+    <h4 style="margin-top:18px">📤 Notas para a contadora</h4><p class="det-obs" style="margin:0 0 6px">Todo mês, pra conferência: os arquivos (XML) de todas as notas do CNPJ (cupons e notas do caixa + cupons e notas do ViaVale, com os cancelamentos) e um resumo em planilha, num ZIP.</p>
     <div class="cf-ct"><input type="month" id="cf-mes" value="${cfMesPadrao()}"><input id="cf-tel" inputmode="tel" placeholder="WhatsApp da contadora (com DDD)" value="${esc(cfTelFmt(S.contadora || ""))}"></div>
     <div class="cf-ct-res" id="cf-ct-res">…</div>
     <div class="cf-ct-bts"><button class="btn ok" data-a="cfContadora">📲 Mandar no WhatsApp</button><button class="btn" data-a="cfZip">⬇ Baixar ZIP</button></div>
     <div id="cf-msg" class="cf-msg" hidden></div></div>
     <div class="acoes cm-rodape"><button class="btn" data-a="fechar">Fechar</button><button class="btn" data-a="cfSefaz" ${C ? "" : "disabled"}>🔌 Testar conexão com a SEFAZ</button></div>`);
-  cfResumoMes();
+  cfResumoMes(); cdStatus();
 }
 // notas pra contadora: até o dia 10 sugere o mês passado (é quando costuma mandar o fechamento)
 const cfMesPadrao = () => { const d = new Date(); if (d.getDate() <= 10) d.setMonth(d.getMonth() - 1); return d.toLocaleDateString("en-CA").slice(0, 7); };
@@ -1950,7 +1972,7 @@ async function cfResumoMes() {
   try { const r = await aut("/api/fiscal/notas?mes=" + m), j = await r.json(); if (!r.ok) { el.textContent = j.erro || "—"; return; }
     if (!$("#cf-tel").value && j.contadora) $("#cf-tel").value = cfTelFmt(j.contadora);
     const li = (t, x) => (x && (x.qtd || x.canceladas) ? `<div class="cf-ct-li"><span>${t}</span><b>${x.qtd} · ${brl(x.total)}</b>${x.canceladas ? `<small>+ ${x.canceladas} cancelada(s)</small>` : ""}</div>` : "");
-    el.innerHTML = j.qtd ? li("🧾 Cupons do caixa", j.caixa) + li("🧾 Cupons do ViaVale", j.viavaleNfce) + li("📄 Notas do ViaVale (empresas)", j.viavaleNfe) : "Nenhuma nota emitida nesse mês.";
+    el.innerHTML = j.qtd ? li("🧾 Cupons do caixa", j.caixa) + li("📄 Notas do caixa (empresas)", j.caixaNfe) + li("🧾 Cupons do ViaVale", j.viavaleNfce) + li("📄 Notas do ViaVale (empresas)", j.viavaleNfe) : "Nenhuma nota emitida nesse mês.";
   } catch (e) { el.textContent = "Sem conexão com o servidor."; }
 }
 document.addEventListener("change", (e) => { if (e.target.id === "cf-mes") cfResumoMes(); });
@@ -2009,6 +2031,206 @@ document.addEventListener("click", async (e) => {
     } catch (er) { t.disabled = false; cfMsg("✕ Sem conexão com o servidor.", "ruim"); }
   }
 });
+// ===================== NOTAS FISCAIS (dona 25/11): todas as notas do mês + NF-e pra empresa + cupom automático do dia =====================
+// Botão 📄 no topo. Lista: cupons (NFC-e) e NF-e daqui e do ViaVale; reimprimir cupom, DANFE da NF-e, baixar XML, cancelar.
+let ntMes = new Date().toLocaleDateString("en-CA").slice(0, 7), ntFiltro = "todas", ntBusca = "", ntLista = [], ntEmpresas = null;
+const docFmt = (d) => { const s = String(d || ""); return s.length === 14 ? s.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5") : s.length === 11 ? cpfFmt(s) : s; };
+const dhFmt = (dh) => { const d = new Date(dh); return isNaN(d) ? "" : d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); };
+const ntPodeCancelar = (n) => n.origem === "caixa" && n.situacao === "autorizada" && Date.now() - Date.parse(n.dhEmi) < (n.modelo === "55" ? 24 * 3600e3 : 30 * 60e3);
+async function modalNotas() {
+  abrirModal(`<div class="cm-corpo cm-largo"><h2>📄 Notas fiscais<small>Tudo que saiu no CNPJ: cupons (NFC-e) e notas pra empresa (NF-e), do caixa e do ViaVale</small></h2>
+    <div class="nt-topo"><input type="month" id="nt-mes" value="${ntMes}"><input id="nt-busca" placeholder="🔎 Número, nome, CNPJ/CPF ou valor" value="${esc(ntBusca)}" autocomplete="off">
+      <button class="btn ok" data-a="ntNova">➕ NF-e pra empresa</button></div>
+    <div class="cf-seg nt-filtros">${[["todas", "Todas"], ["65", "🧾 Cupons"], ["55", "📄 NF-e"], ["canc", "✕ Canceladas"]].map(([k, t]) => `<button type="button" class="btn mini ${ntFiltro === k ? "on" : ""}" data-a="ntFiltro" data-v="${k}">${t}</button>`).join("")}</div>
+    <div id="nt-tot" class="nt-tot"></div><div id="nt-lista" class="nt-lista"><p class="det-obs">⏳ Carregando…</p></div><div id="cf-msg" class="cf-msg" hidden></div></div>
+    <div class="acoes cm-rodape"><button class="btn" data-a="fechar">Fechar</button></div>`);
+  await ntCarregar();
+}
+async function ntCarregar() {
+  const el = $("#nt-lista"); if (!el) return;
+  try { const r = await aut("/api/fiscal/lista?mes=" + ntMes), j = await r.json(); if (!r.ok) { el.innerHTML = `<p class="det-obs">${esc(j.erro || "não deu")}</p>`; return; } ntLista = j; ntDesenhar(); }
+  catch (e) { el.innerHTML = '<p class="det-obs">Sem conexão com o servidor.</p>'; }
+}
+function ntDesenhar() {
+  const el = $("#nt-lista"); if (!el) return;
+  const b = ntBusca.trim().toLowerCase(), bn = b.replace(/[^\d,]/g, "").replace(",", ".");
+  const l = ntLista.filter((n) => (ntFiltro === "todas" || (ntFiltro === "canc" ? n.situacao === "cancelada" : n.modelo === ntFiltro))
+    && (!b || String(n.numero) === b || (n.nome || "").toLowerCase().includes(b) || (bn.length >= 3 && String(n.doc).includes(bn.replace(".", ""))) || (bn && Number(bn) === n.valor) || (n.pedido && n.pedido.rot.toLowerCase().includes(b))));
+  const vale = l.filter((n) => n.situacao === "autorizada" && n.amb === 1), soma = (x) => x.reduce((s, n) => s + n.valor, 0);
+  const c = vale.filter((n) => n.modelo === "65"), e = vale.filter((n) => n.modelo === "55");
+  $("#nt-tot").innerHTML = `<div><span>🧾 Cupons</span><b>${c.length} · ${brl(soma(c))}</b></div><div><span>📄 NF-e</span><b>${e.length} · ${brl(soma(e))}</b></div><div><span>Total</span><b>${brl(soma(vale))}</b></div>`;
+  el.innerHTML = l.length ? l.map((n) => {
+    const tp = n.modelo === "55" ? "📄 NF-e" : "🧾 Cupom", quem = n.nome ? esc(n.nome) + (n.doc ? " · " + docFmt(n.doc) : "") : n.doc ? "CPF " + docFmt(n.doc) : n.vendasDia ? `Cartão/Pix do dia · ${n.vendasDia} vendas` : n.pedido ? esc(n.pedido.rot) : "Consumidor";
+    const st = n.situacao === "cancelada" ? '<em class="nt-st ruim">cancelada</em>' : n.situacao !== "autorizada" ? `<em class="nt-st ruim">${esc(n.situacao)}</em>` : n.amb === 2 ? '<em class="nt-st">teste</em>' : '<em class="nt-st ok">autorizada</em>';
+    return `<div class="nt-li ${n.situacao === "cancelada" ? "canc" : ""}"><div class="nt-tp">${tp}<small>${n.origem === "viavale" ? "ViaVale" : "Caixa"}</small></div>
+      <div class="nt-info"><b>nº ${n.numero} <small>série ${n.serie}</small></b><span>${dhFmt(n.dhEmi)} · ${quem}</span></div>
+      <div class="nt-v"><b>${brl(n.valor)}</b>${st}</div>
+      <div class="nt-bts">${n.modelo === "55" ? `<button class="btn mini" data-a="ntDanfe" data-ch="${n.chave}" title="DANFE pra imprimir ou salvar em PDF">📄 DANFE</button>` : `<button class="btn mini" data-a="ntReimp" data-ch="${n.chave}" title="Imprimir de novo na bobina">🖨</button>`}
+        <button class="btn mini" data-a="ntXml" data-ch="${n.chave}" title="Baixar o XML">⬇ XML</button>${ntPodeCancelar(n) ? `<button class="btn ruim mini" data-a="ntCanc" data-ch="${n.chave}">Cancelar</button>` : ""}</div></div>`;
+  }).join("") : '<div class="vazio-box"><span>📄</span>Nenhuma nota aqui.</div>';
+}
+async function ntNota(ch) { const r = await aut("/api/fiscal/nota?chave=" + ch), j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.erro || "nota não encontrada"); return j; }
+async function baixarAut(url, nome) { // download com o token (o link direto não leva o login)
+  const r = await aut(url); if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.erro || "não baixou"); }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(await r.blob()); a.download = nome; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+// ----- código de barras da chave (Code 128 C, só números) pra DANFE -----
+const C128 = "212222 222122 222221 121223 121322 131222 122213 122312 132212 221213 221312 231212 112232 122132 122231 113222 123122 123221 223211 221132 221231 213212 223112 312131 311222 321122 321221 312212 322112 322211 212123 212321 232121 111323 131123 131321 112313 132113 132311 211313 231113 231311 112133 112331 132131 113123 113321 133121 313121 211331 231131 213113 213311 213131 311123 311321 331121 312113 312311 332111 314111 221411 431111 111224 111422 121124 121421 141122 141221 112214 112412 122114 122411 142112 142211 241211 221114 413111 241112 134111 111242 121142 121241 114212 124112 124211 411212 421112 421211 212141 214121 412121 111143 111341 131141 114113 114311 411113 411311 113141 114131 311141 411131 211412 211214 211232 2331112".split(" ");
+function barras128C(num) {
+  const v = [105]; for (let i = 0; i < num.length; i += 2) v.push(+num.slice(i, i + 2));
+  v.push(v.reduce((s, x, i) => s + x * (i || 1), 0) % 103); v.push(106);
+  let x = 10, r = ""; for (const k of v) [...C128[k]].forEach((w, i) => { if (i % 2 === 0) r += `<rect x="${x}" y="0" width="${w}" height="50"/>`; x += +w; });
+  return `<svg viewBox="0 0 ${x + 10} 50" preserveAspectRatio="none" style="width:100%;height:46px">${r}</svg>`;
+}
+function danfeHtml(n) { // DANFE (retrato, A4) da NF-e, pra imprimir ou "Salvar como PDF"
+  const E = n.emit || {}, D = n.dest || {}, v = (x) => Number(x || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }), q = (x) => Number(x || 0).toLocaleString("pt-BR", { maximumFractionDigits: 4 });
+  const dt = (s) => s ? new Date(s).toLocaleDateString("pt-BR") : "", hr = (s) => s ? new Date(s).toLocaleTimeString("pt-BR") : "", c = (t, x, cls) => `<td class="${cls || ""}"><i>${t}</i><b>${x === "" || x == null ? "&nbsp;" : x}</b></td>`;
+  const ch = String(n.chave).replace(/(\d{4})(?=\d)/g, "$1 "), PG = { dinheiro: "Dinheiro", credito: "Cartão de crédito", debito: "Cartão de débito", pix: "PIX", boleto: "Boleto", deposito: "Depósito", transferencia: "Transferência", prazo: "A prazo (sem pagamento)", cartao: "Cartão" };
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>DANFE NF-e ${n.numero} - ${esc(D.xNome || "")}</title><style>
+  @page { size: A4; margin: 8mm; } * { box-sizing: border-box; } body { font: 9px Arial, sans-serif; color: #000; margin: 0; }
+  table { width: 100%; border-collapse: collapse; margin-top: 3px; } td { border: 1px solid #000; padding: 2px 4px; vertical-align: top; } td i { display: block; font-style: normal; font-size: 7px; text-transform: uppercase; } td b { font-size: 9.5px; font-weight: 600; }
+  h3 { font-size: 8px; margin: 6px 0 0; text-transform: uppercase; } .r { text-align: right; } .c { text-align: center; } .emit b { font-size: 12px; } .danfe { text-align: center; } .danfe b { font-size: 14px; display: block; }
+  .itens th { border: 1px solid #000; font-size: 7px; padding: 2px; } .itens td { font-size: 8.5px; } .marca { position: fixed; top: 40%; left: 0; right: 0; text-align: center; font-size: 46px; color: rgba(200,0,0,.25); transform: rotate(-25deg); font-weight: 800; }
+  </style></head><body>${n.situacao === "cancelada" ? '<div class="marca">NF-e CANCELADA</div>' : n.amb === 2 ? '<div class="marca">SEM VALOR FISCAL</div>' : ""}
+  <table><tr><td style="width:40%" class="emit"><b>${esc(E.xNome)}</b><br>${esc(E.xLgr)}, ${esc(E.nro)} - ${esc(E.xBairro)}<br>${esc(E.xMun)} - ${esc(E.UF)} · CEP ${esc(E.CEP)}${E.fone ? "<br>Fone " + esc(E.fone) : ""}</td>
+    <td style="width:18%" class="danfe"><b>DANFE</b>Documento Auxiliar da Nota Fiscal Eletrônica<br><br>0 - Entrada<br>1 - Saída &nbsp;<b style="display:inline;border:1px solid #000;padding:0 5px">1</b><br><br><b style="font-size:11px">Nº ${String(n.numero).padStart(9, "0").replace(/(\d{3})(?=\d)/g, "$1.")}</b>Série ${n.serie}</td>
+    <td>${barras128C(n.chave)}<i>Chave de acesso</i><b>${ch}</b><br><span>Consulta de autenticidade no portal nacional da NF-e www.nfe.fazenda.gov.br/portal ou no site da SEFAZ-SP</span></td></tr></table>
+  <table><tr>${c("Natureza da operação", esc(n.natOp || "Venda"))}${c("Protocolo de autorização de uso", esc(n.prot) + " - " + dt(n.dhAut) + " " + hr(n.dhAut))}</tr></table>
+  <table><tr>${c("Inscrição estadual", esc(E.IE))}${c("CNPJ", docFmt(E.CNPJ))}</tr></table>
+  <h3>Destinatário / remetente</h3>
+  <table><tr>${c("Nome / razão social", esc(D.xNome), "")}${c("CNPJ / CPF", docFmt(D.doc))}${c("Data da emissão", dt(n.dhEmi))}</tr>
+    <tr>${c("Endereço", esc(D.xLgr) + ", " + esc(D.nro) + (D.xCpl ? " " + esc(D.xCpl) : ""))}${c("Bairro", esc(D.xBairro))}${c("Data da saída", dt(n.dhSaiEnt || n.dhEmi))}</tr>
+    <tr>${c("Município", esc(D.xMun) + " - " + esc(D.UF) + (D.CEP ? " · CEP " + esc(D.CEP) : ""))}${c("Inscrição estadual", esc(D.IE || ""))}${c("Hora da saída", hr(n.dhSaiEnt || n.dhEmi))}</tr></table>
+  <h3>Pagamento</h3><table><tr>${(n.pagL || []).map((p) => c(PG[p.forma] || p.forma, "R$ " + v(p.valor))).join("")}</tr></table>
+  <h3>Cálculo do imposto</h3>
+  <table><tr>${c("Base de cálculo do ICMS", "0,00", "r")}${c("Valor do ICMS", "0,00", "r")}${c("Base cálc. ICMS ST", "0,00", "r")}${c("Valor do ICMS ST", "0,00", "r")}${c("Valor total dos produtos", v(n.vProd), "r")}</tr>
+    <tr>${c("Valor do frete", "0,00", "r")}${c("Valor do seguro", "0,00", "r")}${c("Desconto", "0,00", "r")}${c("Valor aprox. dos tributos", v(n.vTotTrib), "r")}${c("Valor total da nota", "<span style='font-size:12px'>" + v(n.valor) + "</span>", "r")}</tr></table>
+  <h3>Transportador / volumes transportados</h3><table><tr>${c("Modalidade do frete", "9 - Sem ocorrência de transporte")}</tr></table>
+  <h3>Dados dos produtos / serviços</h3>
+  <table class="itens"><thead><tr><th>Código</th><th>Descrição</th><th>NCM</th><th>CSOSN</th><th>CFOP</th><th>Un</th><th>Qtd</th><th>Valor unit.</th><th>Valor total</th></tr></thead>
+    <tbody>${(n.linhas || []).map((l) => `<tr><td>${esc(l.cProd)}</td><td>${esc(l.xProd)}</td><td class="c">${esc(l.NCM || "")}</td><td class="c">${esc(l.CSOSN || "")}</td><td class="c">${esc(l.CFOP || "")}</td><td class="c">UN</td><td class="r">${q(l.qtd)}</td><td class="r">${v(l.un)}</td><td class="r">${v(l.v)}</td></tr>`).join("")}</tbody></table>
+  <h3>Dados adicionais</h3><table><tr><td style="height:70px"><i>Informações complementares</i>${esc(n.infAdFisco || "")}<br>${esc(n.infCpl || "")}${n.situacao === "cancelada" ? "<br><b>NF-e CANCELADA" + (n.cancProt ? " - protocolo " + esc(n.cancProt) : "") + "</b>" : ""}</td></tr></table>
+  </body></html>`;
+}
+async function abrirDanfe(ch) {
+  const w = window.open("", "_blank"); if (!w) return alert("O navegador bloqueou a janela da DANFE. Libere as janelas (pop-up) pra este endereço.");
+  w.document.write("<p style='font:16px Arial;padding:20px'>⏳ Montando a DANFE…</p>");
+  try { const n = await ntNota(ch); w.document.open(); w.document.write(danfeHtml(n)); w.document.close(); setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 400); }
+  catch (e) { w.close(); alert("Não abriu a DANFE: " + e.message); }
+}
+// ----- NF-e pra empresa -----
+const NFE_FORMAS = [["prazo", "A prazo (a empresa paga depois)"], ["dinheiro", "Dinheiro"], ["pix", "Pix"], ["transferencia", "Transferência"], ["boleto", "Boleto"], ["deposito", "Depósito"], ["credito", "Cartão de crédito"], ["debito", "Cartão de débito"]];
+let nfeItens = [];
+const nfeTotal = () => nfeItens.reduce((s, i) => s + Math.round((+i.qtd || 0) * (+i.un || 0) * 100) / 100, 0);
+async function modalNFe() {
+  if (!fiscalSt) await carregarFiscal();
+  if (!fiscalPronto()) return alert("Falta instalar o certificado (botão 🧾 no topo).");
+  nfeItens = [{ k: "marmitex", xProd: "", qtd: "", un: "" }];
+  const PR = (fiscalSt.produtos || []).map((p) => `<option value="${p.k}">${esc(p.xProd)}</option>`).join(""), cp = (id, ph, extra) => `<input id="nfe-${id}" placeholder="${ph}" autocomplete="off" ${extra || ""}>`;
+  abrirModal(`<div class="cm-corpo cm-largo"><h2>📄 NF-e pra empresa<small>Nota fiscal eletrônica (modelo 55) · série ${(fiscalSt.nfe || {}).serie || 50} · próxima nº ${(fiscalSt.nfe || {}).proximo || 1}${fiscalSt.ambiente === 2 ? ' · <span class="cf-teste">TESTE</span>' : ""}</small></h2>
+    <h4>Empresa</h4>
+    <div class="nfe-g"><input id="nfe-busca" list="nfe-emps" placeholder="🔎 Escolha uma empresa que já recebeu nota (nome ou CNPJ)" autocomplete="off" class="nfe-l2"><datalist id="nfe-emps"></datalist>
+      ${cp("doc", "CNPJ (ou CPF)", 'inputmode="numeric"')}<button class="btn" data-a="nfeCad" title="Busca nome, IE e endereço na SEFAZ-SP">🔎 Buscar pelo CNPJ</button>
+      ${cp("xNome", "Razão social", 'class="nfe-l2"')}
+      ${cp("IE", "Inscrição estadual")}<label class="nfe-chk"><input type="checkbox" id="nfe-semie"> Não contribuinte (sem IE)</label>
+      ${cp("xLgr", "Rua / avenida", 'class="nfe-l2"')}${cp("nro", "Número")}${cp("xBairro", "Bairro")}${cp("xMun", "Cidade (SP)")}${cp("CEP", "CEP", 'inputmode="numeric"')}
+      ${cp("email", "E-mail (opcional)", 'class="nfe-l2" type="email"')}</div>
+    <h4>Itens</h4><div id="nfe-itens"></div><button class="btn mini" data-a="nfeMais">➕ Item</button>
+    <h4>Pagamento</h4><select id="nfe-forma" style="width:100%">${NFE_FORMAS.map(([k, t]) => `<option value="${k}">${t}</option>`).join("")}</select>
+    <h4>Observação na nota <small>(opcional)</small></h4><input id="nfe-obs" placeholder="Ex.: Refeições de 01 a 30/11/2026" maxlength="250" style="width:100%">
+    <div class="nfe-tot"><span>Total da nota</span><b id="nfe-total">${brl(0)}</b></div><div id="cf-msg" class="cf-msg" hidden></div></div>
+    <div class="acoes cm-rodape"><button class="btn" data-a="ntVoltar">Voltar</button><button class="btn ok" data-a="nfeEmitir">📄 Emitir NF-e</button></div>`);
+  nfeDesenharItens(PR);
+  try { ntEmpresas = await (await aut("/api/fiscal/empresas")).json(); $("#nfe-emps").innerHTML = ntEmpresas.map((e) => `<option value="${esc(e.xNome + " — " + docFmt(e.doc))}">`).join(""); } catch (e) { ntEmpresas = []; }
+}
+function nfeDesenharItens(PR) {
+  PR = PR || (fiscalSt.produtos || []).map((p) => `<option value="${p.k}">${esc(p.xProd)}</option>`).join("");
+  $("#nfe-itens").innerHTML = nfeItens.map((i, n) => `<div class="nfe-it" data-i="${n}"><select data-c="k">${PR}</select><input data-c="xProd" placeholder="Descrição (opcional)" value="${esc(i.xProd)}">
+    <input data-c="qtd" inputmode="decimal" placeholder="Qtd" value="${esc(i.qtd)}"><input data-c="un" inputmode="decimal" placeholder="Valor un." value="${esc(i.un)}"><b>${brl(Math.round((+i.qtd || 0) * (+i.un || 0) * 100) / 100)}</b>
+    <button class="btn mini ruim" data-a="nfeTira" data-i="${n}" ${nfeItens.length < 2 ? "disabled" : ""}>✕</button></div>`).join("");
+  $("#nfe-itens").querySelectorAll(".nfe-it").forEach((d) => (d.querySelector("select").value = nfeItens[+d.dataset.i].k));
+  $("#nfe-total").textContent = brl(nfeTotal());
+}
+function nfePreencher(e) { ["doc", "xNome", "IE", "xLgr", "nro", "xBairro", "xMun", "CEP", "email"].forEach((k) => { const el = $("#nfe-" + k); if (el && e[k] !== undefined) el.value = k === "doc" ? docFmt(e.doc) : e[k] || ""; }); $("#nfe-semie").checked = !e.IE; }
+const nfeDest = () => { const g = (k) => ($("#nfe-" + k) || {}).value || ""; return { doc: g("doc"), xNome: g("xNome"), IE: $("#nfe-semie").checked ? "" : g("IE"), xLgr: g("xLgr"), nro: g("nro"), xBairro: g("xBairro"), xMun: g("xMun"), CEP: g("CEP"), email: g("email"), UF: "SP" }; };
+document.addEventListener("input", (e) => {
+  const it = e.target.closest(".nfe-it");
+  if (it && e.target.dataset.c) { const i = nfeItens[+it.dataset.i]; i[e.target.dataset.c] = e.target.dataset.c === "qtd" || e.target.dataset.c === "un" ? e.target.value.replace(",", ".") : e.target.value; it.querySelector("b").textContent = brl(Math.round((+i.qtd || 0) * (+i.un || 0) * 100) / 100); $("#nfe-total").textContent = brl(nfeTotal()); }
+  if (e.target.id === "nfe-busca" && ntEmpresas) { const v = e.target.value, x = ntEmpresas.find((y) => v === y.xNome + " — " + docFmt(y.doc)); if (x) { nfePreencher(x); e.target.value = ""; } }
+  if (e.target.id === "nt-busca") { ntBusca = e.target.value; ntDesenhar(); }
+});
+document.addEventListener("change", (e) => {
+  const it = e.target.closest(".nfe-it"); if (it && e.target.dataset.c === "k") nfeItens[+it.dataset.i].k = e.target.value;
+  if (e.target.id === "nfe-semie") $("#nfe-IE").disabled = e.target.checked;
+  if (e.target.id === "nt-mes" && e.target.value) { ntMes = e.target.value; ntCarregar(); }
+});
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("[data-a]"); if (!t) return; const a = t.dataset.a;
+  if (a === "notas" || a === "ntVoltar") return modalNotas();
+  if (a === "ntFiltro") { ntFiltro = t.dataset.v; t.parentNode.querySelectorAll(".btn").forEach((b) => b.classList.toggle("on", b === t)); return ntDesenhar(); }
+  if (a === "ntXml") { try { await baixarAut("/api/fiscal/xml?chave=" + t.dataset.ch, t.dataset.ch + "-procNFe.xml"); } catch (er) { alert(er.message); } return; }
+  if (a === "ntDanfe") return abrirDanfe(t.dataset.ch);
+  if (a === "ntReimp") { try { imprimirCupom(await ntNota(t.dataset.ch)); } catch (er) { alert(er.message); } return; }
+  if (a === "ntCanc") {
+    const n = ntLista.find((x) => x.chave === t.dataset.ch); if (!n) return;
+    const mot = prompt(`Cancelar ${n.modelo === "55" ? "a NF-e" : "o cupom"} nº ${n.numero} (${brl(n.valor)}) na SEFAZ?\n\nMotivo (pelo menos 15 letras):`, n.modelo === "55" ? "Nota emitida com dados errados" : "Cliente desistiu da compra"); if (!mot) return;
+    t.disabled = true; cfMsg("⏳ Cancelando na SEFAZ…");
+    try { const r = await aut("/api/fiscal/cancelar-nota", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chave: n.chave, motivo: mot.trim() }) }), j = await r.json().catch(() => ({}));
+      if (!r.ok) { t.disabled = false; return cfMsg("✕ Não cancelou: " + esc(j.erro || "erro"), "ruim"); } cfMsg("✓ Nº " + n.numero + " cancelada na SEFAZ.", "ok"); cachePed = {}; carregar(); ntCarregar();
+    } catch (er) { t.disabled = false; cfMsg("✕ Sem conexão com o servidor.", "ruim"); }
+    return;
+  }
+  if (a === "ntNova") return modalNFe();
+  if (a === "nfeMais") { nfeItens.push({ k: "marmitex", xProd: "", qtd: "", un: "" }); return nfeDesenharItens(); }
+  if (a === "nfeTira") { nfeItens.splice(+t.dataset.i, 1); return nfeDesenharItens(); }
+  if (a === "nfeCad") {
+    const doc = $("#nfe-doc").value.replace(/\D/g, ""); if (doc.length !== 14) return cfMsg("Digite o CNPJ (14 números) pra buscar.", "ruim");
+    const ja = (ntEmpresas || []).find((x) => x.doc === doc); if (ja) { nfePreencher(ja); return cfMsg("✓ Empresa já usada antes: dados da última nota.", "ok"); }
+    cfMsg("⏳ Consultando a SEFAZ…"); t.disabled = true;
+    try { const r = await aut("/api/fiscal/cadastro?doc=" + doc), j = await r.json().catch(() => ({})); t.disabled = false;
+      if (!r.ok) return cfMsg("✕ " + esc(j.erro || "não consultou"), "ruim");
+      if (j.naoAchou) { $("#nfe-semie").checked = true; $("#nfe-IE").value = ""; $("#nfe-IE").disabled = true; return cfMsg("Essa empresa não tem inscrição estadual em SP (não contribuinte). Digite o nome e o endereço.", ""); }
+      nfePreencher(j); cfMsg(j.ativa === false ? "⚠ A SEFAZ diz que essa inscrição não está ativa. Confira com a empresa." : "✓ Dados da SEFAZ. Confira o endereço (às vezes é o da matriz).", j.ativa === false ? "ruim" : "ok");
+    } catch (er) { t.disabled = false; cfMsg("✕ Sem conexão com o servidor.", "ruim"); }
+    return;
+  }
+  if (a === "nfeEmitir") {
+    const dest = nfeDest(), itens = nfeItens.filter((i) => +i.qtd > 0 && +i.un > 0).map((i) => ({ k: i.k, xProd: i.xProd.trim(), qtd: +i.qtd, un: +i.un })), tot = nfeTotal(), forma = $("#nfe-forma").value;
+    if (!dest.xNome || dest.doc.replace(/\D/g, "").length < 11) return cfMsg("Preencha a empresa (CNPJ e razão social).", "ruim");
+    if (!itens.length) return cfMsg("Coloque pelo menos 1 item com quantidade e valor.", "ruim");
+    if (!confirm(`Emitir a NF-e${fiscalSt.ambiente === 1 ? " (VALE DE VERDADE)" : " de TESTE"}?\n\n${dest.xNome}\n${docFmt(dest.doc.replace(/\D/g, ""))}\n\n${itens.map((i) => i.qtd + " x " + (i.xProd || (fiscalSt.produtos.find((p) => p.k === i.k) || {}).xProd) + " a " + brl(i.un)).join("\n")}\n\nTotal: ${brl(tot)}\nPagamento: ${(NFE_FORMAS.find((f) => f[0] === forma) || [])[1]}`)) return;
+    t.disabled = true; cfMsg("⏳ Mandando pra SEFAZ…");
+    try { const r = await aut("/api/fiscal/nfe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dest, itens, forma, obs: $("#nfe-obs").value }) }), j = await r.json().catch(() => ({}));
+      if (!r.ok) { t.disabled = false; return cfMsg("✕ A NF-e não saiu: " + esc(j.erro || "erro"), "ruim"); }
+      ntMes = new Date().toLocaleDateString("en-CA").slice(0, 7); await carregarFiscal(); await modalNotas(); cfMsg(`✓ NF-e nº ${j.numero} autorizada (${brl(j.valor)}). A DANFE abriu pra imprimir ou salvar em PDF.`, "ok"); abrirDanfe(j.chave);
+    } catch (er) { t.disabled = false; cfMsg("✕ Sem conexão com o servidor. Confira na lista de notas antes de emitir de novo.", "ruim"); }
+    return;
+  }
+  if (a === "cdLiga") {
+    const on = t.dataset.v === "1";
+    if (on && !confirm("Ligar o cupom fiscal automático?\n\nTodo dia às " + ((fiscalSt.cupomDia || {}).hora || 15) + "h sai 1 cupom com o total das vendas pagas só em crédito, débito ou Pix que não tiraram cupom na hora (a partir de hoje).")) return;
+    try { const r = await aut("/api/fiscal/cupom-dia", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ativo: on }) }); if (!r.ok) return cfMsg("✕ Não mudou.", "ruim"); await modalFiscal(); cfMsg(on ? "✅ Cupom automático ligado." : "Cupom automático desligado.", "ok"); } catch (er) { cfMsg("✕ Sem conexão com o servidor.", "ruim"); }
+    return;
+  }
+  if (a === "cdAgora") {
+    if (!confirm("Emitir AGORA o cupom das vendas no cartão/Pix que ainda não têm cupom?")) return;
+    t.disabled = true; cfMsg("⏳ Emitindo…");
+    try { const r = await aut("/api/fiscal/cupom-dia", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rodar: true }) }), j = await r.json().catch(() => ({})); t.disabled = false;
+      const em = (j.resultado || {}).emitidos || [], err = (j.resultado || {}).erro;
+      cfMsg(r.ok ? (err ? "⚠ " + esc(err) : em.length ? "✓ " + em.map((c) => `Cupom nº ${c.numero} · ${brl(c.valor)} (${c.qtd} vendas)`).join("<br>") : "Nada pendente.") : "✕ " + esc(j.erro || "não deu"), r.ok && !err ? "ok" : "ruim"); cdStatus();
+    } catch (er) { t.disabled = false; cfMsg("✕ Sem conexão com o servidor.", "ruim"); }
+  }
+});
+// status do cupom automático (no 🧾): o que está pendente pro próximo cupom
+async function cdStatus() {
+  const el = $("#cd-pend"); if (!el) return;
+  if (sessionStorage.getItem("caixaRole") !== "admin") { el.textContent = ""; return; }
+  try { const r = await aut("/api/fiscal/cupom-dia", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }), j = await r.json(); if (!r.ok || !j.cupomDia.ativo) { el.textContent = ""; return; }
+    const u = j.ultimo || {}, pend = j.pendentes || [];
+    el.innerHTML = (pend.length ? "Esperando o próximo cupom: " + pend.map((p) => `${p.dia.slice(8)}/${p.dia.slice(5, 7)} · ${p.qtd} vendas · ${brl(p.valor)}`).join(" | ") : "Nenhuma venda esperando cupom.")
+      + (u.erro ? `<br><b style="color:#a50f14">Último erro: ${esc(u.erro)}</b>` : "");
+  } catch (e) {}
+}
 // ----- tela "Impressora do caixa" (botão 🖨 no topo) -----
 const ipOk = (ip) => { const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(String(ip || "").trim()); return !!m && m.slice(1).every((n) => +n <= 255); };
 function statusImpCx(html, tipo) { const el = $("#icx-st"); if (el) { el.innerHTML = html; el.style.background = tipo === "ok" ? "#e9f6ec" : tipo === "erro" ? "#fde0e0" : tipo === "testando" ? "#fff3d6" : "#f3ede6"; el.style.color = tipo === "ok" ? "#16793a" : tipo === "erro" ? "#a50f14" : tipo === "testando" ? "#7a3b00" : "#8a6f60"; } }

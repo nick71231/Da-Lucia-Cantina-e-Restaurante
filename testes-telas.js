@@ -44,6 +44,12 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
     await clica(w, `[data-aba="${aba}"]`);
     t(texto(w, "#lista").includes(esperado) && texto(w, "#lista").trim().length > 0, `aba ${aba}: mostra o conteúdo certo (sem ficar com a aba anterior)`);
   }
+  { // 📄 notas fiscais: abre a lista do mês (vazia aqui) com os filtros
+    await clica(w, '[data-a="notas"]'); await dorme(300);
+    t(texto(w, "#modal").includes("Notas fiscais") && texto(w, "#nt-lista").includes("Nenhuma nota") && w.document.querySelectorAll('[data-a="ntFiltro"]').length === 4 && w.document.querySelector('[data-a="ntNova"]'), "botão 📄: lista de notas fiscais do mês com filtros e o botão de NF-e pra empresa");
+    await clica(w, '[data-a="ntFiltro"][data-v="55"]'); t(w.document.querySelector('[data-a="ntFiltro"][data-v="55"]').classList.contains("on"), "filtro NF-e marca o botão");
+    await clica(w, '[data-a="fechar"]');
+  }
   { // conta da Caramuru: filtro de quinzena e planilha com a quantidade de almoços
     await clica(w, '[data-aba="contas"]'); await clica(w, '[data-a="abrirConta"][data-k="e:CARAMURU"]');
     await clica(w, '[data-a="ctQuinz"][data-q="1"]'); const q1 = texto(w, "#lista");
