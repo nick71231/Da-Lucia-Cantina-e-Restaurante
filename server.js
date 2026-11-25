@@ -109,6 +109,7 @@ function lerDados() {
 }
 let db = lerDados();
 db.pedidos = db.pedidos || []; db.caixa = db.caixa || {};
+db.pedidos.forEach((p) => { if (p.nfceRecusa && /\b787\b/.test(p.nfceRecusa.motivo || "")) delete p.nfceRecusa; }); // 25/11: entrega sem CPF agora sai como presencial -> as recusadas (787) entram de novo no cupom automático
 db.clientes = db.clientes || []; db.lancamentos = db.lancamentos || []; db.pagamentos = db.pagamentos || []; db.enviados = db.enviados || {};
 db.entregadores = Array.isArray(db.entregadores) ? db.entregadores : []; // motoboys (nomes)
 // cartão na entrega dos pedidos do site entrava como "Cartão" genérico: passa pra crédito/débito/refeição (o tipo que o cliente escolheu)
@@ -569,8 +570,6 @@ function pedidosCupomDia(cd) {
   const formas = new Set(cd.formas || []), hj = hoje(), porDia = {};
   for (const p of db.pedidos) {
     if (p.status !== "pago" || !p.dia || p.dia < cd.desde || p.dia > hj || p.nfceDia || p.nfce || p.nfceRecusa) continue; // p.nfce: já tem cupom (ou teve e foi cancelado: não tira de novo sozinho); nfceRecusa: a SEFAZ já recusou (não manda de novo)
-    // entrega em casa: a SEFAZ exige o CPF do cliente no cupom (rejeição 787, 25/11) e o delivery não tem -> fica de fora (retirada continua)
-    if (p.tipo === "delivery" && p.entrega !== "retirada") continue;
     const pg = pagsDe(p); if (!pg.length || !pg.every((g) => formas.has(g.forma) && g.valor > 0)) continue;
     const itens = cents((p.itens || []).reduce((s, c) => s + c.preco * (c.qtd || 1), 0)), recebido = cents(pg.reduce((s, g) => s + g.valor, 0));
     if (!(itens > 0) || Math.abs(itens - recebido) > 0.009) continue; // desconto/diferença: o cupom não fecharia

@@ -205,8 +205,9 @@ module.exports = function criarFiscal({ DIR_DADOS }) {
     }
     if (troco && porF.dinheiro) porF.dinheiro = c2(porF.dinheiro + troco);
     const pag = Object.entries(porF).map(([f, v]) => `<detPag><tPag>${TPAG[f]}</tPag>${f === "cartao" ? "<xPag>Cartao</xPag>" : ""}<vPag>${f2(v)}</vPag>${["credito", "debito", "pix"].includes(f) ? "<card><tpIntegra>2</tpIntegra></card>" : ""}</detPag>`).join("") + (troco ? `<vTroco>${f2(troco)}</vTroco>` : "");
-    const entregaDom = peds.some((p) => p.tipo === "delivery" && p.entrega !== "retirada");
     const cpfL = cpf && cpfOk(cpf) ? String(cpf).replace(/\D/g, "") : "";
+    // entrega em casa (indPres 4) só com o CPF do cliente: sem CPF a SEFAZ recusa (787). Sem CPF sai como venda presencial (dona 25/11)
+    const entregaDom = !!cpfL && peds.some((p) => p.tipo === "delivery" && p.entrega !== "retirada");
     const inf = `<infNFe Id="NFe${chave}" versao="4.00"><ide><cUF>35</cUF><cNF>${cNF}</cNF><natOp>Venda</natOp><mod>65</mod><serie>${serie}</serie><nNF>${nNF}</nNF><dhEmi>${agoraSP()}</dhEmi><tpNF>1</tpNF><idDest>1</idDest><cMunFG>${E.cMun}</cMunFG><tpImp>4</tpImp><tpEmis>1</tpEmis><cDV>${chave.slice(-1)}</cDV><tpAmb>${amb}</tpAmb><finNFe>1</finNFe><indFinal>1</indFinal><indPres>${entregaDom ? 4 : 1}</indPres>${entregaDom ? "<indIntermed>0</indIntermed>" : ""}<procEmi>0</procEmi><verProc>DaLucia 1.0</verProc></ide>`
       + emitXml(cfg)
       + (cpfL ? `<dest><CPF>${cpfL}</CPF><indIEDest>9</indIEDest></dest>` : "")
