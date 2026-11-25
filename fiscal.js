@@ -35,8 +35,8 @@ const CLASSES = {
   cerveja: { cProd: "CERVEJA", xProd: "CERVEJA LONG NECK", NCM: "22030000", CEST: "0302101", CFOP: "5405", CSOSN: "500" },
   sorvete: { cProd: "SORVETE", xProd: "SORVETE", NCM: "21050010", CEST: "2300100", CFOP: "5102", CSOSN: "102" }, // contadora 24/11: saiu da ST em 01/07/2026
   doce: { cProd: "DOCE", xProd: "SOBREMESA", NCM: "21069090", CFOP: "5102", CSOSN: "102" },
-  // café da manhã das empresas (NF-e). O ViaVale usava NCM 2101.12.00; aqui sem CEST e CFOP 5101 (feito no restaurante), como a refeição - conferir com a contadora
-  cafe: { cProd: "CAFE", xProd: "CAFE DA MANHA", NCM: "21011200", CFOP: "5101", CSOSN: "102" },
+  // café da manhã das empresas (NF-e): o ViaVale usava NCM 2101.12.00; a contadora (25/11) mandou usar 2106.90.90 e CFOP 5101, como a refeição
+  cafe: { cProd: "CAFE", xProd: "CAFE DA MANHA", NCM: "21069090", CFOP: "5101", CSOSN: "102" }, // contadora 25/11: NCM 2106.90.90, CFOP 5101 (como a refeição)
 };
 const semAc = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 // qual produto fiscal é cada item do pedido (pelo tipo e pelo nome)
