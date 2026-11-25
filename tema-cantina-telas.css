@@ -1,0 +1,52 @@
+/* ===== TEMA "CANTINA" NAS TELAS DA EQUIPE (caixa, balança, garçom) - 25/11/2026 =====
+   Mesma identidade do totem (tema-cantina.css), mas sem enfeite: aqui é trabalho na correria. Troca só fontes e cores, o layout fica.
+   - letra fácil de ler (Atkinson Hyperlegible) em tudo; a letra gótica do letreiro (Grenze Gotisch) só no nome "Da Lúcia" e nos títulos
+   - menu lateral em vinho, item ativo marcado com o dourado do arabesco do logo
+   Vem por último em cada tela (depois do tema dela). Os seletores com #app/#modal ganham da regra de fonte com !important do caixa-tema.css. */
+@font-face { font-family: "Grenze Gotisch"; src: url("fontes/grenze-gotisch.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Atkinson Hyperlegible"; src: url("fontes/atkinson-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Atkinson Hyperlegible"; src: url("fontes/atkinson-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+
+:root {
+  --ff: "Atkinson Hyperlegible", "Segoe UI", Roboto, Arial, sans-serif;
+  --c-verm: #A50F14; --c-vinho: #6E0A0D; --c-vinho-fundo: #4A0B0E; --c-ouro: #E9A21A; --c-ouro-claro: #F7D27A;
+  --fundo: #F7F4F3; --sup-2: #FBF8F7; --linha: #EADBD3; --linha-2: #F2E8E4;
+  --tinta: #2A1511; --texto: #3D2620; --muted: #6B5148; --muted-2: #A58E85;
+  --marca: #A50F14; --marca-esc: #6E0A0D; --marca-suave: #FBEFEE;
+  --laranja: #A50F14; --lar-esc: #6E0A0D; --vermelho: #A50F14; --verm-esc: #6E0A0D;
+}
+.gotica, #app .lateral .marca-txt b, #titulo-aba, #modal .caixa-modal h2 { font-family: "Grenze Gotisch", Georgia, serif !important; font-weight: 800 !important; letter-spacing: .005em !important; }
+#modal .caixa-modal h2 small { font-family: var(--ff) !important; font-weight: 600 !important; letter-spacing: 0 !important; }
+
+/* ---------- caixa: menu lateral vinho ---------- */
+#app .lateral { background: var(--c-vinho-fundo); color: #F2DCDA; }
+#app .lateral .marca { border-bottom: 0; padding-bottom: 16px; margin-bottom: 10px; position: relative; }
+#app .lateral .marca::after { content: ""; position: absolute; left: 4px; right: 4px; bottom: 0; height: 8px; border-radius: 2px; /* faixinha de toalha xadrez, a mesma do totem */
+  background-color: #fff; background-image: linear-gradient(90deg, rgba(165, 15, 20, .85) 50%, transparent 50%), linear-gradient(rgba(165, 15, 20, .85) 50%, transparent 50%); background-size: 8px 8px; opacity: .9; }
+#app .lateral .marca-logo { box-shadow: 0 0 0 2px var(--c-vinho-fundo), 0 0 0 4px var(--c-ouro); }
+#app .lateral .marca-txt b { font-size: 1.7rem !important; line-height: 1 !important; }
+#app .lateral .marca-txt small { color: var(--c-ouro-claro) !important; letter-spacing: .04em !important; text-transform: none !important; font-size: .8rem !important; }
+#app .lat-sec { color: rgba(247, 210, 122, .7); text-transform: none; letter-spacing: 0; font-size: .82rem; }
+#app nav.abas .btn { color: #F2DCDA !important; font-size: .98rem !important; }
+#app nav.abas .btn:hover { background: rgba(255, 255, 255, .07) !important; }
+#app nav.abas .btn.on { background: rgba(255, 255, 255, .12) !important; box-shadow: inset 3px 0 0 var(--c-ouro) !important; }
+#app nav.abas .btn.on .ic { color: var(--c-ouro); }
+
+/* ---------- caixa: topo com o título da tela na letra do letreiro ---------- */
+.topo-fixo { background: rgba(247, 244, 243, .94) !important; }
+#titulo-aba { font-size: 2.1rem !important; color: var(--c-vinho) !important; line-height: 1 !important; }
+
+/* ---------- janelas ---------- */
+#modal .caixa-modal h2 { color: var(--c-vinho) !important; font-size: 2rem !important; line-height: 1.05 !important; }
+#titulo-aba { flex: 0 0 auto !important; max-width: 34vw; font-size: 1.9rem !important; } /* não corta o nome da tela ("Em a...") */
+@media (max-width: 1100px) { #titulo-aba { font-size: 1.5rem !important; max-width: 40vw; } }
+.ct-stats b { font-size: 1.3rem !important; white-space: nowrap; } /* a Atkinson é mais larga: o valor cabe no quadrinho (gaveta, contas) */
+
+/* ---------- balança e garçom: o nome "Da Lúcia" no topo na letra do letreiro ---------- */
+header .marca-txt b { font-family: "Grenze Gotisch", Georgia, serif !important; font-weight: 800 !important; font-size: 1.7rem !important; color: var(--c-vinho) !important; letter-spacing: .005em !important; line-height: 1 !important; }
+header .marca-txt small { color: var(--c-verm) !important; letter-spacing: .04em !important; text-transform: none !important; }
+
+/* ---------- garçom: barra de cima em vinho, título na letra do letreiro ---------- */
+header:has(> #titulo) { background: var(--c-vinho-fundo) !important; border-bottom: 0 !important; box-shadow: inset 0 -6px 0 -2px rgba(233, 162, 26, .0) !important; }
+header > #titulo { font-family: "Grenze Gotisch", Georgia, serif !important; font-weight: 800 !important; font-size: 1.8rem !important; color: #fff !important; letter-spacing: .005em !important; }
+header > #titulo { padding-left: 3px; overflow: visible !important; }
