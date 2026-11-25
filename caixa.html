@@ -197,9 +197,19 @@ input.cf-ruim { border-color: #d9534f !important; background: #fff5f5 !important
 .cf-li { display: grid; grid-template-columns: 26px 118px 1fr; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: #f7f2ec; }
 .cf-li.ok { background: #e9f6ec; } .cf-li.ruim { background: #fde0e0; } .cf-li em { font-style: normal; color: #4a2f22; } .cf-li small { color: #7a5a48; }
 .cf-msg { margin-top: 12px; padding: 12px 14px; border-radius: 14px; font-weight: 600; background: #fff3d6; color: #7a3b00; }
+.gv-contar { margin-top: 10px; } .gv-contar.on { background: #f3ede6; }
+.cont-cx { margin-top: 10px; padding: 12px; border: 1px solid #eadfd3; border-radius: 14px; background: #fffaf4; text-align: left; } .cont-cx[hidden] { display: none; }
+.cont-g { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.cont-it { display: grid !important; grid-template-columns: 1fr 56px; grid-template-rows: auto auto; align-items: center; gap: 2px 6px !important; padding: 6px 8px; border-radius: 10px; background: #fff; border: 1px solid #efe4d8; }
+.cont-it.moeda { background: #fbf7f1; } .cont-it span { font-weight: 700; font-size: .9rem; } .cont-it input { grid-row: span 2; width: 56px !important; text-align: center; padding: 6px 4px !important; font: 700 1rem var(--num); }
+.cont-it b { font: 600 .75rem var(--num); color: #7a5a48; }
+.cont-tot { display: flex; align-items: center; gap: 10px; margin-top: 10px; } .cont-tot span { color: #7a5a48; font-size: .85rem; } .cont-tot b { font: 800 1.2rem var(--num); margin-right: auto; }
 .cf-msg.ok { background: #e9f6ec; color: #16793a; } .cf-msg.ruim { background: #fde0e0; color: #a50f14; }
 /* notas fiscais (lista) e NF-e pra empresa */
-.caixa-modal:has(.cm-largo) { width: min(940px, 98vw); }
+.caixa-modal:has(.cm-corpo.cm-largo) { width: min(940px, 98vw); }
+.caixa-modal:has(.cm-corpo.cm-nfe) { width: min(1280px, 98vw); max-height: 97vh; } /* NF-e: tudo à vista sem rolar pro lado (dona 25/11) */
+.cm-largo { overflow-x: hidden; } .cm-largo input, .cm-largo select { min-width: 0; width: 100%; box-sizing: border-box; }
+.nt-topo input { width: auto; } .nfe-chk input { width: 18px; }
 .nt-topo { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 8px; } .nt-topo input { flex: 1 1 180px; min-width: 0; } .nt-topo input[type=month] { flex: 0 0 170px; }
 .nt-filtros { margin-bottom: 8px; }
 .nt-tot { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; } .nt-tot div { flex: 1 1 140px; padding: 8px 12px; border-radius: 12px; background: #f7f2ec; display: flex; flex-direction: column; } .nt-tot span { font-size: .78rem; color: #7a5a48; } .nt-tot b { font: 800 1rem var(--num); }
@@ -212,9 +222,12 @@ input.cf-ruim { border-color: #d9534f !important; background: #fff5f5 !important
 .nt-st { font-style: normal; font-size: .7rem; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: #fff1cc; color: #7a4a00; } .nt-st.ok { background: #e9f6ec; color: #16793a; } .nt-st.ruim { background: #fde0e0; color: #a50f14; }
 .nt-bts { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
 @media (max-width: 700px) { .nt-li { grid-template-columns: 1fr auto; } .nt-bts { grid-column: 1 / -1; justify-content: flex-start; } }
-.nfe-g { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; align-items: center; } .nfe-g .nfe-l2 { grid-column: span 2; } .nfe-g #nfe-busca { grid-column: 1 / -1; }
+.nfe-g { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; align-items: center; } .nfe-g .nfe-l2 { grid-column: span 2; } .nfe-g #nfe-busca { grid-column: 1 / -1; }
+.cm-corpo label.nfe-campo { flex-direction: column; align-items: stretch; gap: 2px; } .nfe-campo small { font-size: .72rem; font-weight: 600; color: #7a5a48; }
+.nfe-g > .btn, .nfe-g > .nfe-chk { align-self: end; min-height: 40px; }
 .nfe-chk { font-size: .85rem; color: #4a2f22; } .nfe-chk input { width: 18px; height: 18px; }
-.nfe-it { display: grid; grid-template-columns: 1.2fr 1.4fr 80px 100px 100px 40px; gap: 6px; align-items: center; margin-bottom: 6px; } .nfe-it b { text-align: right; font: 700 .95rem var(--num); }
+.nfe-it { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 2fr) 90px 110px 120px 40px; gap: 6px; align-items: center; margin-bottom: 6px; } .nfe-cab small { font-size: .72rem; font-weight: 600; color: #7a5a48; } .nfe-cab { margin-bottom: 2px; }
+.nfe-it b { text-align: right; font: 700 .95rem var(--num); }
 @media (max-width: 700px) { .nfe-g { grid-template-columns: 1fr; } .nfe-g .nfe-l2 { grid-column: auto; } .nfe-it { grid-template-columns: 1fr 1fr; } }
 .nfe-tot { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding: 12px 14px; border-radius: 14px; background: #f7f2ec; } .nfe-tot b { font: 800 1.4rem var(--num); }
 .cf-aviso { background: #fff1cc; color: #7a4a00; padding: 8px 12px; border-radius: 12px; font-weight: 600; margin: 0 0 8px; }
@@ -713,7 +726,7 @@ nav { flex-wrap: wrap; }
   <div class="area">
   <div class="topo-fixo"><header><h1 id="titulo-aba">Em aberto</h1>
     <div class="filtros"><input id="busca" placeholder="Buscar nº ou nome"><input id="dia" type="date"></div>
-    <div class="hd-dir"><span id="status">...</span><button class="btn mini" data-a="parado" id="btn-parado" title="Aviso de pedido parado">⏱</button><button class="btn mini" data-a="somCx" id="som-cx" title="Som de pedido novo">🔔</button><button class="btn mini" data-a="notas" title="Notas fiscais emitidas (cupons e NF-e)">📄</button><button class="btn mini" data-a="cfConfig" title="Cupom fiscal (NFC-e)">🧾</button><button class="btn mini" data-a="impCx" title="Impressora do caixa">🖨</button></div>
+    <div class="hd-dir"><span id="status">...</span><button class="btn mini" data-a="cxConfig" title="Configurações (som e aviso de pedido parado)">⚙</button><button class="btn mini" data-a="notas" title="Notas fiscais emitidas (cupons e NF-e)">📄</button><button class="btn mini" data-a="cfConfig" title="Cupom fiscal (NFC-e)">🧾</button><button class="btn mini" data-a="impCx" title="Impressora do caixa">🖨</button></div>
   </header></div>
   <main id="lista"></main>
   </div>
@@ -2126,15 +2139,15 @@ async function modalNFe() {
   if (!fiscalSt) await carregarFiscal();
   if (!fiscalPronto()) return alert("Falta instalar o certificado (botão 🧾 no topo).");
   nfeItens = [{ k: "marmitex", xProd: "", qtd: "", un: "" }];
-  const PR = (fiscalSt.produtos || []).map((p) => `<option value="${p.k}">${esc(p.xProd)}</option>`).join(""), cp = (id, ph, extra) => `<input id="nfe-${id}" placeholder="${ph}" autocomplete="off" ${extra || ""}>`;
-  abrirModal(`<div class="cm-corpo cm-largo"><h2>📄 NF-e pra empresa<small>Nota fiscal eletrônica (modelo 55) · série ${(fiscalSt.nfe || {}).serie || 50} · próxima nº ${(fiscalSt.nfe || {}).proximo || 1}${fiscalSt.ambiente === 2 ? ' · <span class="cf-teste">TESTE</span>' : ""}</small></h2>
+  const PR = (fiscalSt.produtos || []).map((p) => `<option value="${p.k}">${esc(p.xProd)}</option>`).join(""), cp = (id, ph, extra, cls) => `<label class="nfe-campo ${cls || ""}"><small>${ph}</small><input id="nfe-${id}" autocomplete="off" ${extra || ""}></label>`;
+  abrirModal(`<div class="cm-corpo cm-largo cm-nfe"><h2>📄 NF-e pra empresa<small>Nota fiscal eletrônica (modelo 55) · série ${(fiscalSt.nfe || {}).serie || 50} · próxima nº ${(fiscalSt.nfe || {}).proximo || 1}${fiscalSt.ambiente === 2 ? ' · <span class="cf-teste">TESTE</span>' : ""}</small></h2>
     <h4>Empresa</h4>
     <div class="nfe-g"><input id="nfe-busca" list="nfe-emps" placeholder="🔎 Escolha uma empresa que já recebeu nota (nome ou CNPJ)" autocomplete="off" class="nfe-l2"><datalist id="nfe-emps"></datalist>
       ${cp("doc", "CNPJ (ou CPF)", 'inputmode="numeric"')}<button class="btn" data-a="nfeCad" title="Busca nome, IE e endereço na SEFAZ-SP">🔎 Buscar pelo CNPJ</button>
-      ${cp("xNome", "Razão social", 'class="nfe-l2"')}
+      ${cp("xNome", "Razão social", "", "nfe-l2")}
       ${cp("IE", "Inscrição estadual")}<label class="nfe-chk"><input type="checkbox" id="nfe-semie"> Não contribuinte (sem IE)</label>
-      ${cp("xLgr", "Rua / avenida", 'class="nfe-l2"')}${cp("nro", "Número")}${cp("xBairro", "Bairro")}${cp("xMun", "Cidade (SP)")}${cp("CEP", "CEP", 'inputmode="numeric"')}
-      ${cp("email", "E-mail (opcional)", 'class="nfe-l2" type="email"')}</div>
+      ${cp("xLgr", "Rua / avenida", "", "nfe-l2")}${cp("nro", "Número")}${cp("xBairro", "Bairro")}${cp("xMun", "Cidade (SP)")}${cp("CEP", "CEP", 'inputmode="numeric"')}
+      ${cp("email", "E-mail (opcional)", 'type="email"', "nfe-l2")}</div>
     <h4>Itens</h4><div id="nfe-itens"></div><button class="btn mini" data-a="nfeMais">➕ Item</button>
     <h4>Pagamento</h4><select id="nfe-forma" style="width:100%">${NFE_FORMAS.map(([k, t]) => `<option value="${k}">${t}</option>`).join("")}</select>
     <h4>Observação na nota <small>(opcional)</small></h4><input id="nfe-obs" placeholder="Ex.: Refeições de 01 a 30/11/2026" maxlength="250" style="width:100%">
@@ -2145,10 +2158,10 @@ async function modalNFe() {
 }
 function nfeDesenharItens(PR) {
   PR = PR || (fiscalSt.produtos || []).map((p) => `<option value="${p.k}">${esc(p.xProd)}</option>`).join("");
-  $("#nfe-itens").innerHTML = nfeItens.map((i, n) => `<div class="nfe-it" data-i="${n}"><select data-c="k">${PR}</select><input data-c="xProd" placeholder="Descrição (opcional)" value="${esc(i.xProd)}">
+  $("#nfe-itens").innerHTML = '<div class="nfe-it nfe-cab"><small>Produto</small><small>Descrição na nota (opcional)</small><small>Qtd</small><small>Valor un. (R$)</small><small style="text-align:right">Total</small><span></span></div>' + nfeItens.map((i, n) => `<div class="nfe-it" data-i="${n}"><select data-c="k">${PR}</select><input data-c="xProd" placeholder="Descrição (opcional)" value="${esc(i.xProd)}">
     <input data-c="qtd" inputmode="decimal" placeholder="Qtd" value="${esc(i.qtd)}"><input data-c="un" inputmode="decimal" placeholder="Valor un." value="${esc(i.un)}"><b>${brl(Math.round((+i.qtd || 0) * (+i.un || 0) * 100) / 100)}</b>
     <button class="btn mini ruim" data-a="nfeTira" data-i="${n}" ${nfeItens.length < 2 ? "disabled" : ""}>✕</button></div>`).join("");
-  $("#nfe-itens").querySelectorAll(".nfe-it").forEach((d) => (d.querySelector("select").value = nfeItens[+d.dataset.i].k));
+  $("#nfe-itens").querySelectorAll(".nfe-it[data-i]").forEach((d) => (d.querySelector("select").value = nfeItens[+d.dataset.i].k));
   $("#nfe-total").textContent = brl(nfeTotal());
 }
 function nfePreencher(e) { ["doc", "xNome", "IE", "xLgr", "nro", "xBairro", "xMun", "CEP", "email"].forEach((k) => { const el = $("#nfe-" + k); if (el && e[k] !== undefined) el.value = k === "doc" ? docFmt(e.doc) : e[k] || ""; }); $("#nfe-semie").checked = !e.IE; }
@@ -2673,7 +2686,7 @@ function desenharGaveta() {
   const g = gaveta; if (!g) return ($("#lista").innerHTML = `<div class="vazio-box"><span>📡</span>Sem conexão com o servidor.</div>`);
   const aberta = g.abertura && !g.fechamento, f = g.fechamento, sug = g.ultimoTroco != null ? g.ultimoTroco.toFixed(2).replace(".", ",") : "";
   if (!g.abertura) return ($("#lista").innerHTML = `<div class="gv-box"><div class="gv-ic">💵</div><h3>Gaveta de hoje ainda fechada</h3><p>Ela <b>abre sozinha no primeiro pedido do dia</b> com o troco da última vez${sug ? ` (R$ ${sug})` : ""}. Se quiser, abra agora:</p>
-    <div class="gv-abrir"><div class="pg-valor"><span>R$</span><input id="g-val" inputmode="decimal" placeholder="0,00" value="${sug}"></div><button class="btn ok" data-a="gAbrir">Abrir gaveta</button></div></div>`);
+    <div class="gv-abrir"><div class="pg-valor"><span>R$</span><input id="g-val" inputmode="decimal" placeholder="0,00" value="${sug}"></div><button class="btn ok" data-a="gAbrir">Abrir gaveta</button></div>${contadorHtml("g-val")}</div>`);
   const tile = (rot, v, cls, extra) => `<div class="${cls || ""}"><small>${rot}</small><b>${v}</b>${extra || ""}</div>`;
   $("#lista").innerHTML = `<div class="gv-topo"><div><h3>Gaveta de hoje</h3><span class="st-pill ${f ? "" : "ok"} grande">${f ? "Fechada às " + hora(f.quando) : "Aberta desde " + hora(g.abertura.quando)}${g.abertura.auto ? " · abriu sozinha" : ""}</span></div></div>
     <div class="ct-stats gv-stats">${tile("Troco inicial", brl(g.abertura.valor), "", aberta ? `<button class="btn mini" data-a="gTrocoAbre">corrigir</button>` : "")}${tile("Vendas em dinheiro", "+ " + brl(g.vendasDinheiro), "ok")}${tile("Contas em dinheiro", "+ " + brl(g.contasDinheiro), "ok")}
@@ -2681,9 +2694,25 @@ function desenharGaveta() {
     ${f ? `<div class="gv-res ${Math.abs(f.diferenca) < 0.005 ? "ok" : "dev"}"><b>${Math.abs(f.diferenca) < 0.005 ? "✓ Bateu certinho!" : f.diferenca > 0 ? "Sobrou " + brl(f.diferenca) : "Faltou " + brl(-f.diferenca)}</b><span>Contado ${brl(f.contado)} · esperado ${brl(f.esperado)}</span><button class="btn" data-a="gReabrir">Reabrir gaveta</button></div>` : ""}
     ${aberta ? `<div class="gv-cols"><div class="gv-box"><h4>Tirar ou colocar dinheiro</h4><input type="hidden" id="g-tipo" value="sangria"><div class="ct-seg gv-tipo"><button class="btn on" data-a="gTipo" data-t="sangria">➖ Retirada (sangria)</button><button class="btn" data-a="gTipo" data-t="suprimento">➕ Reforço (suprimento)</button></div>
         <div class="gv-mv"><input id="g-mv" inputmode="decimal" placeholder="Valor (R$)"><input id="g-mot" placeholder="Motivo (ex.: pagamento do gás)"><button class="btn" data-a="gMov">Registrar</button></div></div>
-      <div class="gv-box"><h4>Fechar a gaveta</h4><p class="gv-dica">Conte o dinheiro da gaveta e digite o total:</p><div class="gv-mv"><input id="g-cont" inputmode="decimal" placeholder="Dinheiro contado (R$)"><button class="btn ok" data-a="gFechar">Fechar e conferir</button></div></div></div>` : ""}
+      <div class="gv-box"><h4>Fechar a gaveta</h4><p class="gv-dica">Conte o dinheiro da gaveta e digite o total:</p><div class="gv-mv"><input id="g-cont" inputmode="decimal" placeholder="Dinheiro contado (R$)"><button class="btn ok" data-a="gFechar">Fechar e conferir</button></div>${contadorHtml("g-cont")}</div></div>` : ""}
     ${g.movimentos.length || g.abertura.ajustado ? `<h4 class="gv-h">Movimentos do dia</h4><div class="tl">${g.abertura.ajustado ? `<div class="tl-it ant"><span class="tl-dia"><b>${hora(g.abertura.ajustado)}</b></span><div class="tl-txt"><b>Troco corrigido</b><span>de ${brl(g.abertura.anterior)} para ${brl(g.abertura.valor)}</span></div><b class="tl-v">${brl(g.abertura.valor)}</b><span></span></div>` : ""}${g.movimentos.map((m) => `<div class="tl-it ${m.tipo === "sangria" ? "" : "pag"}" style="cursor:default"><span class="tl-dia"><b>${hora(m.quando)}</b></span><div class="tl-txt"><b>${m.tipo === "sangria" ? "➖ Retirada" : "➕ Reforço"}</b><span>${esc(m.motivo)}</span></div><b class="tl-v">${m.tipo === "sangria" ? "− " : "+ "}${brl(m.valor)}</b><span class="tl-bts">${aberta ? `<button class="btn ruim mini" data-a="gApaga" data-id="${esc(m.id)}" title="Apagar (digitou errado)">✕</button>` : ""}</span></div>`).join("")}</div>` : ""}`;
 }
+// 🧮 CONTAR NOTAS E MOEDAS (dona 25/11): digita QUANTAS tem de cada nota/moeda e o total vai sozinho pro campo do valor
+const CEDULAS = [200, 100, 50, 20, 10, 5, 2, 1, 0.5, 0.25, 0.1, 0.05];
+const contadorHtml = (alvo) => `<button type="button" class="btn mini gv-contar" data-a="contAbre" data-alvo="${alvo}">🧮 Contar notas e moedas</button>
+  <div class="cont-cx" id="cont-${alvo}" hidden><div class="cont-g">${CEDULAS.map((v) => `<label class="cont-it${v < 2 ? " moeda" : ""}"><span>${v < 2 ? "🪙" : "💵"} ${v >= 1 ? "R$ " + v : v.toFixed(2).replace(".", ",")}</span><input inputmode="numeric" maxlength="4" data-cont="${alvo}" data-v="${v}" placeholder="0"><b>—</b></label>`).join("")}</div>
+  <div class="cont-tot"><span>Total contado</span><b id="cont-tot-${alvo}">R$ 0,00</b><button type="button" class="btn mini" data-a="contLimpa" data-alvo="${alvo}">Limpar</button></div></div>`;
+function contSomar(alvo) {
+  let tot = 0; document.querySelectorAll(`[data-cont="${alvo}"]`).forEach((i) => { const q = Math.max(0, parseInt(i.value.replace(/\D/g, ""), 10) || 0), v = Math.round(q * Number(i.dataset.v) * 100) / 100; tot += v; i.nextElementSibling.textContent = q ? brl(v) : "—"; });
+  tot = Math.round(tot * 100) / 100; const t = $("#cont-tot-" + alvo); if (t) t.textContent = brl(tot);
+  const campo = $("#" + alvo); if (campo) campo.value = tot.toFixed(2).replace(".", ",");
+}
+document.addEventListener("input", (e) => { if (e.target.dataset && e.target.dataset.cont) contSomar(e.target.dataset.cont); });
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-a]"); if (!t) return;
+  if (t.dataset.a === "contAbre") { const c = $("#cont-" + t.dataset.alvo); if (!c) return; c.hidden = !c.hidden; t.classList.toggle("on", !c.hidden); if (!c.hidden) { const i = c.querySelector("input"); if (i) i.focus(); } }
+  if (t.dataset.a === "contLimpa") { document.querySelectorAll(`[data-cont="${t.dataset.alvo}"]`).forEach((i) => (i.value = "")); contSomar(t.dataset.alvo); }
+});
 async function gavetaAcao(corpo) { gaveta = await api("POST", "/api/gaveta", corpo); desenharGaveta(); }
 
 function textoExtrato(k) { // texto simples: serve pra imprimir ou mandar por WhatsApp
@@ -2705,8 +2734,7 @@ function modalExtrato(k) {
 }
 document.addEventListener("click", async (e) => {
   const t = e.target.closest("[data-a]"); if (!t) return; const d = t.dataset, a = d.a;
-  if (a === "somCx") { const novo = localStorage.getItem("caixaSom") === "0" ? "1" : "0"; localStorage.setItem("caixaSom", novo); t.textContent = novo === "0" ? "🔕" : "🔔"; if (novo === "1") bip(); }
-  else if (a === "acItem") { acerto.itens[d.i].on = !acerto.itens[d.i].on; atualizarAcerto(); }
+  if (a === "acItem") { acerto.itens[d.i].on = !acerto.itens[d.i].on; atualizarAcerto(); }
   else if (a === "acForma") { if (d.i.startsWith("d|")) acerto.doces[d.i.slice(2)].forma = d.f; else acerto.itens[d.i].forma = d.f; atualizarAcerto(); }
   else if (a === "acSet") { acerto.padrao = d.f; acerto.focoDin = d.f === "dinheiro"; Object.values(acerto.itens).forEach((x) => { if (x.on) x.forma = d.f; }); Object.values(acerto.doces).forEach((x) => (x.forma = d.f)); atualizarAcerto(); }
   else if (a === "acTodos") { Object.values(acerto.itens).forEach((x) => (x.on = d.v === "1")); atualizarAcerto(); }
@@ -2728,7 +2756,6 @@ document.addEventListener("click", async (e) => {
   else if (a === "voltaConta") modalConta(d.k);
   else if (a === "imprimirExtrato") imprimirExtrato(modalAtual && modalAtual.k);
 });
-if ($("#som-cx")) $("#som-cx").textContent = localStorage.getItem("caixaSom") === "0" ? "🔕" : "🔔";
 
 if (sessionStorage.getItem("caixaToken")) iniciar();
 
@@ -2759,13 +2786,19 @@ function copiarTexto(txt) { // funciona mesmo em http (sem https)
 }
 document.addEventListener("click", async (e) => {
   const t = e.target.closest("[data-a]"); if (!t) return; const a = t.dataset.a;
-  if (a === "parado") {
-    const v = cxParado();
-    abrirModal(`<h2>⏱ Pedido parado</h2><p class="dica">Destacar em vermelho os pedidos em aberto há mais de:</p>
-      <select id="par-min" style="width:100%">${[[0, "Desligado"], [10, "10 minutos"], [15, "15 minutos"], [20, "20 minutos"], [30, "30 minutos"], [45, "45 minutos"], [60, "1 hora"]].map(([m, n]) => `<option value="${m}" ${v === m ? "selected" : ""}>${n}</option>`).join("")}</select>
-      <div class="acoes"><button class="btn" data-a="fechar">Cancelar</button><button class="btn ok" data-a="salvaParado">Salvar</button></div>`);
-  } else if (a === "salvaParado") {
-    localStorage.setItem("cxParado", $("#par-min").value); $("#modal").hidden = true; ultimoHtml = ""; desenhar();
+  if (a === "cxConfig") { // ⚙ no topo (dona 25/11: o relógio e o sino saíram do topo pra cá; fica menos coisa na tela)
+    const v = cxParado(), som = localStorage.getItem("caixaSom") !== "0";
+    abrirModal(`<div class="cm-corpo"><h2>⚙ Configurações<small>Valem só neste computador</small></h2>
+      <h4>🔔 Som de pedido novo</h4><div class="cf-seg">${[[1, "🔔 Ligado"], [0, "🔕 Desligado"]].map(([k, n]) => `<button type="button" class="btn mini ${som === !!k ? "on" : ""}" data-a="cxSom" data-v="${k}">${n}</button>`).join("")}</div>
+      <h4 style="margin-top:16px">⏱ Aviso de pedido parado</h4><p class="det-obs" style="margin:0 0 6px">Destacar em vermelho os pedidos em aberto há mais de:</p>
+      <select id="par-min" style="width:100%">${[[0, "Desligado"], [10, "10 minutos"], [15, "15 minutos"], [20, "20 minutos"], [30, "30 minutos"], [45, "45 minutos"], [60, "1 hora"]].map(([m, n]) => `<option value="${m}" ${v === m ? "selected" : ""}>${n}</option>`).join("")}</select></div>
+      <div class="acoes cm-rodape"><button class="btn" data-a="fechar">Cancelar</button><button class="btn ok" data-a="salvaCxConfig">Salvar</button></div>`);
+  } else if (a === "cxSom") {
+    t.parentNode.querySelectorAll(".btn").forEach((b) => b.classList.toggle("on", b === t));
+  } else if (a === "salvaCxConfig") {
+    const on = !!document.querySelector('[data-a="cxSom"][data-v="1"].on'), antes = localStorage.getItem("caixaSom") !== "0";
+    localStorage.setItem("caixaSom", on ? "1" : "0"); localStorage.setItem("cxParado", $("#par-min").value); $("#modal").hidden = true; ultimoHtml = ""; desenhar();
+    if (on && !antes) bip(); // ligou o som: toca uma vez pra conferir
   } else if (a === "zapResumo" || a === "copiaResumo") {
     let g = null; if (per.modo === "dia" && dia === new Date().toLocaleDateString("en-CA")) { try { g = await (await aut("/api/gaveta")).json(); } catch (err) {} }
     const txt = textoFechamento(g);
@@ -2922,7 +2955,7 @@ Isso não dá pra desfazer.`)) return;
   else if (a === "cliReat") { await api("PUT", "/api/clientes/" + d.c, { ativo: true }); await carregarClientes(); desenharClientes(); avisoImp("✓ Cliente reativado", "ok"); }
   // gaveta
   else if (a === "gAvisoOk") { const el = $("#aviso-gav"); if (el) el.remove(); }
-  else if (a === "gTrocoAbre") abrirModal(`<div class="cm-corpo"><h2>Corrigir troco inicial<small>Quanto tinha na gaveta quando o dia começou?</small></h2><div class="pg-valor"><span>R$</span><input id="g-troco" inputmode="decimal" value="${gaveta && gaveta.abertura ? gaveta.abertura.valor.toFixed(2).replace(".", ",") : ""}"></div></div><div class="acoes cm-rodape"><button class="btn" data-a="fechar">Cancelar</button><button class="btn ok" data-a="gTrocoSalva">Salvar troco</button></div>`);
+  else if (a === "gTrocoAbre") abrirModal(`<div class="cm-corpo"><h2>Corrigir troco inicial<small>Quanto tinha na gaveta quando o dia começou?</small></h2><div class="pg-valor"><span>R$</span><input id="g-troco" inputmode="decimal" value="${gaveta && gaveta.abertura ? gaveta.abertura.valor.toFixed(2).replace(".", ",") : ""}"></div>${contadorHtml("g-troco")}</div><div class="acoes cm-rodape"><button class="btn" data-a="fechar">Cancelar</button><button class="btn ok" data-a="gTrocoSalva">Salvar troco</button></div>`);
   else if (a === "gTrocoSalva") { const v = num("#g-troco"); if (!(v >= 0)) return alert("Digite o troco."); $("#modal").hidden = true; try { gaveta = await api("POST", "/api/gaveta", { acao: "troco", valor: v }); } catch (err) { return; } const el = $("#aviso-gav"); if (el) el.remove(); if (aba === "gaveta") desenharGaveta(); avisoImp("✓ Troco corrigido para " + brl(v), "ok"); }
   else if (a === "gTipo") { $("#g-tipo").value = d.t; t.parentNode.querySelectorAll(".btn").forEach((b) => b.classList.toggle("on", b === t)); }
 });

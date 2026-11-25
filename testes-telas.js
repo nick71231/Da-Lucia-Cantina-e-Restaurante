@@ -44,6 +44,20 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
     await clica(w, `[data-aba="${aba}"]`);
     t(texto(w, "#lista").includes(esperado) && texto(w, "#lista").trim().length > 0, `aba ${aba}: mostra o conteúdo certo (sem ficar com a aba anterior)`);
   }
+  { // ⚙ configurações: o relógio (pedido parado) e o sino (som) saíram do topo e ficam aqui
+    t(!w.document.querySelector('[data-a="parado"]') && !w.document.querySelector('[data-a="somCx"]'), "topo do caixa sem o ⏱ e o 🔔 (foram pro ⚙)");
+    await clica(w, '[data-a="cxConfig"]'); await clica(w, '[data-a="cxSom"][data-v="0"]'); w.document.querySelector("#par-min").value = "20"; await clica(w, '[data-a="salvaCxConfig"]');
+    t(w.localStorage.getItem("caixaSom") === "0" && w.localStorage.getItem("cxParado") === "20" && w.document.querySelector("#modal").hidden, "⚙ configurações: desliga o som e põe o aviso de parado em 20 min");
+    w.localStorage.removeItem("caixaSom"); w.localStorage.removeItem("cxParado");
+  }
+  { // 🧮 gaveta: contar notas e moedas (quantas de cada) e o total vai pro campo
+    await clica(w, '[data-aba="gaveta"]'); const alvo = w.document.querySelector("#g-cont") ? "g-cont" : "g-val";
+    await clica(w, `[data-a="contAbre"][data-alvo="${alvo}"]`);
+    const pos = (v, q) => { const i = w.document.querySelector(`[data-cont="${alvo}"][data-v="${v}"]`); i.value = q; i.dispatchEvent(new w.Event("input", { bubbles: true })); };
+    pos(50, "2"); pos(20, "3"); pos(0.25, "4"); pos(0.05, "1");
+    t(!w.document.querySelector("#cont-" + alvo).hidden && w.document.querySelector("#" + alvo).value === "161,05" && texto(w, "#cont-tot-" + alvo).includes("161,05"), "gaveta: 2 notas de 50 + 3 de 20 + 4 moedas de 0,25 + 1 de 0,05 = R$ 161,05 no campo");
+    await clica(w, '[data-aba="aberto"]');
+  }
   { // 📄 notas fiscais: abre a lista do mês (vazia aqui) com os filtros
     await clica(w, '[data-a="notas"]'); await dorme(300);
     t(texto(w, "#modal").includes("Notas fiscais") && texto(w, "#nt-lista").includes("Nenhuma nota") && w.document.querySelectorAll('[data-a="ntFiltro"]').length === 4 && w.document.querySelector('[data-a="ntNova"]'), "botão 📄: lista de notas fiscais do mês com filtros e o botão de NF-e pra empresa");
