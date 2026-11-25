@@ -690,6 +690,8 @@ main #aviso-gav, #app > #aviso-gav { width: calc(100% - 56px); }
 .ac-tile.on { background: #fff; border-color: var(--verde); color: #16793a; box-shadow: 0 0 0 4px rgba(31,154,69,.14); }
 @media (max-width: 560px) { .ac-tiles { grid-template-columns: repeat(3, 1fr); } }
 .ac-esc-dica { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: #fff7e8; color: #7a4a00 !important; } .ac-mais-bts .ac-esc, #ac-mais-bts .ac-esc { margin-bottom: 6px; }
+.ac-parte-bts { display: flex; gap: 8px; margin-top: 10px; } .ac-parte-bts .btn { flex: 1; margin: 0 !important; min-height: 42px; }
+.ac-mais.vazia { border: 0 !important; padding: 0 !important; margin: 0 !important; background: none !important; box-shadow: none !important; min-height: 0 !important; } .ac-mais.vazia > .ac-sec-t { display: none; } .dv-f.dv-fa { border-style: dashed; }
 .ac-resumo-it { padding: 2px 0 6px; } .ac-li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 2px; border-bottom: 1px solid #f5ede4; } .ac-li b { font-family: var(--num); white-space: nowrap; }
 .d2 { display: flex; flex-direction: column; gap: 12px; padding: 4px 0; } .d2-tit { font-weight: 700; display: flex; justify-content: space-between; } .d2-passo > span { display: block; font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 6px; } .d2-passo > span b { color: var(--tinta); } .d2-val { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-weight: 600; } .d2-val .cel-rs input { width: 110px; font-size: 1.2rem !important; } .ac-d2 { margin-top: 6px; }
 .ac-dividir { width: 100%; margin-top: 10px; min-height: 46px; background: transparent; border: 1px dashed #d9c3ab; box-shadow: none; color: #7a5a48; font-weight: 600; }
@@ -2471,8 +2473,9 @@ function atualizarAcerto() {
   const nAb = soma(A.ps, (p) => p.itens.filter((c) => !c.pago).length) + soma(dl, (d) => d.qtd), totAb = round2(soma(A.ps, (p) => soma(p.itens.filter((c) => !c.pago), valorIt)));
   if ($("#ac-nit")) $("#ac-nit").textContent = nAb + (nAb === 1 ? " item" : " itens");
   // Dividir / 2 formas ficam em "Outras opções" (embaixo das formas), não no meio da lista
-  if ($("#ac-mais-bts")) $("#ac-mais-bts").innerHTML = simples ? (nAb >= 2 ? `<button class="btn ac-dividir ac-esc" data-a="acEscolher">☑ Receber só alguns itens</button>` : "") + (A.ps.length === 1 ? `<button class="btn ac-dividir ac-d2" data-a="d2Abrir">➗ Separar por valor</button>` : "") : ""; // dona 25/11: receber só parte da comanda (o resto fica em aberto)
-  if (simples) h = `<div class="ac-resumo-it">${A.ps.map((p) => (A.ps.length > 1 ? `<div class="ac-grupo"><b>${rotPed(p)}</b>${p.nome ? " - " + esc(p.nome) : ""}<button class="btn mini" data-a="acTira" data-id="${esc(p.id)}">Tirar</button></div>` : "") + p.itens.filter((c) => !c.pago).map((c) => `<div class="ac-li"><span>${c.qtd}x ${esc(c.nome)}</span><b>${brl(valorIt(c))}</b></div>`).join("")).join("")}<div class="ac-li-tot"><span>Total</span><b>${brl(totAb)}</b></div></div>`;
+  const btsParte = simples ? (nAb >= 2 ? `<button class="btn ac-dividir ac-esc" data-a="acEscolher">☑ Receber só alguns itens</button>` : "") + (A.ps.length === 1 ? `<button class="btn ac-dividir ac-d2" data-a="d2Abrir">➗ Separar por valor</button>` : "") : ""; // dona 25/11: receber só uma parte (o resto fica em aberto) - logo embaixo dos itens, sem rolar
+  if ($("#ac-mais-bts")) { $("#ac-mais-bts").innerHTML = ""; const sec = $("#ac-mais-bts").closest(".ac-mais"); if (sec) sec.classList.add("vazia"); } // a seção fica (tem a janelinha de bebida/doce dentro), só some o título e a caixa
+  if (simples) h = `<div class="ac-resumo-it">${A.ps.map((p) => (A.ps.length > 1 ? `<div class="ac-grupo"><b>${rotPed(p)}</b>${p.nome ? " - " + esc(p.nome) : ""}<button class="btn mini" data-a="acTira" data-id="${esc(p.id)}">Tirar</button></div>` : "") + p.itens.filter((c) => !c.pago).map((c) => `<div class="ac-li"><span>${c.qtd}x ${esc(c.nome)}</span><b>${brl(valorIt(c))}</b></div>`).join("")).join("")}<div class="ac-li-tot"><span>Total</span><b>${brl(totAb)}</b></div>${btsParte ? `<div class="ac-parte-bts">${btsParte}</div>` : ""}</div>`;
   else if (A.escolher) h = `<p class="dica ac-esc-dica">Marque só o que vai pagar agora. O que ficar desmarcado continua em aberto pra receber depois.</p>` + h + `<button class="btn ac-dividir" data-a="acJuntarTudo">↩ Receber tudo</button>`;
   else if (A.dividir) h += `<button class="btn ac-dividir" data-a="acJuntarTudo">↩ Voltar pro jeito simples</button>`;
   $("#ac-itens").innerHTML = h; total = round2(total); aberto = round2(aberto);
@@ -2540,7 +2543,7 @@ function aposVenda() { // volta pro campo de busca já pronto pra digitar a pró
 // ----- SEPARAR POR VALOR (dona 24/11: "o jeito de separar é ruim, separa só por valor") -----
 // Até 4 partes, cada uma com o valor e a forma (Dinheiro, Pix, Crédito, Débito, Refeição ou 📒 Na conta de um cliente).
 // A última parte é sempre "o resto" (calcula sozinha). ÷2 ÷3 ÷4 divide igual. Partes com a mesma forma viram uma só no recebimento.
-const DV_FORMAS = [...FORMAS_PAG, "conta"], dvNome = (f) => (f === "conta" ? "Na conta" : FORMAS[f]), dvIc = (f) => (f === "conta" ? "📒" : FIC[f]);
+const DV_FORMAS = [...FORMAS_PAG, "conta", "aberto"], dvNome = (f) => (f === "conta" ? "Na conta" : f === "aberto" ? "Fica em aberto" : FORMAS[f]), dvIc = (f) => (f === "conta" ? "📒" : f === "aberto" ? "⏳" : FIC[f]); // aberto: essa parte continua na comanda pra receber depois (dona 25/11)
 const dvNum = (v) => { const n = parseFloat(String(v == null ? "" : v).replace(/[^0-9,.]/g, "").replace(",", ".")); return isNaN(n) ? 0 : round2(n); };
 function dvConta() { // valores de cada parte (a última = o que falta)
   const A = acerto, D = A.duas, p = A.ps[0], aberto = round2(soma(p.itens.filter((c) => !c.pago), valorIt));
@@ -2554,7 +2557,7 @@ function desenharDuas() {
   const cliSel = (i) => `<select class="dv-cli" data-i="${i}"><option value="">📒 De quem é a conta?</option>${clientes.filter((c) => c.ativo !== false).sort((a, b) => a.nome.localeCompare(b.nome)).map((c) => `<option value="${esc(c.id)}" ${D.cli === c.id ? "selected" : ""}>${esc(c.nome)}${c.empresa && c.empresa !== c.nome ? " (" + esc(c.empresa) + ")" : ""}</option>`).join("")}</select>`;
   const parte = (x, i) => { const ult = i === n - 1, contaOutra = D.partes.some((y, k) => k !== i && y.f === "conta");
     return `<div class="dv-parte ${ult ? "dv-ult" : ""}"><div class="dv-top"><b>${i + 1}ª parte</b>${ult ? `<span class="dv-resto">o resto</span><b class="dv-vr" id="dv-resto">${brl(vs[i])}</b>` : `<span class="dv-val">R$<input class="dv-v" data-i="${i}" inputmode="decimal" autocomplete="off" placeholder="0,00" value="${esc(x.v)}"></span>`}${n > 2 ? `<button type="button" class="dv-x" data-a="dvTira" data-i="${i}" title="Tirar esta parte">✕</button>` : ""}</div>
-      <div class="dv-fs">${DV_FORMAS.filter((f) => f !== "conta" || !contaOutra).map((f) => `<button type="button" class="dv-f ${x.f === f ? "on" : ""} ${f === "conta" ? "dv-fc" : ""}" data-a="dvForma" data-i="${i}" data-f="${f}">${dvIc(f)} ${dvNome(f)}</button>`).join("")}</div>${x.f === "conta" ? cliSel(i) : ""}</div>`; };
+      <div class="dv-fs">${DV_FORMAS.filter((f) => (f !== "conta" || !contaOutra) && (f !== "aberto" || !D.partes.some((y, k) => k !== i && y.f === "aberto")) && !(f === "aberto" && D.partes.some((y, k) => k !== i && y.f === "conta")) && !(f === "conta" && D.partes.some((y, k) => k !== i && y.f === "aberto"))).map((f) => `<button type="button" class="dv-f ${x.f === f ? "on" : ""} ${f === "conta" ? "dv-fc" : ""} ${f === "aberto" ? "dv-fa" : ""}" data-a="dvForma" data-i="${i}" data-f="${f}">${dvIc(f)} ${dvNome(f)}</button>`).join("")}</div>${x.f === "conta" ? cliSel(i) : ""}</div>`; };
   $("#ac-itens").innerHTML = `<div class="dv"><div class="dv-cab"><div><b>Separar por valor</b><small>total ${brl(aberto)}</small></div><div class="dv-igual"><span>Dividir igual:</span>${[2, 3, 4].map((k) => `<button type="button" class="dv-q" data-a="dvIgual" data-n="${k}">÷${k}</button>`).join("")}</div></div>
     ${D.partes.map(parte).join("")}
     <div class="dv-pe">${n < 4 ? `<button type="button" class="btn dv-mais" data-a="dvMais">＋ Mais uma parte</button>` : ""}<button type="button" class="btn dv-sair" data-a="d2Sair">↩ Pagar tudo junto</button></div></div>`;
@@ -2562,7 +2565,7 @@ function desenharDuas() {
 }
 function d2Rodape() {
   const D = acerto.duas, { vs, sobra } = dvConta(), rec = parseFloat(String($("#ac-rec") ? $("#ac-rec").value : "").replace(",", "."));
-  const din = round2(soma(D.partes.map((x, i) => (x.f === "dinheiro" ? vs[i] : 0)), (v) => v)), conta = round2(soma(D.partes.map((x, i) => (x.f === "conta" ? vs[i] : 0)), (v) => v)), agora = round2(soma(vs, (v) => v) - conta);
+  const din = round2(soma(D.partes.map((x, i) => (x.f === "dinheiro" ? vs[i] : 0)), (v) => v)), conta = round2(soma(D.partes.map((x, i) => (x.f === "conta" ? vs[i] : 0)), (v) => v)), fica = round2(soma(D.partes.map((x, i) => (x.f === "aberto" ? vs[i] : 0)), (v) => v)), agora = round2(soma(vs, (v) => v) - conta - fica);
   if ($("#dv-resto")) { $("#dv-resto").textContent = brl(vs[vs.length - 1]); $("#dv-resto").classList.toggle("dv-neg", vs[vs.length - 1] <= 0); }
   $("#ac-din").hidden = !(din > 0); $("#ac-tr").textContent = din > 0 && !isNaN(rec) ? (rec >= din ? "Troco: " + brl(rec - din) : "Falta: " + brl(din - rec)) : "";
   $("#ac-rapido").innerHTML = din > 0 ? [din, ...[20, 30, 40, 50, 100].filter((v) => v > din)].map((v, i) => `<button class="btn mini" data-a="acRap" data-v="${v}">${i ? brl(v) : "Valor exato"}</button>`).join("") : "";
@@ -2571,7 +2574,8 @@ function d2Rodape() {
   const avisos = [faltaV ? "digite o valor de cada parte" : "", sobra || vs[vs.length - 1] <= 0 ? "as partes passaram do total" : "", semCli ? "escolha de quem é a conta" : ""].filter(Boolean);
   $("#ac-resumo").innerHTML = `<div class="ac-linha"><div class="ac-tot"><small>Receber agora</small><b>${brl(agora)}</b></div><div class="ac-chips">${Object.entries(porF).map(([f, v]) => `<span class="ac-chip">${dvIc(f)} ${f === "conta" && D.cli ? "Conta de " + esc(nomeCli(D.cli)) : dvNome(f)} ${brl(v)}</span>`).join("")}${avisos.map((t) => `<span class="ac-chip falta">${t}</span>`).join("")}</div></div>`;
   const ok = !avisos.length && (din <= 0 || isNaN(rec) || rec >= din);
-  $("#ac-ok").disabled = !ok; $("#ac-ok").textContent = conta > 0 ? `Receber ${brl(agora)} e marcar ${brl(conta)} na conta` : rotReceber(agora);
+  const soAberto = D.partes.every((x, i) => x.f === "aberto" || !(vs[i] > 0));
+  $("#ac-ok").disabled = !ok || soAberto; $("#ac-ok").textContent = conta > 0 ? `Receber ${brl(agora)} e marcar ${brl(conta)} na conta` : fica > 0 ? `Receber ${brl(agora)} (fica ${brl(fica)} em aberto)` : rotReceber(agora);
 }
 document.addEventListener("change", (e) => { if (e.target.classList && e.target.classList.contains("dv-cli") && acerto && acerto.duas) { acerto.duas.cli = e.target.value; d2Rodape(); } });
 document.addEventListener("input", (e) => {
@@ -2593,11 +2597,14 @@ async function receberDuas(cf) {
   const D = acerto.duas, { p, vs } = dvConta(), rec = parseFloat(String($("#ac-rec") ? $("#ac-rec").value : "").replace(",", ".")); $("#ac-ok").disabled = true;
   const cIdx = D.partes.findIndex((x) => x.f === "conta");
   if (cf && cIdx >= 0) { alert("Com uma parte na conta, o cupom fiscal sai depois, quando a conta for paga. Desmarque o cupom fiscal pra continuar."); $("#ac-ok").disabled = false; return; }
-  const porF = {}; D.partes.forEach((x, i) => { if (x.f !== "conta" && vs[i] > 0) porF[x.f] = round2((porF[x.f] || 0) + vs[i]); }); // mesma forma em 2 partes = 1 recebimento
+  const aIdx = D.partes.findIndex((x) => x.f === "aberto");
+  if (cf && aIdx >= 0) { alert("Com uma parte em aberto, o cupom fiscal sai depois, quando a comanda for paga toda. Desmarque o cupom fiscal pra continuar."); $("#ac-ok").disabled = false; return; }
+  const porF = {}; D.partes.forEach((x, i) => { if (x.f !== "conta" && x.f !== "aberto" && vs[i] > 0) porF[x.f] = round2((porF[x.f] || 0) + vs[i]); }); // mesma forma em 2 partes = 1 recebimento
   const partes = Object.entries(porF).map(([forma, valor]) => ({ forma, valor })); if (cIdx >= 0) partes.push({ forma: "conta", valor: vs[cIdx], clienteId: D.cli });
   const antes = idsPags([p]), recebido = isNaN(rec) ? undefined : rec;
-  const ok = partes.length === 1 && cIdx < 0 ? await patch(p.id, { status: "pago", pagamento: partes[0].forma, recebido }) // tudo na mesma forma: pagamento simples
-    : await patch(p.id, { acertarValores: { partes, recebido } });
+  const fica = aIdx >= 0 ? vs[aIdx] : 0;
+  const ok = partes.length === 1 && cIdx < 0 && !(fica > 0) ? await patch(p.id, { status: "pago", pagamento: partes[0].forma, recebido }) // tudo na mesma forma: pagamento simples
+    : await patch(p.id, { acertarValores: { partes, recebido, fica: fica > 0 ? fica : undefined } });
   if (ok) { cfAgora = cf || null; aposVenda(); return depoisDeReceber([p], antes); }
   d2Rodape();
 }

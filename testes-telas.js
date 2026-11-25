@@ -121,7 +121,7 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
   await clica(w, '[data-a="receber"]'); // agora é a comanda 36 (3 itens)
   t(w.document.querySelectorAll(".ac-li").length === 3, "comanda 36 lista os 3 itens");
   // dona 24/11: separar é só por valor (o "Dividir itens" saiu); a comanda 36 continua aberta pros testes da balança
-  t(!w.document.querySelector('[data-a="acDividir"]') && /Separar por valor/.test(texto(w, "#ac-mais-bts")) && /Receber só alguns itens/.test(texto(w, "#ac-mais-bts")), "outras opções: receber só alguns itens e separar por valor (sem o 'Dividir itens' antigo)");
+  t(!w.document.querySelector('[data-a="acDividir"]') && /Separar por valor/.test(texto(w, ".ac-parte-bts")) && /Receber só alguns itens/.test(texto(w, ".ac-parte-bts")) && w.document.querySelector(".ac-mais").classList.contains("vazia") && w.document.querySelector("#ac-picker"), "logo embaixo dos itens: receber só alguns itens e separar por valor (sem o 'Dividir itens' antigo)");
   await clica(w, '[data-a="fechar"]');
   { // dona 25/11: comanda 9 com 2 pratos, recebe só um; o outro fica em aberto
     const c9 = await api("POST", "/api/balanca", { comanda: 9, valor: 24.79, peso: 400, uid: "c9a" }, cx); await api("POST", "/api/balanca", { comanda: 9, valor: 28.04, peso: 450, uid: "c9b" }, cx);

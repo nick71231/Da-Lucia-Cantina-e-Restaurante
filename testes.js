@@ -380,6 +380,20 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
     const df = await reqEm(sd.base, "PATCH", "/api/pedidos/" + cm.id, { status: "aguardando" }, tkD), cs2 = (await reqEm(sd.base, "GET", "/api/contas", undefined, tkD)).j, rc2 = (await reqEm(sd.base, "GET", "/api/recebimentos?de=" + hoje, undefined, tkD)).j;
     t(df.s === 200 && df.j.status === "aguardando" && df.j.itens.every((c) => !c.pago) && !cs2.lancamentos.some((l) => l.pedidoId === cm.id) && !rc2.some((g) => g.pedidoId === cm.id), "desfazer a conta: tira da conta e estorna a parte paga (a comanda volta inteira pro em aberto)");
   }
+  { // receber uma PARTE por valor e o resto FICA EM ABERTO (dona 25/11)
+    const c1 = (await reqEm(sd.base, "POST", "/api/balanca", { comanda: 781, valor: 52.83, uid: "fa1" }, tkD)).j;
+    const r1 = await reqEm(sd.base, "PATCH", "/api/pedidos/" + c1.id, { acertarValores: { partes: [{ forma: "debito", valor: 30 }], fica: 22.83 } }, tkD);
+    const it1 = r1.j.itens || [], pago1 = it1.filter((c) => c.pago), aberto1 = it1.filter((c) => !c.pago);
+    t(r1.s === 200 && r1.j.status === "aguardando" && r1.j.valor === 52.83 && pago1.length === 1 && pago1[0].preco === 30 && aberto1.length === 1 && aberto1[0].preco === 22.83 && /\(resto\)/.test(aberto1[0].nome) && r1.j.pagamentos.filter((g) => !g.estornado).map((g) => g.forma + g.valor).join() === "debito30",
+      "1 prato de R$ 52,83: recebe R$ 30 no débito e R$ 22,83 fica em aberto na comanda (item '(resto)')");
+    const r1b = await reqEm(sd.base, "PATCH", "/api/pedidos/" + c1.id, { acertar: [{ iid: aberto1[0].iid, forma: "pix" }] }, tkD);
+    t(r1b.s === 200 && r1b.j.status === "pago", "depois recebe o resto (Pix) e a comanda fecha");
+    const c2 = (await reqEm(sd.base, "POST", "/api/balanca", { comanda: 782, valor: 24.79, uid: "fa2" }, tkD)).j; await reqEm(sd.base, "POST", "/api/balanca", { comanda: 782, valor: 28.04, uid: "fa3" }, tkD);
+    const r2 = await reqEm(sd.base, "PATCH", "/api/pedidos/" + c2.id, { acertarValores: { partes: [{ forma: "dinheiro", valor: 24.79 }], fica: 28.04, recebido: 30 } }, tkD);
+    t(r2.s === 200 && r2.j.status === "aguardando" && r2.j.itens.length === 2 && r2.j.itens.find((c) => c.preco === 28.04 && !c.pago) && r2.j.itens.find((c) => c.preco === 24.79 && c.pago) && r2.j.troco === 5.21, "2 pratos: o que fica em aberto bate com um prato inteiro (não parte nada); dinheiro com troco");
+    const r3 = await reqEm(sd.base, "PATCH", "/api/pedidos/" + c2.id, { acertarValores: { partes: [{ forma: "pix", valor: 10 }], fica: 30 } }, tkD), r4 = await reqEm(sd.base, "PATCH", "/api/pedidos/" + c2.id, { acertarValores: { partes: [], fica: 28.04 } }, tkD);
+    t(r3.s === 400 && r4.s === 400, "o que fica em aberto não pode ser o total (nem passar dele)");
+  }
   { // juntar cadastro repetido: lançamentos passam pro outro e o repetido some
     const a1 = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "LUIS ALMOCO", empresa: "OBRA X" }, tkD)).j, a2 = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "ALMOCO", empresa: "OBRA X" }, tkD)).j;
     await reqEm(sd.base, "POST", "/api/lancamentos", { clienteId: a1.id, dia: "2026-01-05", valor: 30 }, tkD);

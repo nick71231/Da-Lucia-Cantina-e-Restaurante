@@ -42,15 +42,32 @@ function acertar(ped, sel, recebido, papel) { // sel = [{ iid, forma }]: cada it
 // por "dividido" e o estorno de uma desfaz todas.
 // conta = { cli, valor }: uma parte vai pra CONTA de um cliente (dona 24/11: "paga R$14 e marca R$10 na conta da Gilmara", em qualquer pedido).
 // As outras partes são recebidas; o pedido fica "na conta" com o resto (valConta = valor - recebido) e um lançamento desse valor.
-function acertarValores(ped, partes, recebido, papel, conta) {
+// fica: valor que continua EM ABERTO (dona 25/11: "receber uma parte e a outra ficar em aberto"). Sai do fim da lista: itens inteiros
+// ficam como estão; se o valor cair no meio de um item, ele é partido em 2 (o que é pago agora + "(resto)", que fica em aberto)
+function separarFica(ped, abertos, fica) {
+  let R = cents(fica); const ficam = new Set();
+  for (const c of [...abertos].reverse()) {
+    if (R <= 0.001) break; const v = valorItem(c);
+    if (v <= R + 0.001) { ficam.add(c.iid); R = cents(R - v); continue; }
+    const nome = (c.qtd || 1) > 1 ? (c.qtd + "x " + c.nome) : c.nome, novo = { ...c, iid: uid("i"), qtd: 1, preco: R, nome: nome + " (resto)", grupos: [] }; delete novo.pago;
+    c.nome = nome; c.qtd = 1; c.preco = cents(v - R); c.partido = novo.iid;
+    ped.itens.splice(ped.itens.indexOf(c) + 1, 0, novo); ficam.add(novo.iid); R = 0;
+  }
+  return ficam;
+}
+function acertarValores(ped, partes, recebido, papel, conta, fica) {
   if (ped.status !== "aguardando") return { s: 409, erro: "o pedido não está em aberto" };
-  const abertos = ped.itens.filter((c) => !c.pago), total = cents(abertos.reduce((s, c) => s + valorItem(c), 0));
+  const fv = cents(Number(fica) || 0); if (fv < 0) return { s: 400, erro: "valor em aberto inválido" };
+  if (fv > 0 && conta) return { s: 400, erro: "escolha: uma parte na conta OU uma parte em aberto" };
+  let abertos = ped.itens.filter((c) => !c.pago); const total = cents(abertos.reduce((s, c) => s + valorItem(c), 0));
+  if (fv >= total) return { s: 400, erro: "o que fica em aberto tem que ser menor que o total" };
   if (!abertos.length) return { s: 400, erro: "nada em aberto" };
-  if (!Array.isArray(partes) || partes.length < (conta ? 1 : 2) || partes.length > 4) return { s: 400, erro: "informe de 2 a 4 formas" };
+  if (!Array.isArray(partes) || partes.length < (conta || fv > 0 ? 1 : 2) || partes.length > 4) return { s: 400, erro: "informe de 2 a 4 formas" };
   const ps = partes.map((x) => ({ forma: String(x && x.forma), valor: cents(Number(x && x.valor)) }));
   if (ps.some((x) => !FORMAS_VALIDAS.includes(x.forma) || !(x.valor > 0)) || new Set(ps.map((x) => x.forma)).size !== ps.length) return { s: 400, erro: "formas ou valores inválidos" };
   if (conta && !(conta.valor > 0)) return { s: 400, erro: "valor da conta inválido" };
-  if (Math.abs(cents(ps.reduce((s, x) => s + x.valor, 0) + (conta ? conta.valor : 0)) - total) > 0.009) return { s: 400, erro: "a soma das partes tem que dar " + total.toFixed(2).replace(".", ",") };
+  if (Math.abs(cents(ps.reduce((s, x) => s + x.valor, 0) + (conta ? conta.valor : 0) + fv) - total) > 0.009) return { s: 400, erro: "a soma das partes tem que dar " + total.toFixed(2).replace(".", ",") };
+  if (fv > 0) { const ficam = separarFica(ped, abertos, fv); abertos = ped.itens.filter((c) => !c.pago && !ficam.has(c.iid)); }
   const agora = Date.now(), grupo = uid("d"), recs = ps.map((x) => ({ id: uid("g"), forma: x.forma, itens: abertos.map((c) => c.iid), valor: x.valor, dia: hoje(), quando: agora, operador: papel, dividido: grupo }));
   const din = recs.find((r) => r.forma === "dinheiro");
   if (din) { const rec = recebido === undefined || recebido === null || recebido === "" ? din.valor : cents(recebido); if (!(rec >= din.valor)) return { s: 400, erro: "o valor recebido é menor que a parte em dinheiro" }; din.recebido = rec; din.troco = cents(rec - din.valor); ped.recebido = rec; ped.troco = din.troco; }
@@ -1054,7 +1071,7 @@ async function tratar(req, res) {
         if (!cli) return json(res, 400, { erro: "escolha de quem é a conta" });
         conta = { cli, valor: cents(Number(pc[0].valor)) };
       }
-      const r = acertarValores(ped, todas.filter((x) => !(x && x.forma === "conta")), av.recebido, req.papel, conta); if (!r.ok) return json(res, r.s, { erro: r.erro });
+      const r = acertarValores(ped, todas.filter((x) => !(x && x.forma === "conta")), av.recebido, req.papel, conta, av.fica); if (!r.ok) return json(res, r.s, { erro: r.erro });
       await gravar(); return json(res, 200, ped);
     }
     if (u.estornarPagamento !== undefined) {                     // desfaz UM recebimento (os itens voltam a ficar em aberto)
