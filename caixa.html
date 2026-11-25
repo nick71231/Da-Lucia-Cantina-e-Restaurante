@@ -690,6 +690,7 @@ main #aviso-gav, #app > #aviso-gav { width: calc(100% - 56px); }
 .ac-tile.on { background: #fff; border-color: var(--verde); color: #16793a; box-shadow: 0 0 0 4px rgba(31,154,69,.14); }
 @media (max-width: 560px) { .ac-tiles { grid-template-columns: repeat(3, 1fr); } }
 .ac-esc-dica { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: #fff7e8; color: #7a4a00 !important; } .ac-mais-bts .ac-esc, #ac-mais-bts .ac-esc { margin-bottom: 6px; }
+.ac-li .ac-rem { margin-left: 8px; min-height: 0; padding: 2px 8px; color: #a50f14; background: #fff5f5; border: 1px solid #f1c4c4; } .ac-li { align-items: center; } .ac-li span { flex: 1; }
 .ac-parte-bts { display: flex; gap: 8px; margin-top: 10px; } .ac-parte-bts .btn { flex: 1; margin: 0 !important; min-height: 42px; }
 .ac-mais.vazia { border: 0 !important; padding: 0 !important; margin: 0 !important; background: none !important; box-shadow: none !important; min-height: 0 !important; } .ac-mais.vazia > .ac-sec-t { display: none; } .dv-f.dv-fa { border-style: dashed; }
 .ac-resumo-it { padding: 2px 0 6px; } .ac-li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 2px; border-bottom: 1px solid #f5ede4; } .ac-li b { font-family: var(--num); white-space: nowrap; }
@@ -2475,7 +2476,7 @@ function atualizarAcerto() {
   // Dividir / 2 formas ficam em "Outras opções" (embaixo das formas), não no meio da lista
   const btsParte = simples ? (nAb >= 2 ? `<button class="btn ac-dividir ac-esc" data-a="acEscolher">☑ Receber só alguns itens</button>` : "") + (A.ps.length === 1 ? `<button class="btn ac-dividir ac-d2" data-a="d2Abrir">➗ Separar por valor</button>` : "") : ""; // dona 25/11: receber só uma parte (o resto fica em aberto) - logo embaixo dos itens, sem rolar
   if ($("#ac-mais-bts")) { $("#ac-mais-bts").innerHTML = ""; const sec = $("#ac-mais-bts").closest(".ac-mais"); if (sec) sec.classList.add("vazia"); } // a seção fica (tem a janelinha de bebida/doce dentro), só some o título e a caixa
-  if (simples) h = `<div class="ac-resumo-it">${A.ps.map((p) => (A.ps.length > 1 ? `<div class="ac-grupo"><b>${rotPed(p)}</b>${p.nome ? " - " + esc(p.nome) : ""}<button class="btn mini" data-a="acTira" data-id="${esc(p.id)}">Tirar</button></div>` : "") + p.itens.filter((c) => !c.pago).map((c) => `<div class="ac-li"><span>${c.qtd}x ${esc(c.nome)}</span><b>${brl(valorIt(c))}</b></div>`).join("")).join("")}<div class="ac-li-tot"><span>Total</span><b>${brl(totAb)}</b></div>${btsParte ? `<div class="ac-parte-bts">${btsParte}</div>` : ""}</div>`;
+  if (simples) h = `<div class="ac-resumo-it">${A.ps.map((p) => (A.ps.length > 1 ? `<div class="ac-grupo"><b>${rotPed(p)}</b>${p.nome ? " - " + esc(p.nome) : ""}<button class="btn mini" data-a="acTira" data-id="${esc(p.id)}">Tirar</button></div>` : "") + p.itens.filter((c) => !c.pago).map((c) => `<div class="ac-li"><span>${c.qtd}x ${esc(c.nome)}</span><b>${brl(valorIt(c))}</b>${p.tipo === "balanca" ? `<button class="btn mini ac-rem" data-a="acRemover" data-id="${esc(p.id)}" data-iid="${esc(c.iid)}" title="Tirar esse item da comanda (lançado errado)">✕</button>` : ""}</div>`).join("")).join("")}<div class="ac-li-tot"><span>Total</span><b>${brl(totAb)}</b></div>${btsParte ? `<div class="ac-parte-bts">${btsParte}</div>` : ""}</div>`;
   else if (A.escolher) h = `<p class="dica ac-esc-dica">Marque só o que vai pagar agora. O que ficar desmarcado continua em aberto pra receber depois.</p>` + h + `<button class="btn ac-dividir" data-a="acJuntarTudo">↩ Receber tudo</button>`;
   else if (A.dividir) h += `<button class="btn ac-dividir" data-a="acJuntarTudo">↩ Voltar pro jeito simples</button>`;
   $("#ac-itens").innerHTML = h; total = round2(total); aberto = round2(aberto);
@@ -2743,6 +2744,16 @@ function modalExtrato(k) {
 }
 document.addEventListener("click", async (e) => {
   const t = e.target.closest("[data-a]"); if (!t) return; const d = t.dataset, a = d.a;
+  if (a === "acRemover" && acerto) { // dona 25/11: tirar do caixa um item lançado errado na comanda (ex.: 2 águas, era 1)
+    const p = acerto.ps.find((x) => x.id === d.id), c = p && p.itens.find((x) => x.iid === d.iid); if (!c || c.pago) return;
+    if (!confirm("Tirar \"" + c.qtd + "x " + c.nome + "\" (" + brl(valorIt(c)) + ") da " + rotPed(p).toLowerCase() + "?")) return;
+    const ids = acerto.ps.map((x) => x.id), vazia = p.itens.filter((x) => !x.pago).length === 1;
+    if (!(await patch(p.id, { removerItem: p.itens.indexOf(c), removerIid: c.iid }))) return;
+    avisoImp("✓ Tirei " + c.nome + " da " + rotPed(p).toLowerCase(), "ok"); await esperaCarregar();
+    const sobra = ids.filter((id) => pedidos.some((x) => x.id === id && x.status === "aguardando" && x.itens.some((y) => !y.pago)));
+    if (sobra.length && !(vazia && ids.length === 1)) abrirAcerto(sobra); else { acerto = null; $("#modal").hidden = true; }
+    return;
+  }
   if (a === "acItem") { const it = acerto.itens[d.i]; it.on = !it.on; if (it.on && acerto.padrao) it.forma = acerto.padrao; atualizarAcerto(); }
   else if (a === "acForma") { if (d.i.startsWith("d|")) acerto.doces[d.i.slice(2)].forma = d.f; else acerto.itens[d.i].forma = d.f; atualizarAcerto(); }
   else if (a === "acSet") { acerto.padrao = d.f; acerto.focoDin = d.f === "dinheiro"; Object.values(acerto.itens).forEach((x) => { if (x.on) x.forma = d.f; }); Object.values(acerto.doces).forEach((x) => (x.forma = d.f)); atualizarAcerto(); }

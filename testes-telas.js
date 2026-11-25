@@ -123,6 +123,16 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
   // dona 24/11: separar é só por valor (o "Dividir itens" saiu); a comanda 36 continua aberta pros testes da balança
   t(!w.document.querySelector('[data-a="acDividir"]') && /Separar por valor/.test(texto(w, ".ac-parte-bts")) && /Receber só alguns itens/.test(texto(w, ".ac-parte-bts")) && w.document.querySelector(".ac-mais").classList.contains("vazia") && w.document.querySelector("#ac-picker"), "logo embaixo dos itens: receber só alguns itens e separar por valor (sem o 'Dividir itens' antigo)");
   await clica(w, '[data-a="fechar"]');
+  { // dona 25/11: tirar do caixa um item lançado errado (2 águas, era 1)
+    const ca = await api("POST", "/api/balanca", { comanda: 77, valor: 3.5, nome: "Água Com Gás", uid: "ag1" }, cx); await api("POST", "/api/balanca", { comanda: 77, valor: 3.5, nome: "Água Com Gás", uid: "ag2" }, cx); await api("POST", "/api/balanca", { comanda: 77, valor: 34.79, peso: 500, uid: "ag3" }, cx);
+    await dorme(300); w.eval("cachePed = {}; carregar()"); await dorme(800); w.eval("abrirAcerto")(ca.id); await dorme(300);
+    const rems = w.document.querySelectorAll('[data-a="acRemover"]'); w.confirm = () => true;
+    t(rems.length === 3, "comanda: um ✕ em cada item não pago no Receber");
+    rems[0].click(); await dorme(1500);
+    const p77 = (await api("GET", "/api/pedidos?dia=" + new Date().toLocaleDateString("en-CA"), undefined, cx)).find((p) => p.id === ca.id);
+    t(p77 && p77.itens.filter((c) => /Água Com Gás/.test(c.nome)).length === 1 && p77.valor === 38.29 && !w.document.querySelector("#modal").hidden && w.document.querySelectorAll(".ac-li").length === 2, "tirou 1 água com gás: a comanda fica com 1 água + o prato (R$ 38,29) e o Receber continua aberto");
+    await clica(w, '[data-a="fechar"]');
+  }
   { // dona 25/11: comanda 9 com 2 pratos, recebe só um; o outro fica em aberto
     const c9 = await api("POST", "/api/balanca", { comanda: 9, valor: 24.79, peso: 400, uid: "c9a" }, cx); await api("POST", "/api/balanca", { comanda: 9, valor: 28.04, peso: 450, uid: "c9b" }, cx);
     await dorme(300); w.eval("cachePed = {}; carregar()"); await dorme(800);
