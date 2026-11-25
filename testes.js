@@ -319,6 +319,16 @@ const principal = sobe(PORTA, dir), srv = principal.srv, espera = () => principa
     const ct = (await reqEm(sd.base, "GET", "/api/contas", undefined, tkD)).j.lancamentos.filter((l) => l.clienteId === mad.id);
     t(ct.some((l) => l.valor === 40 && /2x marmita.* \+ refri 600ml/.test(l.obs)) && ct.some((l) => l.valor === 59 && /3x marmita.* \+ refri 2L/.test(l.obs)), "Madeireira: 2 marmitex = R$ 40 (com refri 600ml) e 3 = R$ 59 (com refri 2L) na conta");
   }
+  { // Madeireira pediu no TOTEM (marmitex R$ 22): marcar na conta do ALEMÃO (mesma empresa) = 2 x R$ 17 + refri 600ml R$ 6 = R$ 40 (dona 25/11)
+    const ale = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "ALEMÃO", empresa: "MADEREIRA" }, tkD)).j;
+    const tp = (await reqEm(sd.base, "POST", "/api/pedidos", { uid: "mad-totem", nome: "Madereira", itens: [{ nome: "Marmitex - R$22,00", preco: 22, qtd: 2 }] }, "")).j;
+    const mk = await reqEm(sd.base, "PATCH", "/api/pedidos/" + tp.id, { status: "conta", clienteId: ale.id }, tkD), ct = (await reqEm(sd.base, "GET", "/api/contas", undefined, tkD)).j;
+    const its = (mk.j.itens || []).map((c) => c.nome + ":" + c.preco + "x" + c.qtd).join(" | ");
+    t(mk.s === 200 && mk.j.status === "conta" && mk.j.valor === 40 && /Marmitex - R\$17,00:17x2/.test(its) && /Refrigerante 600ml:6x1/.test(its) && ct.lancamentos.some((l) => l.clienteId === ale.id && l.pedidoId === tp.id && l.valor === 40), "Madeireira no totem: na conta do Alemão vira 2 x R$ 17 + refri 600ml R$ 6 = R$ 40 (" + its + ")");
+    const outro = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "OUTRO CLIENTE" }, tkD)).j, tp2 = (await reqEm(sd.base, "POST", "/api/pedidos", { uid: "out-totem", nome: "Fulano", itens: [{ nome: "Marmitex - R$22,00", preco: 22, qtd: 2 }] }, "")).j;
+    const mk2 = await reqEm(sd.base, "PATCH", "/api/pedidos/" + tp2.id, { status: "conta", clienteId: outro.id }, tkD);
+    t(mk2.s === 200 && mk2.j.valor === 44 && mk2.j.itens.length === 1, "outro cliente na conta: continua R$ 44 (a regra é só da Madeireira)");
+  }
   { // pedido "na conta" do robô: marca sozinho pelo telefone cadastrado ou pelo nome (empresa) que deu no pedido
     const der = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "DER", empresa: "DER" }, tkD)).j, gi = (await reqEm(sd.base, "POST", "/api/clientes", { nome: "GILDA", telefone: "(12) 98111-2233" }, tkD)).j;
     const it = [{ nome: "Marmitex - R$22,00", preco: 22, qtd: 1, grupos: [] }];
