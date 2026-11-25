@@ -125,5 +125,5 @@ const SORVETES = [
   { nome: "Sorvete Mega Clássico", preco: 17.9 }, { nome: "Sorvete Lacta", preco: 18.9 }, { nome: "Sorvete Mega", preco: 18.9 },
   { nome: "Sorvete Prestígio/Crocante", preco: 15.9 }, { nome: "Sorvete Super Preço", preco: 9.99 }, { nome: "Sorvete La Frutta", preco: 7.5 },
   { nome: "Sorvete Fini Dentadura", preco: 8.5 }, { nome: "Sorvete Fini Tube", preco: 5.9 }, { nome: "Sorvete Chambinho", preco: 8.5 },
-  { nome: "Sorvete Batom", preco: 5.9 }, { nome: "Sorvete Oreo/KitKat Gold", preco: 8.5 },
+  { nome: "Sorvete Batom", preco: 5.9 }, { nome: "Sorvete Oreo/KitKat Gold", preco: 8.99 },
 ];
