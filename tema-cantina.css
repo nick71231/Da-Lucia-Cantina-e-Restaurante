@@ -1,0 +1,152 @@
+/* ===== TEMA "CANTINA" DO TOTEM (25/11/2026) =====
+   Identidade da Da Lúcia: o vermelho e o dourado do medalhão do logo, a letra gótica do letreiro (Grenze Gotisch) nos títulos
+   e a toalha xadrez de cantina no painel do pedido. O resto é quieto: fundo branco, letra fácil de ler (Atkinson Hyperlegible,
+   feita pra baixa visão) e botões grandes pro toque. Carregado DEPOIS dos estilos do app.js (ver index.html), então vence nos
+   mesmos seletores. Pra desligar: tirar este arquivo do index.html. */
+@font-face { font-family: "Grenze Gotisch"; src: url("fontes/grenze-gotisch.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Atkinson Hyperlegible"; src: url("fontes/atkinson-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Atkinson Hyperlegible"; src: url("fontes/atkinson-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+
+body.tema-cantina {
+  --c-verm: #A50F14; --c-vinho: #6E0A0D; --c-ouro: #E9A21A; --c-ouro-claro: #F7D27A; --c-tinta: #2A1511; --c-suave: #6B5148; --c-linha: #EADBD3; --c-verde: #2E7D32;
+  --t-v: var(--c-verm); --t-ve: var(--c-vinho); --t-l: var(--c-ouro); --t-le: var(--c-ouro); --t-tinta: var(--c-tinta); --t-muted: var(--c-suave);
+  --t-som: 0 1px 0 var(--c-linha), 0 6px 18px rgba(110, 10, 13, .06); --t-somg: 0 10px 28px rgba(110, 10, 13, .16);
+  --c-texto: "Atkinson Hyperlegible", "Segoe UI", Arial, sans-serif; --t-serif: var(--c-texto); /* a letra gótica só onde é título (posta direto); números e preços na letra de ler */
+  background: #FFFFFF; color: var(--c-tinta); font-family: var(--c-texto);
+}
+.tema-cantina #principal { background: #FFFFFF; }
+.tema-cantina button, .tema-cantina input, .tema-cantina textarea { font-family: var(--c-texto); }
+
+/* ---------- topo: medalhão + título em letra gótica, sem enfeite embaixo ---------- */
+.tema-cantina .t-topo { padding: 20px 32px 10px; }
+.tema-cantina .t-topo .logo-box .logo { width: 72px !important; height: 72px !important; box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--c-ouro); }
+.tema-cantina .t-tit h1 { font: 800 clamp(2rem, 3.6vw, 2.9rem)/1.05 "Grenze Gotisch", Georgia, serif; color: var(--c-vinho); letter-spacing: .005em; }
+.tema-cantina .t-tit h1::after { content: none; }
+.tema-cantina .t-tit p { margin-top: 6px; font-size: 1.12rem; color: var(--c-suave); }
+.tema-cantina .t-tit p b { color: var(--c-verm); }
+.tema-cantina .t-inicio { background: transparent; border: 2px solid var(--c-linha); color: var(--c-suave); font-weight: 700; }
+
+/* ---------- etapas: uma trilha de pratinhos (é sequência de verdade: etapa 3 de 7) ---------- */
+.tema-cantina .t-passos { padding: 4px 32px 8px; gap: 16px; }
+.tema-cantina .t-passo-n { color: var(--c-vinho); font-size: 1rem; }
+.tema-cantina .t-trilho { gap: 8px; }
+.tema-cantina .t-trilho i { height: 10px; background: #F3ECE8; box-shadow: none; }
+.tema-cantina .t-trilho i.feito { background: var(--c-ouro); }
+.tema-cantina .t-trilho i.atual { background: var(--c-verm); }
+
+/* ---------- marmitex (menu) ---------- */
+.tema-cantina .t-produtos { gap: 24px; }
+.tema-cantina .t-prod { padding: 0; border: 2px solid var(--c-linha); border-radius: 22px; box-shadow: none; overflow: hidden; background: #fff; }
+.tema-cantina .t-prod-foto { height: 180px; border-radius: 0; background: #FBEFE9; box-shadow: none; }
+.tema-cantina .t-prod-info { padding: 14px 16px 16px; gap: 10px; }
+.tema-cantina .t-prod-info b { font: 700 1.25rem/1.25 var(--c-texto); color: var(--c-tinta); }
+.tema-cantina .t-preco { font: 700 1.25rem var(--c-texto); color: var(--c-verm); }
+.tema-cantina .t-montar { padding: 10px 20px; border-radius: 12px; background: var(--c-verm); color: #fff; font-size: 1rem; box-shadow: none; }
+
+/* ---------- opções das etapas: branco; escolhido = vermelho com o ✓ dourado ---------- */
+.tema-cantina .t-itens { gap: 12px; }
+.tema-cantina .t-item { min-height: 86px; border: 2px solid var(--c-linha); border-radius: 18px; box-shadow: none; padding: 8px 60px 8px 10px; background: #fff; }
+.tema-cantina .t-item-foto { border-radius: 50%; width: 66px; height: 66px; box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--c-ouro-claro); }
+.tema-cantina .t-item-ini { width: 58px; height: 58px; margin-left: 4px; border-radius: 50%; background: #fff; color: var(--c-vinho); font: 800 1.9rem/1 "Grenze Gotisch", Georgia, serif;
+  box-shadow: inset 0 0 0 2px var(--c-ouro-claro), inset 0 0 0 5px #fff, inset 0 0 0 6px var(--c-ouro-claro); }
+.tema-cantina .t-item-nome { font: 400 1.2rem/1.25 var(--c-texto); color: var(--c-tinta); }
+.tema-cantina .t-check { width: 34px; height: 34px; margin-top: -17px; border: 2px solid #D9C9C1; }
+.tema-cantina .t-item.sel { background: var(--c-verm); border-color: var(--c-verm); box-shadow: 0 8px 20px rgba(165, 15, 20, .25); }
+.tema-cantina .t-item.sel .t-item-nome { color: #fff; font-weight: 700; }
+.tema-cantina .t-item.sel .t-item-ini { background: var(--c-vinho); color: var(--c-ouro-claro); box-shadow: inset 0 0 0 2px var(--c-ouro); }
+.tema-cantina .t-item.sel .t-check { background: var(--c-ouro); border-color: var(--c-ouro); color: var(--c-vinho); }
+
+/* ---------- barra de baixo ---------- */
+.tema-cantina .t-barra { margin: 0; padding: 14px 32px 18px; border-radius: 0; background: #fff; box-shadow: none; border-top: 2px solid var(--c-linha); }
+.tema-cantina .t-info { color: var(--c-suave); font-size: 1.1rem; }
+.tema-cantina .t-info .t-okk { color: var(--c-verde); }
+.tema-cantina .t-info .t-val { font: 700 1.6rem var(--c-texto); color: var(--c-tinta); }
+.tema-cantina .t-prim, .tema-cantina .t-sec { min-height: 64px; border-radius: 14px; font-size: 1.15rem; }
+.tema-cantina .t-prim { background: var(--c-verm); box-shadow: none; }
+.tema-cantina .t-prim:not(:disabled):active { background: var(--c-vinho); }
+.tema-cantina .t-prim:disabled { background: #EFE6E2; color: #A58E85; }
+.tema-cantina .t-prim.t-neutro { border-radius: 14px; background: #fff; color: var(--c-verm); border: 2px solid var(--c-verm); }
+.tema-cantina .t-sec { border-color: var(--c-linha); color: var(--c-tinta); }
+
+/* ---------- revisão e observação ---------- */
+.tema-cantina .t-rev, .tema-cantina .t-obs { border: 2px solid var(--c-linha); box-shadow: none; border-radius: 20px; }
+.tema-cantina .t-rev-l { border-top: 1px solid var(--c-linha); }
+.tema-cantina .t-rev-r { text-transform: none; letter-spacing: 0; font-size: 1rem; color: var(--c-suave); }
+.tema-cantina .t-rev-v { font: 700 1.2rem var(--c-texto); }
+.tema-cantina .t-trocar { border-color: var(--c-linha); color: var(--c-verm); border-radius: 12px; }
+.tema-cantina .t-obs h3 { font: 800 1.6rem "Grenze Gotisch", Georgia, serif; color: var(--c-vinho); }
+.tema-cantina .t-obs h3 small { font: 400 .95rem var(--c-texto); }
+.tema-cantina .t-chip { background: #fff; border: 2px solid var(--c-linha); color: var(--c-tinta); border-radius: 12px; }
+.tema-cantina .t-chip.on { background: var(--c-verm); border-color: var(--c-verm); color: #fff; }
+.tema-cantina .t-obs textarea { font-family: var(--c-texto); border-color: var(--c-linha); }
+
+/* ---------- bebidas e doces ---------- */
+.tema-cantina .t-beb { border: 2px solid var(--c-linha); box-shadow: none; border-radius: 20px; }
+.tema-cantina .t-beb.tem { border-color: var(--c-verm); }
+.tema-cantina .t-beb-q { background: var(--c-verm); }
+
+/* ---------- nome ---------- */
+.tema-cantina .t-nome input { border: 2px solid var(--c-linha); box-shadow: none; font-family: var(--c-texto); }
+.tema-cantina .t-nome input:focus { border-color: var(--c-ouro); box-shadow: 0 0 0 6px rgba(233, 162, 26, .22); }
+
+/* ---------- o pedido: TOALHA XADREZ de cantina com a comanda de papel por cima (o elemento marcante) ---------- */
+.tema-cantina #carrinho {
+  color: var(--c-tinta); padding: 18px 16px;
+  background-color: #fff;
+  background-image:
+    linear-gradient(90deg, rgba(165, 15, 20, .55) 50%, transparent 50%),
+    linear-gradient(rgba(165, 15, 20, .55) 50%, transparent 50%);
+  background-size: 44px 44px;
+  border-radius: 0; box-shadow: inset 12px 0 18px -14px rgba(0, 0, 0, .35);
+}
+.tema-cantina #carrinho .cx { background: #fff; border-radius: 6px; padding: 18px 16px 16px; box-shadow: 0 14px 30px rgba(60, 5, 8, .32); position: relative; }
+.tema-cantina #carrinho .cx::before { content: ""; position: absolute; left: 0; right: 0; top: -7px; height: 8px;
+  background: radial-gradient(circle at 6px 0, transparent 5px, #fff 5.5px) 0 0 / 12px 8px repeat-x; } /* borda picotada da comanda */
+.tema-cantina #carrinho .cx h2 { color: var(--c-vinho); font: 800 2rem/1 "Grenze Gotisch", Georgia, serif; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 2px dashed var(--c-linha); }
+.tema-cantina #carrinho .cx h2 small { font: 700 .9rem var(--c-texto); color: var(--c-suave); opacity: 1; margin-top: 4px; }
+.tema-cantina .cx-it { background: transparent; border-radius: 0; padding: 10px 2px; border-bottom: 1px solid var(--c-linha); }
+.tema-cantina .cx-top b { font-size: 1.08rem; } .tema-cantina .cx-top span { color: var(--c-tinta); }
+.tema-cantina .cx-it p { color: var(--c-suave); opacity: 1; }
+.tema-cantina .cx-ctl button { background: #F6EFEC; color: var(--c-verm); box-shadow: none; border-radius: 10px; }
+.tema-cantina .cx-ctl .cx-rm { background: transparent; color: var(--c-suave); text-decoration: underline; }
+.tema-cantina .cx-vazio { color: var(--c-suave); opacity: 1; }
+.tema-cantina .cx-rod { border-top: 2px dashed var(--c-linha); }
+.tema-cantina .cx-tot span { color: var(--c-suave); } .tema-cantina .cx-tot b { color: var(--c-tinta); font-size: 1.7rem; }
+.tema-cantina .cx-fin { border: 0; border-radius: 14px; background: var(--c-verm); box-shadow: none; }
+.tema-cantina .cx-fin:disabled { background: #EFE6E2; color: #A58E85; border: 0; }
+.tema-cantina .cx-fin.chama { animation: cChama 2.4s ease-in-out infinite; }
+@keyframes cChama { 0%, 100% { box-shadow: 0 0 0 0 rgba(233, 162, 26, 0); } 50% { box-shadow: 0 0 0 7px rgba(233, 162, 26, .55); } }
+
+/* ---------- tela de descanso: o medalhão no vermelho, faixa de toalha xadrez embaixo ---------- */
+.tema-cantina .descanso { background: radial-gradient(circle at 50% 42%, #B3131A 0, var(--c-vinho) 80%); }
+.tema-cantina .descanso::before { content: none; }
+.tema-cantina .descanso .toque { background: #fff !important; color: var(--c-vinho) !important; font: 800 clamp(2rem, 3.8vw, 3.2rem)/1.1 "Grenze Gotisch", Georgia, serif !important;
+  letter-spacing: .01em !important; text-transform: none !important; padding: 22px 16px 20px !important; box-shadow: none !important;
+  border-top: 14px solid transparent; border-image: repeating-linear-gradient(90deg, var(--c-verm) 0 14px, #fff 14px 28px) 14; }
+
+/* ---------- pedido enviado ---------- */
+.tema-cantina .suc-ok { background: var(--c-verde); box-shadow: none; }
+.tema-cantina .suc-tit { font: 800 3.4rem/1 "Grenze Gotisch", Georgia, serif; color: var(--c-vinho); }
+.tema-cantina .suc-ola { color: var(--c-suave); }
+.tema-cantina .suc-num { border: 2px solid var(--c-linha); box-shadow: none; }
+.tema-cantina .suc-num small { letter-spacing: .04em; text-transform: none; }
+.tema-cantina .suc-num strong { font-family: "Grenze Gotisch", Georgia, serif !important; color: var(--c-verm) !important; }
+
+@media (prefers-reduced-motion: reduce) { .tema-cantina .cx-fin.chama { animation: none; } }
+@media (max-width: 900px) { .tema-cantina .t-barra { padding: 12px 16px 14px; } .tema-cantina #carrinho { padding: 10px; } }
+
+/* ajustes depois das fotos: a faixa "Toque na tela" não pisca transparente (ficava rosada) e o título do pedido sem a sombra antiga */
+.tema-cantina .descanso .toque { animation: none !important; opacity: 1 !important; }
+.tema-cantina #carrinho .cx h2 { text-shadow: none; }
+
+/* ---------- janelas (salada separada, pagamento...): mesmo tema ---------- */
+.tema-cantina .modal-caixa { font-family: var(--c-texto); border-radius: 22px; }
+.tema-cantina .modal-caixa h2, .tema-cantina .pp h2 { font: 800 2.2rem/1.1 "Grenze Gotisch", Georgia, serif; color: var(--c-vinho); }
+.tema-cantina .pp-ic { background: #fff; box-shadow: inset 0 0 0 2px var(--c-ouro-claro), inset 0 0 0 6px #fff, inset 0 0 0 8px var(--c-ouro-claro); }
+.tema-cantina .pp-sub { color: var(--c-suave); } .tema-cantina .pp-sub b { color: var(--c-verm); }
+.tema-cantina .pp-bts button { border-radius: 14px; font-family: var(--c-texto); }
+.tema-cantina .pp-nao { border-color: var(--c-linha); color: var(--c-tinta); }
+.tema-cantina .pp-sim { background: var(--c-verm); box-shadow: none; }
+.tema-cantina .pp-op { border-color: var(--c-linha); border-radius: 18px; } .tema-cantina .pp-op b { font-family: var(--c-texto); }
+.tema-cantina .pp-op:active { border-color: var(--c-verm); background: #FBF3F1; }
+.tema-cantina .modal-caixa .op-pag { border: 2px solid var(--c-linha); background: #fff; border-radius: 16px; }

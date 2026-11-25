@@ -157,7 +157,7 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
   }
   { // 2 formas com o resto NA CONTA (dona 24/11): a tela mostra "Na conta", pede o cliente e o botão diz o que vai acontecer
     const cmT = await api("POST", "/api/balanca", { comanda: 881, valor: 24, uid: "tcp1" }, bl); await clica(w, '[data-aba="aberto"]'); await dorme(1200);
-    w.eval("abrirAcerto")(cmT.id); await dorme(300); await clica(w, '[data-a="d2Abrir"]'); await clica(w, '[data-a="dvForma"][data-i="1"][data-f="conta"]'); await dorme(400);
+    await w.eval("esperaCarregar")(); w.eval("abrirAcerto")(cmT.id); await dorme(300); await clica(w, '[data-a="d2Abrir"]'); await clica(w, '[data-a="dvForma"][data-i="1"][data-f="conta"]'); await dorme(400);
     const v1 = w.document.querySelector('.dv-v[data-i="0"]'); v1.value = "14"; v1.dispatchEvent(new w.Event("input", { bubbles: true }));
     t(/R\$\s*10,00/.test(texto(w, "#dv-resto")), "separar por valor: a última parte é o resto (R$ 24 - 14 = R$ 10)");
     const sel = w.document.querySelector(".dv-cli"), op = sel && [...sel.options].find((o) => o.textContent.includes("Elza"));
@@ -170,7 +170,7 @@ const texto = (w, sel) => (w.document.querySelector(sel) || { textContent: "" })
     t(cm2 && cm2.status === "conta", "2 formas com conta: a comanda fica 'na conta' com o resto");
     // ÷3: divide igual entre 3 pessoas (dinheiro, pix, crédito); o centavo que sobra vai na última
     const cmI = await api("POST", "/api/balanca", { comanda: 882, valor: 50, uid: "tcp2" }, bl); await clica(w, '[data-aba="aberto"]'); await w.eval("carregar")(); await dorme(300);
-    w.eval("abrirAcerto")(cmI.id); await dorme(300); await clica(w, '[data-a="d2Abrir"]'); await clica(w, '[data-a="dvIgual"][data-n="3"]'); await dorme(300);
+    await w.eval("esperaCarregar")(); w.eval("abrirAcerto")(cmI.id); await dorme(300); await clica(w, '[data-a="d2Abrir"]'); await clica(w, '[data-a="dvIgual"][data-n="3"]'); await dorme(300);
     const vals = [...w.document.querySelectorAll(".dv-v")].map((x) => x.value), resto = texto(w, "#dv-resto"), bt3 = w.document.querySelector("#ac-ok");
     t(vals.join() === "16,66,16,66" && /16,68/.test(resto) && !bt3.disabled, "÷3: R$ 50 vira 16,66 + 16,66 + 16,68 (" + vals.join(" / ") + " / " + resto + ")");
     await clica(w, "#ac-ok"); await dorme(800);

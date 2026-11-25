@@ -2,7 +2,7 @@ const $ = (s) => document.querySelector(s);
 const brl = (n) => "R$" + n.toFixed(2).replace(".", ",");
 const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const ler = (k, p) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : p; } catch (e) { return p; } };
-const SEM_SYNC = ["pedidos", "fila", "contador", "carrinho", "cfgT", "pin", "tecladoVirtual", "tokenAdmin", "impFalhas", "cfgSujo"]; // o que NÃO vai pro backup automático
+const SEM_SYNC = ["pedidos", "fila", "contador", "carrinho", "cfgT", "pin", "tecladoVirtual", "tokenAdmin", "impFalhas", "cfgSujo", "temaVisual"]; // o que NÃO vai pro backup automático
 let tSync;
 const salvar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} if (!SEM_SYNC.includes(k)) { try { localStorage.setItem("cfgSujo", "1"); } catch (e) {} agendaSync(); } };  // cfgSujo = mudança ainda não enviada ao servidor
 
